@@ -37,7 +37,7 @@ const Header = ({ onNavigate, isMobileMenuOpen, setMobileMenuOpen, compareCount 
         </a>
         <div className="px-6 py-4 border-t">
           <button className="w-full text-center text-gray-600 hover:text-blue-600 mb-2" onClick={() => { onNavigate('login'); setMobileMenuOpen(false); }}>Sign In</button>
-          <button className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors" onClick={() => { onNavigate('register'); setMobileMenuOpen(false); }}>Get Started</button>
+          <button className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors" onClick={() => { onNavigate('register'); setMobileMenuOpen(false); }}>Register Your School</button>
         </div>
       </div>
     )}

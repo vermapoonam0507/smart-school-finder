@@ -1,67 +1,103 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 
-const LoginPage = ({ onNavigate }) => (
-  <div className="flex items-center justify-center min-h-screen bg-gray-100">
-    <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold text-center text-gray-900">Sign In</h2>
-      <form className="space-y-6">
-        <div>
-          <label htmlFor="email" className="text-sm font-medium text-gray-700">Email address</label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            autoComplete="email"
-            required
-            className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-            placeholder="you@example.com"
-          />
+const LoginPage = ({ onNavigate, onLogin }) => {
+  const [showPassword, setShowPassword] = useState(false);
+  const [formData, setFormData] = useState({ email: '', password: '' });
+  const [error, setError] = useState('');
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setError(''); // Clear previous errors
+
+    if (!formData.email || !formData.password) {
+      setError('Please enter both email and password.');
+      return;
+    }
+
+    // onLogin function (from App.jsx) will return true on success, false on failure
+    const loginSuccess = onLogin(formData);
+
+    if (loginSuccess) {
+      alert("Login successful! (Simulation)");
+      onNavigate('schools');
+    } else {
+      setError('Invalid email or password. Please try again.');
+    }
+  };
+
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-gray-100 px-4">
+      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-lg">
+        <div className="text-center">
+            <h2 className="text-2xl font-bold text-gray-900">Welcome Back School</h2>
+            <p className="mt-2 text-sm text-gray-600">Please enter your details to login your account.</p>
         </div>
-        <div>
-          <label htmlFor="password"className="text-sm font-medium text-gray-700">Password</label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            required
-            className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-            placeholder="••••••••"
-          />
-        </div>
-        <div className="flex items-center justify-between">
-            <a href="#" className="text-sm text-blue-600 hover:underline">Forgot password?</a>
-        </div>
-        <div>
-          <button
-            type="submit"
-            onClick={(e) => {
-                e.preventDefault();
-
-                // Here you would normally call your real API to log in.
-                // After successful login, you would navigate the user.
-
-                console.log("Login button clicked!");
-
-                
-
-
-                onNavigate('schools'); // Navigate to schools page after login
-            }}
-            className="w-full px-4 py-2 font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            Sign In
-          </button>
-        </div>
-         <p className="text-sm text-center text-gray-600">
-            Don't have an account?{' '}
-            <a href="#" className="font-medium text-blue-600 hover:underline">
-                Sign Up
-            </a>
-        </p>
-      </form>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {error && <p className="text-sm text-red-600 bg-red-100 p-3 rounded-md">{error}</p>}
+          <div>
+            <label htmlFor="email" className="text-sm font-medium text-gray-700">Email address</label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              value={formData.email}
+              onChange={handleChange}
+              className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              placeholder="you@example.com"
+            />
+          </div>
+          <div>
+            <label htmlFor="password"className="text-sm font-medium text-gray-700">Password</label>
+            <div className="relative">
+              <input
+                id="password"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
+                value={formData.password}
+                onChange={handleChange}
+                className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500"
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+              <button type="button" onClick={() => onNavigate('forgot-password')} className="text-sm text-blue-600 hover:underline">
+                Forgot password?
+              </button>
+          </div>
+          <div>
+            <button
+              type="submit"
+              className="w-full px-4 py-2 font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              Sign In
+            </button>
+          </div>
+           <p className="text-sm text-center text-gray-600">
+              Don't have an account?{' '}
+              <button type="button" onClick={() => onNavigate('signup')} className="font-medium text-blue-600 hover:underline">
+                  Sign Up
+              </button>
+          </p>
+        </form>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default LoginPage;
