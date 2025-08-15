@@ -45,7 +45,6 @@ const Header = ({ onNavigate, isMobileMenuOpen, setMobileMenuOpen, compareCount,
     </nav>
     {isMobileMenuOpen && (
       <div className="md:hidden bg-white shadow-lg">
-        {/* Mobile menu links */}
         <a href="#" className="block py-2 px-6 text-gray-600 hover:bg-gray-100" onClick={(e) => { e.preventDefault(); onNavigate('schools'); setMobileMenuOpen(false); }}>Browse Schools</a>
         <a href="#" className="block py-2 px-6 text-gray-600 hover:bg-gray-100" onClick={(e) => { e.preventDefault(); onNavigate('compare'); setMobileMenuOpen(false); }}>
           Compare {compareCount > 0 && `(${compareCount})`}

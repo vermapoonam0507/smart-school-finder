@@ -2,14 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { mockApi } from '../api/mockApi';
 import SchoolCard from '../components/SchoolCard';
 
-const SchoolsPage = ({ onNavigate, onSelectSchool, onCompareToggle, comparisonList }) => {
+const SchoolsPage = ({ onNavigate, onSelectSchool, onCompareToggle, comparisonList, currentUser, shortlist, onShortlistToggle }) => {
   const [schools, setSchools] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filters, setFilters] = useState({
-      board: 'All',
-      feeRange: 'All'
-  });
+  const [filters, setFilters] = useState({ board: 'All', feeRange: 'All' });
 
   useEffect(() => {
     const loadSchools = async () => {
@@ -45,7 +42,6 @@ const SchoolsPage = ({ onNavigate, onSelectSchool, onCompareToggle, comparisonLi
       <div className="container mx-auto px-6 py-8">
         <h1 className="text-3xl font-bold text-gray-800 mb-6">Explore Schools</h1>
         
-        {/* Filters */}
         <div className="bg-white p-4 rounded-lg shadow-md mb-8">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <input 
@@ -65,25 +61,24 @@ const SchoolsPage = ({ onNavigate, onSelectSchool, onCompareToggle, comparisonLi
             </div>
         </div>
 
-        {/* School List */}
-
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredSchools.length > 0 ? (
             filteredSchools.map(school => {
-
-              // Check karein ki school compare list mein hai ya nahi
-
               const isCompared = comparisonList.some(item => item.id === school.id);
+              const isShortlisted = shortlist.some(item => item.id === school.id);
               return (
                 <SchoolCard
                   key={school.id}
                   school={school}
-                  onCardClick={() => { 
+                  onCardClick={() => {
                     onSelectSchool(school);
                     onNavigate('school-details');
                   }}
-                  onCompareToggle={() => onCompareToggle(school)} 
-                  isCompared={isCompared} 
+                  onCompareToggle={() => onCompareToggle(school)}
+                  isCompared={isCompared}
+                  currentUser={currentUser}
+                  onShortlistToggle={() => onShortlistToggle(school)}
+                  isShortlisted={isShortlisted}
                 />
               )
             })

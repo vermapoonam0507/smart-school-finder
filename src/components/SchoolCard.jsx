@@ -3,7 +3,6 @@ import { MapPin, PlusCircle, CheckCircle, Heart } from 'lucide-react';
 
 const SchoolCard = ({ school, onCardClick, onCompareToggle, isCompared, currentUser, onShortlistToggle, isShortlisted }) => (
   <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-2xl transition-all duration-300 border border-gray-200 flex flex-col relative">
-    {/* Shortlist button */}
     {currentUser && currentUser.role === 'parent' && (
       <button onClick={onShortlistToggle} className="absolute top-4 right-4 text-gray-400 hover:text-red-500 z-10">
         <Heart size={24} className={isShortlisted ? "fill-current text-red-500" : ""} />
