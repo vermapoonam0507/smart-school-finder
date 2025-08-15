@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import LandingPage from './pages/LandingPage';
 import SchoolsPage from './pages/SchoolsPage';
@@ -14,10 +14,43 @@ function App() {
   const [currentPage, setCurrentPage] = useState('landing');
   const [selectedSchool, setSelectedSchool] = useState(null);
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [comparisonList, setComparisonList] = useState([]);
-  const [users, setUsers] = useState([]);
-  const [currentUser, setCurrentUser] = useState(null);
+  
+  // State ko localStorage se load karein
+  const [users, setUsers] = useState(() => JSON.parse(localStorage.getItem('school-finder-users')) || []);
+  const [currentUser, setCurrentUser] = useState(() => JSON.parse(localStorage.getItem('school-finder-currentUser')) || null);
   const [shortlist, setShortlist] = useState([]);
+  const [comparisonList, setComparisonList] = useState(() => JSON.parse(localStorage.getItem('school-finder-comparisonList')) || []);
+
+  // Jab bhi users ya currentUser badle, localStorage mein save karein
+  useEffect(() => {
+    localStorage.setItem('school-finder-users', JSON.stringify(users));
+  }, [users]);
+
+  useEffect(() => {
+    localStorage.setItem('school-finder-currentUser', JSON.stringify(currentUser));
+  }, [currentUser]);
+  
+  // Jab bhi shortlist badle, user-specific shortlist save karein
+  useEffect(() => {
+    if (currentUser) {
+      localStorage.setItem(`shortlist_${currentUser.email}`, JSON.stringify(shortlist));
+    }
+  }, [shortlist]); // <-- YAHAN SE currentUser HATA DIYA GAYA HAI (YAHI FIX HAI)
+
+  useEffect(() => {
+    localStorage.setItem('school-finder-comparisonList', JSON.stringify(comparisonList));
+  }, [comparisonList]);
+
+  // Jab user login kare, uski shortlist load karein
+  useEffect(() => {
+    if (currentUser) {
+      const userShortlist = JSON.parse(localStorage.getItem(`shortlist_${currentUser.email}`)) || [];
+      setShortlist(userShortlist);
+    } else {
+      setShortlist([]);
+    }
+  }, [currentUser]);
+
 
   const handleCompareToggle = (school) => {
     setComparisonList((prevList) => {
@@ -41,7 +74,6 @@ function App() {
       return false;
     }
     setUsers(prevUsers => [...prevUsers, newUser]);
-    console.log("Registered Users:", [...users, newUser]);
     return true;
   };
 

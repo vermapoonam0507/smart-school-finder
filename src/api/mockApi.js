@@ -1,5 +1,3 @@
-// Is file ka poora content is code se replace karein.
-
 const mockApi = {
   fetchSchools: async () => {
     console.log("API: Fetching schools...");
@@ -98,17 +96,77 @@ const mockApi = {
           predefinedAmenities: ['Library', 'Playground'],
           customAmenities: ''
         }
+      },
+      {
+        id: 4,
+        basicInfo: {
+          name: 'Dhirubhai Ambani International School',
+          description: 'A world-class school in the heart of Mumbai.',
+          board: 'ICSE',
+          state: 'Maharashtra',
+          city: 'Mumbai',
+          schoolMode: 'private',
+          genderType: 'co-ed',
+          shifts: ['morning'],
+          feeRange: 'More than 5 Lakh',
+          upto: 'Class 12',
+          email: 'info@dais.edu.in',
+          mobileNo: '9871234567',
+          website: 'https://www.dais.edu.in/',
+          languageMedium: ['English'],
+          transportAvailable: 'yes',
+        },
+        activityInfo: {
+          activities: ['Technology Integration', 'Leadership Development']
+        },
+        alumniInfo: {
+          topAlumnis: [],
+          famousAlumnies: []
+        },
+        amenitiesInfo: {
+          predefinedAmenities: ['Library', 'Auditorium', 'Smart Classes'],
+          customAmenities: 'Olympic Size Swimming Pool'
+        }
+      },
+      {
+        id: 5,
+        basicInfo: {
+          name: 'Bishop Cotton Boys\' School',
+          description: 'One of the oldest and most prestigious schools in Bengaluru.',
+          board: 'ICSE',
+          state: 'Karnataka',
+          city: 'Bengaluru',
+          schoolMode: 'private',
+          genderType: 'boy',
+          shifts: ['morning'],
+          feeRange: '1 Lakh - 2 Lakh',
+          upto: 'Class 12',
+          email: 'contact@bishopcottonboysschool.edu.in',
+          mobileNo: '9988776655',
+          website: 'https://www.bishopcottonboysschool.edu.in/',
+          languageMedium: ['English'],
+          transportAvailable: 'yes',
+        },
+        activityInfo: {
+          activities: ['Empowering in Sports', 'Cultural Education']
+        },
+        alumniInfo: {
+          topAlumnis: [],
+          famousAlumnies: []
+        },
+        amenitiesInfo: {
+          predefinedAmenities: ['Playground', 'Science Lab', 'Computer Lab'],
+          customAmenities: 'Chapel, Boarding Facility'
+        }
       }
     ];
   }
 };
 
-// This new function provides the structure for our dynamic form
 const fetchFormSchema = async () => {
   console.log("API: Fetching form schema...");
   await new Promise(resolve => setTimeout(resolve, 500));
   console.log("API: Schema fetched!");
-  // Yeh data backend se aayega, poore schema ke saath
   return {
     'Basic Info': [
       { name: 'name', label: 'School Name', type: 'String', required: true },
@@ -118,7 +176,7 @@ const fetchFormSchema = async () => {
       { name: 'city', label: 'City', type: 'String', required: true },
       { name: 'schoolMode', label: 'School Mode', type: 'String', required: true, enum: ['convent', 'private', 'government'] },
       { name: 'genderType', label: 'Gender Type', type: 'String', required: true, enum: ['boy', 'girl', 'co-ed'] },
-      { name: 'shifts', label: 'Shifts', type: 'Array', required: true, enum: ['Morning', 'Afternoon', 'Night School'] },
+      { name: 'shifts', label: 'Shifts', type: 'Array', required: true, enum: ['morning', 'afternoon', 'night school'] },
       { name: 'feeRange', label: 'Fee Range', type: 'String', required: true, enum: ["1000 - 10000", "10000 - 25000", "25000 - 50000", "50000 - 75000", "75000 - 100000", "1 Lakh - 2 Lakh", "2 Lakh - 3 Lakh", "3 Lakh - 4 Lakh", "4 Lakh - 5 Lakh", "More than 5 Lakh"] },
       { name: 'upto', label: 'Classes Upto', type: 'String', required: true },
       { name: 'email', label: 'Email', type: 'String', required: true },
@@ -147,5 +205,4 @@ const fetchFormSchema = async () => {
   };
 };
 
-// Dono functions ko ek saath export karein
 export { mockApi, fetchFormSchema };
