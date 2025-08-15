@@ -11,7 +11,21 @@ const SignUpPage = ({ onNavigate, onSignUp }) => {
   });
   const [errors, setErrors] = useState({});
 
-  // ... (validate function waisa hi rahega) ...
+  const validate = () => {
+    const newErrors = {};
+    if (!formData.name) newErrors.name = 'This field is required.';
+    if (!formData.email) {
+        newErrors.email = 'Email is required.';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+        newErrors.email = 'Email address is invalid.';
+    }
+    if (!formData.password) {
+        newErrors.password = 'Password is required.';
+    } else if (formData.password.length < 6) {
+        newErrors.password = 'Password must be at least 6 characters.';
+    }
+    return newErrors;
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -20,13 +34,16 @@ const SignUpPage = ({ onNavigate, onSignUp }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // ... (validation logic waisa hi rahega) ...
-    const signUpSuccess = onSignUp(formData);
-    if (signUpSuccess) {
-      alert("Sign Up successful! Please log in.");
-      onNavigate('login');
-    } else {
-      setErrors({ email: 'An account with this email already exists.' });
+    const validationErrors = validate();
+    setErrors(validationErrors);
+    if (Object.keys(validationErrors).length === 0) {
+      const signUpSuccess = onSignUp(formData);
+      if (signUpSuccess) {
+        alert("Sign Up successful! Please log in.");
+        onNavigate('login');
+      } else {
+        setErrors({ email: 'An account with this email already exists.' });
+      }
     }
   };
 
@@ -37,7 +54,6 @@ const SignUpPage = ({ onNavigate, onSignUp }) => {
             <h2 className="text-2xl font-bold text-gray-900">Create an Account</h2>
         </div>
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Naya Role Selector */}
           <div>
             <label className="text-sm font-medium text-gray-700">I am a:</label>
             <div className="flex gap-4 mt-2">
@@ -51,8 +67,58 @@ const SignUpPage = ({ onNavigate, onSignUp }) => {
                 </label>
             </div>
           </div>
-          {/* ... (baaki form fields waise hi rahenge) ... */}
-          <button type="submit" /* ... */ >Sign Up</button>
+          <div>
+            <label htmlFor="name" className="text-sm font-medium text-gray-700">
+              {formData.role === 'parent' ? 'Full Name' : 'School Name'}
+            </label>
+            <input
+              id="name"
+              name="name"
+              type="text"
+              value={formData.name}
+              onChange={handleChange}
+              className={`w-full px-3 py-2 mt-1 border rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 ${errors.name ? 'border-red-500' : 'border-gray-300'}`}
+              placeholder={formData.role === 'parent' ? 'Poonam Verma' : 'Delhi Public School'}
+            />
+            {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
+          </div>
+          <div>
+            <label htmlFor="email" className="text-sm font-medium text-gray-700">Email address</label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              value={formData.email}
+              onChange={handleChange}
+              className={`w-full px-3 py-2 mt-1 border rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 ${errors.email ? 'border-red-500' : 'border-gray-300'}`}
+              placeholder="you@example.com"
+            />
+            {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email}</p>}
+          </div>
+          <div>
+            <label htmlFor="password"className="text-sm font-medium text-gray-700">Password</label>
+            <div className="relative">
+              <input
+                id="password"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                value={formData.password}
+                onChange={handleChange}
+                className={`w-full px-3 py-2 mt-1 border rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 ${errors.password ? 'border-red-500' : 'border-gray-300'}`}
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500"
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
+            {errors.password && <p className="mt-1 text-xs text-red-500">{errors.password}</p>}
+          </div>
+          <button type="submit" className="w-full px-4 py-2 font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">Sign Up</button>
           <p className="text-sm text-center text-gray-600">
               Already have an account?{' '}
               <button type="button" onClick={() => onNavigate('login')} className="font-medium text-blue-600 hover:underline">
