@@ -1,10 +1,14 @@
 import React from 'react';
-import { MapPin, PlusCircle, CheckCircle } from 'lucide-react';
+import { MapPin, PlusCircle, CheckCircle, Heart } from 'lucide-react';
 
-const SchoolCard = ({ school, onCardClick, onCompareToggle, isCompared }) => (
-  <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-2xl transition-all duration-300 border border-gray-200 flex flex-col">
-
-    {/* Card ke body par click karne se details page khulega */}
+const SchoolCard = ({ school, onCardClick, onCompareToggle, isCompared, currentUser, onShortlistToggle, isShortlisted }) => (
+  <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-2xl transition-all duration-300 border border-gray-200 flex flex-col relative">
+    {/* Shortlist button */}
+    {currentUser && currentUser.role === 'parent' && (
+      <button onClick={onShortlistToggle} className="absolute top-4 right-4 text-gray-400 hover:text-red-500 z-10">
+        <Heart size={24} className={isShortlisted ? "fill-current text-red-500" : ""} />
+      </button>
+    )}
     
     <div onClick={onCardClick} className="p-6 cursor-pointer flex-grow">
       <h3 className="text-xl font-bold text-gray-900 mb-2">{school.basicInfo.name}</h3>
@@ -18,7 +22,6 @@ const SchoolCard = ({ school, onCardClick, onCompareToggle, isCompared }) => (
       </div>
     </div>
     
-   
     <div className="px-6 pt-4 pb-4 bg-gray-50 border-t border-gray-200">
       <button 
         onClick={onCompareToggle}

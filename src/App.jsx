@@ -8,16 +8,16 @@ import ComparePage from './pages/ComparePage';
 import RegistrationPage from './pages/RegistrationPage';
 import SignUpPage from './pages/SignUpPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import DashboardPage from './pages/DashboardPage';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('landing');
   const [selectedSchool, setSelectedSchool] = useState(null);
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [comparisonList, setComparisonList] = useState([]);
-  
-  // To simulate a user database
   const [users, setUsers] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
+  const [shortlist, setShortlist] = useState([]);
 
   const handleCompareToggle = (school) => {
     setComparisonList((prevList) => {
@@ -38,11 +38,11 @@ function App() {
   const handleSignUp = (newUser) => {
     const userExists = users.find(user => user.email === newUser.email);
     if (userExists) {
-      return false; // Sign up failed
+      return false;
     }
     setUsers(prevUsers => [...prevUsers, newUser]);
-    console.log("Registered Users:", [...users, newUser]); // For debugging
-    return true; // Sign up successful
+    console.log("Registered Users:", [...users, newUser]);
+    return true;
   };
 
   const handleLogin = (credentials) => {
@@ -51,9 +51,30 @@ function App() {
     );
     if (user) {
       setCurrentUser(user);
-      return true; // Login successful
+      return true;
     }
-    return false; // Login failed
+    return false;
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setCurrentPage('landing');
+  };
+
+  const handleShortlistToggle = (school) => {
+    if (!currentUser || currentUser.role !== 'parent') {
+      alert("Please log in as a Parent/Student to shortlist schools.");
+      setCurrentPage('login');
+      return;
+    }
+    setShortlist((prevList) => {
+      const isInList = prevList.find((item) => item.id === school.id);
+      if (isInList) {
+        return prevList.filter((item) => item.id !== school.id);
+      } else {
+        return [...prevList, school];
+      }
+    });
   };
 
   const renderPage = () => {
@@ -61,23 +82,42 @@ function App() {
       case 'landing':
         return <LandingPage onNavigate={setCurrentPage} />;
       case 'schools':
-        return <SchoolsPage 
-                  onNavigate={setCurrentPage} 
-                  onSelectSchool={setSelectedSchool} 
+        return <SchoolsPage
+                  onNavigate={setCurrentPage}
+                  onSelectSchool={setSelectedSchool}
                   onCompareToggle={handleCompareToggle}
                   comparisonList={comparisonList}
+                  currentUser={currentUser}
+                  shortlist={shortlist}
+                  onShortlistToggle={handleShortlistToggle}
                />;
       case 'school-details':
-        return <SchoolDetailsPage school={selectedSchool} onNavigate={setCurrentPage} />;
+        return <SchoolDetailsPage
+                  school={selectedSchool}
+                  onNavigate={setCurrentPage}
+                  currentUser={currentUser}
+                  shortlist={shortlist}
+                  onShortlistToggle={handleShortlistToggle}
+                />;
       case 'login':
         return <LoginPage onNavigate={setCurrentPage} onLogin={handleLogin} />;
       case 'signup':
         return <SignUpPage onNavigate={setCurrentPage} onSignUp={handleSignUp} />;
       case 'forgot-password':
         return <ForgotPasswordPage onNavigate={setCurrentPage} />;
+      case 'dashboard':
+        return <DashboardPage
+                  currentUser={currentUser}
+                  shortlist={shortlist}
+                  onShortlistToggle={handleShortlistToggle}
+                  onSelectSchool={setSelectedSchool}
+                  onNavigate={setCurrentPage}
+                  comparisonList={comparisonList}
+                  onCompareToggle={handleCompareToggle}
+                />;
       case 'compare':
-        return <ComparePage 
-                  comparisonList={comparisonList} 
+        return <ComparePage
+                  comparisonList={comparisonList}
                   onCompareToggle={handleCompareToggle}
                   onNavigate={setCurrentPage}
                />;
@@ -90,13 +130,14 @@ function App() {
 
   return (
     <div>
-      {/* Header ko auth pages par hide karein */}
       {currentPage !== 'login' && currentPage !== 'signup' && currentPage !== 'forgot-password' &&
-        <Header 
-          onNavigate={setCurrentPage} 
-          isMobileMenuOpen={isMobileMenuOpen} 
+        <Header
+          onNavigate={setCurrentPage}
+          isMobileMenuOpen={isMobileMenuOpen}
           setMobileMenuOpen={setMobileMenuOpen}
           compareCount={comparisonList.length}
+          currentUser={currentUser}
+          onLogout={handleLogout}
         />}
       <main>
         {renderPage()}
