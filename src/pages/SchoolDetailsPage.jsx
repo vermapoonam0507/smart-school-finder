@@ -14,6 +14,20 @@ const SchoolDetailsPage = ({ school, onNavigate }) => {
 
     const { basicInfo, activityInfo, alumniInfo, amenitiesInfo } = school;
 
+    // Helper function to render custom amenities safely
+    const renderCustomAmenities = () => {
+        if (!amenitiesInfo.customAmenities || typeof amenitiesInfo.customAmenities !== 'string') {
+            return null;
+        }
+        const customList = amenitiesInfo.customAmenities.split(',').map(item => item.trim()).filter(Boolean);
+        if (customList.length === 0) {
+            return null;
+        }
+        return customList.map(amenity => (
+            <span key={amenity} className="bg-pink-100 text-pink-800 text-sm font-medium px-3 py-1 rounded-full">{amenity}</span>
+        ));
+    };
+
     return (
         <div className="bg-gray-100">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -54,9 +68,7 @@ const SchoolDetailsPage = ({ school, onNavigate }) => {
                             {amenitiesInfo.predefinedAmenities.map(amenity => (
                                 <span key={amenity} className="bg-purple-100 text-purple-800 text-sm font-medium px-3 py-1 rounded-full">{amenity}</span>
                             ))}
-                             {amenitiesInfo.customAmenities.map(amenity => (
-                                <span key={amenity} className="bg-pink-100 text-pink-800 text-sm font-medium px-3 py-1 rounded-full">{amenity}</span>
-                            ))}
+                            {renderCustomAmenities()}
                         </div>
                     </AccordionItem>
                     <AccordionItem title="Notable Alumni">
