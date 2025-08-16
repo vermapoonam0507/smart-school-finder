@@ -7,7 +7,6 @@ const LoginPage = ({ onNavigate, onLogin }) => {
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
 
-  // Jab page load ho, check karein ki kya koi saved credentials hain
   useEffect(() => {
     const savedCreds = JSON.parse(localStorage.getItem('school-finder-rememberMe'));
     if (savedCreds) {
@@ -34,14 +33,11 @@ const LoginPage = ({ onNavigate, onLogin }) => {
 
     if (loginSuccess) {
       if (rememberMe) {
-        // Agar "Remember Me" checked hai, toh credentials save karein
         localStorage.setItem('school-finder-rememberMe', JSON.stringify(formData));
       } else {
-        // Agar nahi, toh purane saved credentials hata dein
         localStorage.removeItem('school-finder-rememberMe');
       }
-      alert("Login successful! (Simulation)");
-      onNavigate('schools');
+      // Navigation is now handled in App.jsx
     } else {
       setError('Invalid email or password. Please try again.');
     }
@@ -51,8 +47,8 @@ const LoginPage = ({ onNavigate, onLogin }) => {
     <div className="flex items-center justify-center min-h-screen bg-gray-100 px-4">
       <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-lg">
         <div className="text-center">
-            <h2 className="text-2xl font-bold text-gray-900">Welcome back School</h2>
-            <p className="mt-2 text-sm text-gray-600">Please enter your details to login your account.</p>
+            <h2 className="text-2xl font-bold text-gray-900">Welcome back</h2>
+            <p className="mt-2 text-sm text-gray-600">Please enter your details to login.</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && <p className="text-sm text-red-600 bg-red-100 p-3 rounded-md">{error}</p>}
@@ -108,7 +104,7 @@ const LoginPage = ({ onNavigate, onLogin }) => {
           <div>
             <button
               type="submit"
-              className="w-full px-4 py-2 font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
             >
               Sign In
             </button>

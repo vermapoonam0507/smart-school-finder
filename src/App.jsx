@@ -9,19 +9,18 @@ import RegistrationPage from './pages/RegistrationPage';
 import SignUpPage from './pages/SignUpPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import DashboardPage from './pages/DashboardPage';
+import SchoolPortalPage from './pages/SchoolPortalPage';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('landing');
   const [selectedSchool, setSelectedSchool] = useState(null);
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   
-  // State ko localStorage se load karein
   const [users, setUsers] = useState(() => JSON.parse(localStorage.getItem('school-finder-users')) || []);
   const [currentUser, setCurrentUser] = useState(() => JSON.parse(localStorage.getItem('school-finder-currentUser')) || null);
   const [shortlist, setShortlist] = useState([]);
   const [comparisonList, setComparisonList] = useState(() => JSON.parse(localStorage.getItem('school-finder-comparisonList')) || []);
 
-  // Jab bhi users ya currentUser badle, localStorage mein save karein
   useEffect(() => {
     localStorage.setItem('school-finder-users', JSON.stringify(users));
   }, [users]);
@@ -30,18 +29,16 @@ function App() {
     localStorage.setItem('school-finder-currentUser', JSON.stringify(currentUser));
   }, [currentUser]);
   
-  // Jab bhi shortlist badle, user-specific shortlist save karein
   useEffect(() => {
     if (currentUser) {
       localStorage.setItem(`shortlist_${currentUser.email}`, JSON.stringify(shortlist));
     }
-  }, [shortlist]); // <-- YAHAN SE currentUser HATA DIYA GAYA HAI (YAHI FIX HAI)
+  }, [shortlist]);
 
   useEffect(() => {
     localStorage.setItem('school-finder-comparisonList', JSON.stringify(comparisonList));
   }, [comparisonList]);
 
-  // Jab user login kare, uski shortlist load karein
   useEffect(() => {
     if (currentUser) {
       const userShortlist = JSON.parse(localStorage.getItem(`shortlist_${currentUser.email}`)) || [];
@@ -70,9 +67,7 @@ function App() {
 
   const handleSignUp = (newUser) => {
     const userExists = users.find(user => user.email === newUser.email);
-    if (userExists) {
-      return false;
-    }
+    if (userExists) return false;
     setUsers(prevUsers => [...prevUsers, newUser]);
     return true;
   };
@@ -83,6 +78,11 @@ function App() {
     );
     if (user) {
       setCurrentUser(user);
+      if (user.role === 'school') {
+        setCurrentPage('school-portal');
+      } else {
+        setCurrentPage('schools');
+      }
       return true;
     }
     return false;
@@ -135,6 +135,8 @@ function App() {
         return <LoginPage onNavigate={setCurrentPage} onLogin={handleLogin} />;
       case 'signup':
         return <SignUpPage onNavigate={setCurrentPage} onSignUp={handleSignUp} />;
+      case 'signup-school': // <-- Naya case
+        return <SignUpPage onNavigate={setCurrentPage} onSignUp={handleSignUp} isSchoolSignUp={true} />;
       case 'forgot-password':
         return <ForgotPasswordPage onNavigate={setCurrentPage} />;
       case 'dashboard':
@@ -153,6 +155,8 @@ function App() {
                   onCompareToggle={handleCompareToggle}
                   onNavigate={setCurrentPage}
                />;
+      case 'school-portal':
+        return <SchoolPortalPage currentUser={currentUser} onLogout={handleLogout} />;
       case 'register':
         return <RegistrationPage onNavigate={setCurrentPage} />;
       default:
@@ -162,7 +166,7 @@ function App() {
 
   return (
     <div>
-      {currentPage !== 'login' && currentPage !== 'signup' && currentPage !== 'forgot-password' &&
+      {currentPage !== 'login' && currentPage !== 'signup' && currentPage !== 'signup-school' && currentPage !== 'forgot-password' && currentPage !== 'school-portal' &&
         <Header
           onNavigate={setCurrentPage}
           isMobileMenuOpen={isMobileMenuOpen}

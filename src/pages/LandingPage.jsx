@@ -15,7 +15,7 @@ const LandingPage = ({ onNavigate }) => (
           <button className="bg-blue-600 text-white font-semibold px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors shadow-lg w-full sm:w-auto" onClick={() => onNavigate('schools')}>
             Browse Schools
           </button>
-          <button className="bg-white text-gray-700 font-semibold px-8 py-3 rounded-lg hover:bg-gray-100 transition-colors border border-gray-300 shadow-lg w-full sm:w-auto" onClick={() => onNavigate('register')}>
+          <button className="bg-white text-gray-700 font-semibold px-8 py-3 rounded-lg hover:bg-gray-100 transition-colors border border-gray-300 shadow-lg w-full sm:w-auto" onClick={() => onNavigate('signup-school')}>
             Register Your School
           </button>
         </div>
