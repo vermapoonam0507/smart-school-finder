@@ -1,19 +1,22 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import SchoolCard from '../components/SchoolCard';
 
-const DashboardPage = ({ currentUser, shortlist, onShortlistToggle, onNavigate, onSelectSchool, comparisonList, onCompareToggle }) => {
+const DashboardPage = ({ currentUser, shortlist, onShortlistToggle, onSelectSchool, comparisonList, onCompareToggle }) => {
+  const navigate = useNavigate();
+
   if (!currentUser) {
     return (
       <div className="container mx-auto px-6 py-20 text-center">
         <p>Please log in to view your dashboard.</p>
-        <button onClick={() => onNavigate('login')} className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg">Login</button>
+        <button onClick={() => navigate('/login')} className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg">Login</button>
       </div>
     );
   }
 
   const handleCardClick = (school) => {
     onSelectSchool(school);
-    onNavigate('school-details');
+    navigate(`/school/${school.id}`);
   };
 
   return (
@@ -45,7 +48,7 @@ const DashboardPage = ({ currentUser, shortlist, onShortlistToggle, onNavigate, 
           ) : (
             <div className="text-center py-12 bg-white rounded-lg shadow">
               <p className="text-gray-600">You haven't shortlisted any schools yet.</p>
-              <button onClick={() => onNavigate('schools')} className="mt-4 bg-blue-600 text-white font-semibold px-6 py-2 rounded-lg">
+              <button onClick={() => navigate('/schools')} className="mt-4 bg-blue-600 text-white font-semibold px-6 py-2 rounded-lg">
                 Browse Schools
               </button>
             </div>

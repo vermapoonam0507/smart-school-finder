@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { fetchFormSchema } from '../api/mockApi';
 import { PlusCircle, Trash2 } from 'lucide-react';
 
-// Reusable FormField Component
+// FormField aur DynamicListField components mein koi badlav nahi hai
 const FormField = ({ field, value, onChange }) => {
   const { name, label, type, required, enum: options } = field;
 
@@ -63,7 +64,6 @@ const FormField = ({ field, value, onChange }) => {
   );
 };
 
-// Dynamic List of Objects ke liye naya component
 const DynamicListField = ({ field, value, onChange }) => {
     const { name, label, fields } = field;
     const list = value || [];
@@ -115,11 +115,11 @@ const DynamicListField = ({ field, value, onChange }) => {
     );
 };
 
-
-const RegistrationPage = ({ onNavigate }) => {
+const RegistrationPage = ({ onRegister, onRegisterSuccess }) => {
   const [schema, setSchema] = useState(null);
   const [formData, setFormData] = useState({});
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const getSchema = async () => {
@@ -137,13 +137,18 @@ const RegistrationPage = ({ onNavigate }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log("Form Submitted Data:", formData);
-    alert("Registration Successful! (Check console for data)");
-    onNavigate('landing'); 
+    const success = onRegister(formData);
+    if (success) {
+        if (onRegisterSuccess) {
+            onRegisterSuccess();
+        } else {
+            navigate('/');
+        }
+    }
   };
 
   if (loading) {
-    return <div className="flex justify-center items-center h-screen">Loading Registration Form...</div>;
+    return <div className="p-8 text-center">Loading Registration Form...</div>;
   }
 
   return (
@@ -182,7 +187,7 @@ const RegistrationPage = ({ onNavigate }) => {
 
           <button
             type="submit"
-            className="w-full px-4 py-3 font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+            className="w-full px-4 py-3 font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700"
           >
             Submit Application
           </button>

@@ -1,169 +1,4 @@
-const mockApi = {
-  fetchSchools: async () => {
-    console.log("API: Fetching schools...");
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    console.log("API: Schools fetched!");
-    return [
-      {
-        id: 1,
-        basicInfo: {
-          name: 'Delhi Public School, RK Puram',
-          description: 'A premier institution known for its academic excellence and holistic development.',
-          board: 'CBSE',
-          state: 'Delhi',
-          city: 'New Delhi',
-          schoolMode: 'private',
-          genderType: 'co-ed',
-          shifts: ['morning'],
-          feeRange: '75000 - 100000',
-          upto: 'Class 12',
-          email: 'contact@dpsrkp.net',
-          mobileNo: '9876543210',
-          website: 'https://dpsrkp.net/',
-          languageMedium: ['English'],
-          transportAvailable: 'yes',
-        },
-        activityInfo: {
-          activities: ['Focusing on Academics', 'Empowering in Sports', 'STEM Activities', 'Leadership Development']
-        },
-        alumniInfo: {
-          topAlumnis: [{ name: 'Raghuram Rajan', percentage: 98 }],
-          famousAlumnies: [{ name: 'Shah Rukh Khan', profession: 'Actor' }]
-        },
-        amenitiesInfo: {
-          predefinedAmenities: ['Library', 'Science Lab', 'Computer Lab', 'Sports Ground'],
-          customAmenities: 'Robotics Lab, Swimming Pool'
-        }
-      },
-      {
-        id: 2,
-        basicInfo: {
-          name: 'Modern School, Barakhamba Road',
-          description: 'Fostering creativity and critical thinking since 1920.',
-          board: 'CBSE',
-          state: 'Delhi',
-          city: 'New Delhi',
-          schoolMode: 'private',
-          genderType: 'co-ed',
-          shifts: ['morning'],
-          feeRange: '1 Lakh - 2 Lakh',
-          upto: 'Class 12',
-          email: 'info@modernschool.net',
-          mobileNo: '9123456789',
-          website: 'https://modernschool.net/',
-          languageMedium: ['English'],
-          transportAvailable: 'yes',
-        },
-        activityInfo: {
-          activities: ['Empowering in Arts', 'Cultural Education', 'Technology Integration']
-        },
-        alumniInfo: {
-          topAlumnis: [{ name: 'Khushwant Singh', percentage: 95 }],
-          famousAlumnies: [{ name: 'Gurcharan Das', profession: 'Author' }]
-        },
-        amenitiesInfo: {
-          predefinedAmenities: ['Auditorium', 'Art Studio', 'Music Room'],
-          customAmenities: 'Horse Riding Club'
-        }
-      },
-      {
-        id: 3,
-        basicInfo: {
-          name: 'Kendriya Vidyalaya, Andrews Ganj',
-          description: 'A government-run school providing quality education to all.',
-          board: 'KVS',
-          state: 'Delhi',
-          city: 'New Delhi',
-          schoolMode: 'government',
-          genderType: 'co-ed',
-          shifts: ['morning', 'afternoon'],
-          feeRange: '1000 - 10000',
-          upto: 'Class 12',
-          email: 'kvag@example.com',
-          mobileNo: '9998887776',
-          website: 'https://andrewsganj.kvs.ac.in/',
-          languageMedium: ['English', 'Hindi'],
-          transportAvailable: 'no',
-        },
-        activityInfo: {
-          activities: ['Environmental Awareness', 'Special Focus on Physical Education']
-        },
-        alumniInfo: {
-          topAlumnis: [],
-          famousAlumnies: []
-        },
-        amenitiesInfo: {
-          predefinedAmenities: ['Library', 'Playground'],
-          customAmenities: ''
-        }
-      },
-      {
-        id: 4,
-        basicInfo: {
-          name: 'Dhirubhai Ambani International School',
-          description: 'A world-class school in the heart of Mumbai.',
-          board: 'ICSE',
-          state: 'Maharashtra',
-          city: 'Mumbai',
-          schoolMode: 'private',
-          genderType: 'co-ed',
-          shifts: ['morning'],
-          feeRange: 'More than 5 Lakh',
-          upto: 'Class 12',
-          email: 'info@dais.edu.in',
-          mobileNo: '9871234567',
-          website: 'https://www.dais.edu.in/',
-          languageMedium: ['English'],
-          transportAvailable: 'yes',
-        },
-        activityInfo: {
-          activities: ['Technology Integration', 'Leadership Development']
-        },
-        alumniInfo: {
-          topAlumnis: [],
-          famousAlumnies: []
-        },
-        amenitiesInfo: {
-          predefinedAmenities: ['Library', 'Auditorium', 'Smart Classes'],
-          customAmenities: 'Olympic Size Swimming Pool'
-        }
-      },
-      {
-        id: 5,
-        basicInfo: {
-          name: 'Bishop Cotton Boys\' School',
-          description: 'One of the oldest and most prestigious schools in Bengaluru.',
-          board: 'ICSE',
-          state: 'Karnataka',
-          city: 'Bengaluru',
-          schoolMode: 'private',
-          genderType: 'boy',
-          shifts: ['morning'],
-          feeRange: '1 Lakh - 2 Lakh',
-          upto: 'Class 12',
-          email: 'contact@bishopcottonboysschool.edu.in',
-          mobileNo: '9988776655',
-          website: 'https://www.bishopcottonboysschool.edu.in/',
-          languageMedium: ['English'],
-          transportAvailable: 'yes',
-        },
-        activityInfo: {
-          activities: ['Empowering in Sports', 'Cultural Education']
-        },
-        alumniInfo: {
-          topAlumnis: [],
-          famousAlumnies: []
-        },
-        amenitiesInfo: {
-          predefinedAmenities: ['Playground', 'Science Lab', 'Computer Lab'],
-          customAmenities: 'Chapel, Boarding Facility'
-        }
-      }
-    ];
-  }
-};
-
-const fetchFormSchema = async () => {
+export const fetchFormSchema = async () => {
   console.log("API: Fetching form schema...");
   await new Promise(resolve => setTimeout(resolve, 500));
   console.log("API: Schema fetched!");
@@ -205,4 +40,23 @@ const fetchFormSchema = async () => {
   };
 };
 
-export { mockApi, fetchFormSchema };
+export const fetchStudentApplicationSchema = async () => {
+  console.log("API: Fetching student application schema...");
+  await new Promise(resolve => setTimeout(resolve, 500));
+  return {
+    'Student Details': [
+      { name: 'studentName', label: 'Student Full Name', type: 'String', required: true },
+      { name: 'dateOfBirth', label: 'Date of Birth', type: 'Date', required: true },
+      { name: 'applyingForClass', label: 'Applying for Class', type: 'String', required: true, enum: ['Nursery', 'LKG', 'UKG', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'] },
+    ],
+    'Parent/Guardian Details': [
+      { name: 'parentName', label: 'Parent/Guardian Name', type: 'String', required: true },
+      { name: 'parentContact', label: 'Parent Contact No.', type: 'String', required: true },
+      { name: 'parentEmail', label: 'Parent Email', type: 'String', required: true },
+    ],
+    'Previous School Details': [
+        { name: 'previousSchool', label: 'Previous School Name', type: 'String', required: false },
+        { name: 'previousClass', label: 'Last Class Attended', type: 'String', required: false },
+    ]
+  };
+};

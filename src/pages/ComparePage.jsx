@@ -1,33 +1,28 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { XCircle } from 'lucide-react';
 
-const ComparePage = ({ comparisonList, onCompareToggle, onNavigate }) => {
-
-  // Agar koi school select nahi hai
-
-  if (comparisonList.length === 0) {
+const ComparePage = ({ comparisonList, onCompareToggle }) => {
+  if (!comparisonList || comparisonList.length === 0) {
     return (
       <div className="container mx-auto px-6 py-20 text-center">
         <h1 className="text-3xl font-bold text-gray-800 mb-4">Compare Schools</h1>
-        <p className="text-gray-600 mb-8">Select the School for Comparison if you want.</p>
-        <button 
-          onClick={() => onNavigate('schools')}
-          className="bg-blue-600 text-white font-semibold px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors shadow-lg"
+        <p className="text-gray-600 mb-8">You haven't selected any schools to compare yet.</p>
+        <Link 
+          to="/schools"
+          className="bg-blue-600 text-white font-semibold px-8 py-3 rounded-lg hover:bg-blue-700 shadow-lg"
         >
           Explore Schools
-        </button>
+        </Link>
       </div>
     );
   }
 
- 
   const features = [
     { key: 'board', label: 'Board' },
     { key: 'genderType', label: 'Gender Type' },
     { key: 'schoolMode', label: 'School Mode' },
     { key: 'feeRange', label: 'Fee Range (INR)' },
-    { key: 'upto', label: 'Classes Upto' },
-    { key: 'transportAvailable', label: 'Transport' },
   ];
 
   return (
@@ -35,7 +30,6 @@ const ComparePage = ({ comparisonList, onCompareToggle, onNavigate }) => {
       <h1 className="text-4xl font-extrabold text-gray-900 mb-8 text-center">School Comparison</h1>
       <div className="overflow-x-auto">
         <table className="min-w-full bg-white border border-gray-200 shadow-lg rounded-lg">
-          {/* Table Header */}
           <thead>
             <tr className="bg-gray-100">
               <th className="p-4 text-left font-semibold text-gray-700 w-1/5">Feature</th>
@@ -51,9 +45,6 @@ const ComparePage = ({ comparisonList, onCompareToggle, onNavigate }) => {
               ))}
             </tr>
           </thead>
-
-          {/* Table Body */}
-          
           <tbody>
             {features.map(feature => (
               <tr key={feature.key} className="border-t">
