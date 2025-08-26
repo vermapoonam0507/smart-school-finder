@@ -4,6 +4,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Eye, EyeOff } from 'lucide-react';
+import { toast } from 'react-toastify';
+import { registerUser } from '../api/authService';
 
 const signUpSchema = z.object({
   name: z.string().min(1, { message: "Name is required" }),
@@ -12,9 +14,10 @@ const signUpSchema = z.object({
   role: z.string(),
 });
 
-const SignUpPage = ({ onSignUp, isSchoolSignUp = false }) => {
+const SignUpPage = ({ isSchoolSignUp = false }) => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   
   const { register, handleSubmit, watch, formState: { errors } } = useForm({
     resolver: zodResolver(signUpSchema),
@@ -25,15 +28,34 @@ const SignUpPage = ({ onSignUp, isSchoolSignUp = false }) => {
   
   const role = watch('role');
 
-  const onSubmit = (data) => {
-    const signUpSuccess = onSignUp(data);
-    if (signUpSuccess) {
-      alert("Sign Up successful! Please log in.");
+  const onSubmit = async (data) => {
+    setIsLoading(true);
+    try {
+      // =================================================================
+      // ===> FINAL FIX: Prepare the data payload for the backend <===
+      const payload = {
+        name: data.name,
+        email: data.email,
+        password: data.password,
+        userType: data.role, // Rename 'role' to 'userType'
+        authProvider: 'email', // Add the required 'authProvider' field
+      };
+      // =================================================================
+
+      // Send the corrected payload to the API
+      const response = await registerUser(payload);
+      console.log('Registration successful:', response.data);
+
+      toast.success('Sign up successful! Please check your email to verify your account.');
+      
       navigate('/login');
-    } else {
-      // react-hook-form doesn't have a simple way to set a server error,
-      // so we'll use a simple alert for now.
-      alert('An account with this email already exists.');
+
+    } catch (error) {
+      console.error('Sign up failed:', error);
+      const errorMessage = error.response?.data?.message || 'An account with this email already exists.';
+      toast.error(errorMessage);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -70,6 +92,7 @@ const SignUpPage = ({ onSignUp, isSchoolSignUp = false }) => {
               {...register('name')}
               className={`w-full px-3 py-2 mt-1 border rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 ${errors.name ? 'border-red-500' : 'border-gray-300'}`}
               placeholder={role === 'parent' ? 'Poonam Verma' : 'Delhi Public School'}
+              disabled={isLoading}
             />
             {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name.message}</p>}
           </div>
@@ -81,6 +104,7 @@ const SignUpPage = ({ onSignUp, isSchoolSignUp = false }) => {
               {...register('email')}
               className={`w-full px-3 py-2 mt-1 border rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 ${errors.email ? 'border-red-500' : 'border-gray-300'}`}
               placeholder="you@example.com"
+              disabled={isLoading}
             />
             {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>}
           </div>
@@ -93,6 +117,7 @@ const SignUpPage = ({ onSignUp, isSchoolSignUp = false }) => {
                 {...register('password')}
                 className={`w-full px-3 py-2 mt-1 border rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 ${errors.password ? 'border-red-500' : 'border-gray-300'}`}
                 placeholder="••••••••"
+                disabled={isLoading}
               />
               <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -100,12 +125,14 @@ const SignUpPage = ({ onSignUp, isSchoolSignUp = false }) => {
             </div>
             {errors.password && <p className="mt-1 text-xs text-red-500">{errors.password.message}</p>}
           </div>
-          <button type="submit" className="w-full px-4 py-2 font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">Sign Up</button>
+          <button type="submit" disabled={isLoading} className="w-full px-4 py-2 font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+            {isLoading ? 'Creating Account...' : 'Sign Up'}
+          </button>
           <p className="text-sm text-center text-gray-600">
-              Already have an account?{' '}
-              <Link to="/login" className="font-medium text-blue-600 hover:underline">
-                  Sign In
-              </Link>
+            Already have an account?{' '}
+            <Link to="/login" className="font-medium text-blue-600 hover:underline">
+                Sign In
+            </Link>
           </p>
         </form>
       </div>

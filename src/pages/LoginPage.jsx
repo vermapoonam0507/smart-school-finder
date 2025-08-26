@@ -1,44 +1,74 @@
+// src/pages/LoginPage.jsx
+
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Eye, EyeOff } from 'lucide-react';
+import { useAuth } from '../context/AuthContext'; // AuthContext se hook import kiya
 
+// Form validation ke rules (aapke code se)
 const loginSchema = z.object({
   email: z.string().email({ message: "Invalid email address" }),
   password: z.string().min(1, { message: "Password is required" }),
 });
 
-const LoginPage = ({ onLogin }) => {
+// Ab humein onLogin prop ki zaroorat nahi hai
+const LoginPage = () => {
+  const navigate = useNavigate();
+  const { login } = useAuth(); // AuthContext se login function nikala
+
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  
+  // State for API loading and errors
   const [serverError, setServerError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const { register, handleSubmit, setValue, formState: { errors } } = useForm({
     resolver: zodResolver(loginSchema),
   });
 
+  // "Remember Me" ke liye saved credentials load karna
   useEffect(() => {
-    const savedCreds = JSON.parse(localStorage.getItem('school-finder-rememberMe'));
+    const savedCreds = localStorage.getItem('school-finder-rememberMe');
     if (savedCreds) {
-      setValue('email', savedCreds.email);
-      setValue('password', savedCreds.password);
+      const { email, password } = JSON.parse(savedCreds);
+      setValue('email', email);
+      setValue('password', password);
       setRememberMe(true);
     }
   }, [setValue]);
 
-  const onSubmit = (data) => {
+  // Form submit hone par yeh naya function chalega
+  const onSubmit = async (data) => {
+    setIsLoading(true);
     setServerError('');
-    const loginSuccess = onLogin(data);
-    if (loginSuccess) {
+    
+    try {
+      // Step 1: Context se login function call karna
+      await login(data);
+      
+      // Step 2: "Remember Me" functionality
       if (rememberMe) {
         localStorage.setItem('school-finder-rememberMe', JSON.stringify(data));
       } else {
         localStorage.removeItem('school-finder-rememberMe');
       }
-    } else {
-      setServerError('Invalid email or password. Please try again.');
+
+      // Step 3: User ko dashboard par bhejna
+      // NOTE: Context ab user data ke hisab se redirection handle kar sakta hai,
+      // ya aap yahan se navigate kar sakte hain.
+      navigate('/dashboard'); 
+
+    } catch (error) {
+      console.error("Login failed:", error);
+      // Step 4: User ko error message dikhana
+      const errorMessage = error.response?.data?.message || 'Invalid email or password. Please try again.';
+      setServerError(errorMessage);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -50,7 +80,7 @@ const LoginPage = ({ onLogin }) => {
             <p className="mt-2 text-sm text-gray-600">Please enter your details to login.</p>
         </div>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          {serverError && <p className="text-sm text-red-600 bg-red-100 p-3 rounded-md">{serverError}</p>}
+          {serverError && <p className="text-sm text-red-600 bg-red-100 p-3 rounded-md text-center">{serverError}</p>}
           <div>
             <label htmlFor="email" className="text-sm font-medium text-gray-700">Email address</label>
             <input
@@ -59,6 +89,7 @@ const LoginPage = ({ onLogin }) => {
               {...register('email')}
               className={`w-full px-3 py-2 mt-1 border rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 ${errors.email ? 'border-red-500' : 'border-gray-300'}`}
               placeholder="you@example.com"
+              disabled={isLoading}
             />
             {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>}
           </div>
@@ -71,6 +102,7 @@ const LoginPage = ({ onLogin }) => {
                 {...register('password')}
                 className={`w-full px-3 py-2 mt-1 border rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 ${errors.password ? 'border-red-500' : 'border-gray-300'}`}
                 placeholder="••••••••"
+                disabled={isLoading}
               />
               <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -88,19 +120,20 @@ const LoginPage = ({ onLogin }) => {
               </Link>
           </div>
           <div>
-            <button type="submit" className="w-full px-4 py-2 font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">
-              Sign In
+            <button type="submit" disabled={isLoading} className="w-full px-4 py-2 font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+              {isLoading ? 'Signing In...' : 'Sign In'}
             </button>
           </div>
-           <p className="text-sm text-center text-gray-600">
+            <p className="text-sm text-center text-gray-600">
               Don't have an account?{' '}
               <Link to="/signup" className="font-medium text-blue-600 hover:underline">
                   Sign Up
               </Link>
-          </p>
+            </p>
         </form>
       </div>
     </div>
   );
 };
+
 export default LoginPage;

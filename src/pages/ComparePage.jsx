@@ -18,11 +18,14 @@ const ComparePage = ({ comparisonList, onCompareToggle }) => {
     );
   }
 
+  // These are the properties we will compare, using the flat structure from the API
   const features = [
     { key: 'board', label: 'Board' },
     { key: 'genderType', label: 'Gender Type' },
     { key: 'schoolMode', label: 'School Mode' },
     { key: 'feeRange', label: 'Fee Range (INR)' },
+    { key: 'state', label: 'State' },
+    { key: 'city', label: 'City' },
   ];
 
   return (
@@ -34,9 +37,11 @@ const ComparePage = ({ comparisonList, onCompareToggle }) => {
             <tr className="bg-gray-100">
               <th className="p-4 text-left font-semibold text-gray-700 w-1/5">Feature</th>
               {comparisonList.map(school => (
-                <th key={school.id} className="p-4 text-left font-semibold text-gray-700 border-l">
+                // FIX: Use school._id for the key
+                <th key={school._id} className="p-4 text-left font-semibold text-gray-700 border-l">
                   <div className="flex justify-between items-center">
-                    <span>{school.basicInfo.name}</span>
+                    {/* FIX: Changed school.basicInfo.name to school.name */}
+                    <span>{school.name}</span>
                     <button onClick={() => onCompareToggle(school)} className="text-red-500 hover:text-red-700">
                       <XCircle size={20} />
                     </button>
@@ -50,8 +55,10 @@ const ComparePage = ({ comparisonList, onCompareToggle }) => {
               <tr key={feature.key} className="border-t">
                 <td className="p-4 font-medium text-gray-600">{feature.label}</td>
                 {comparisonList.map(school => (
-                  <td key={school.id} className="p-4 border-l text-gray-800">
-                    {school.basicInfo[feature.key]}
+                  // FIX: Use school._id for the key
+                  <td key={school._id} className="p-4 border-l text-gray-800">
+                    {/* FIX: Changed school.basicInfo[feature.key] to school[feature.key] */}
+                    {school[feature.key] || 'N/A'}
                   </td>
                 ))}
               </tr>
