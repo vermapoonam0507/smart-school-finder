@@ -2,10 +2,15 @@
 
 import axios from 'axios';
 
-// Yahan hum server ka main URL daal rahe hain
+// // Yahan hum server ka main URL daal rahe hain
+// const apiClient = axios.create({
+//   baseURL: 'http://localhost:8080/api', 
+// });
+
 const apiClient = axios.create({
-  baseURL: 'http://localhost:8080/api', 
+  baseURL: import.meta.env.VITE_API_BASE_URL, 
 });
+
 
 // === Request Interceptor ===
 // Yeh function har request bhejne se pehle chalega
