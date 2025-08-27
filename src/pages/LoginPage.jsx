@@ -6,23 +6,20 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Eye, EyeOff } from 'lucide-react';
-import { useAuth } from '../context/AuthContext'; // AuthContext se hook import kiya
+import { useAuth } from '../context/AuthContext';
 
-// Form validation ke rules (aapke code se)
 const loginSchema = z.object({
   email: z.string().email({ message: "Invalid email address" }),
   password: z.string().min(1, { message: "Password is required" }),
 });
 
-// Ab humein onLogin prop ki zaroorat nahi hai
 const LoginPage = () => {
   const navigate = useNavigate();
-  const { login } = useAuth(); // AuthContext se login function nikala
+  const { login } = useAuth();
 
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   
-  // State for API loading and errors
   const [serverError, setServerError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -30,7 +27,6 @@ const LoginPage = () => {
     resolver: zodResolver(loginSchema),
   });
 
-  // "Remember Me" ke liye saved credentials load karna
   useEffect(() => {
     const savedCreds = localStorage.getItem('school-finder-rememberMe');
     if (savedCreds) {
@@ -41,30 +37,33 @@ const LoginPage = () => {
     }
   }, [setValue]);
 
-  // Form submit hone par yeh naya function chalega
   const onSubmit = async (data) => {
     setIsLoading(true);
     setServerError('');
     
     try {
-      // Step 1: Context se login function call karna
       await login(data);
       
-      // Step 2: "Remember Me" functionality
       if (rememberMe) {
         localStorage.setItem('school-finder-rememberMe', JSON.stringify(data));
       } else {
         localStorage.removeItem('school-finder-rememberMe');
       }
 
-      // Step 3: User ko dashboard par bhejna
-      // NOTE: Context ab user data ke hisab se redirection handle kar sakta hai,
-      // ya aap yahan se navigate kar sakte hain.
-      navigate('/dashboard'); 
+      // =================================================================
+      // ===> FIX 2: Check for a saved path and redirect accordingly <===
+      const redirectPath = localStorage.getItem('redirectPath');
+      if (redirectPath) {
+        localStorage.removeItem('redirectPath'); // Clean up the saved path
+        navigate(redirectPath);
+      } else {
+        // If no path is saved, go to the default dashboard
+        navigate('/dashboard'); 
+      }
+      // =================================================================
 
     } catch (error) {
       console.error("Login failed:", error);
-      // Step 4: User ko error message dikhana
       const errorMessage = error.response?.data?.message || 'Invalid email or password. Please try again.';
       setServerError(errorMessage);
     } finally {

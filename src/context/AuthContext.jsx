@@ -18,14 +18,14 @@ export const AuthProvider = ({ children }) => {
     // If a token exists, we should verify it with the backend to get user data.
     // For now, we'll just set the token in our API client.
     
-    if (token) {
+    // if (token) {
       // You might want to add an API call here like `apiClient.get('/auth/me')`
       // to fetch user data based on the token and verify it's still valid.
       // For this example, we'll assume the token is valid if it exists.
       // In a real app, you would decode the token or fetch user data.
       // For now, we'll set a placeholder user if a token is found.
-      setUser({ loggedIn: true }); // Replace with actual user data later
-    }
+      // setUser({ loggedIn: true }); // Replace with actual user data later
+    // }
     setLoading(false);
   }, [token]);
 
@@ -33,11 +33,10 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     try {
       const response = await apiLogin(credentials);
-      const { token, user: userData } = response.data; // Assuming API returns token and user object
-
+      console.log(response)
+      const { token, auth: userData } = response.data.data; // Assuming API returns token and user object
       setToken(token);
       setUser(userData); // Set the full user object from the API
-
       localStorage.setItem('authToken', token);
       return true; // Indicate success
     } catch (error) {

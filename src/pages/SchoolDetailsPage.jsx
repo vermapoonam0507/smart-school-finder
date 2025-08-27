@@ -14,28 +14,25 @@ const InfoBox = ({ icon, label, value }) => (
     </div>
 );
 
-// The component no longer needs the 'school' prop from App.jsx
 const SchoolDetailsPage = ({ currentUser, shortlist, onShortlistToggle }) => {
     const navigate = useNavigate();
-    const { id: schoolId } = useParams(); // Step 1: Get school ID from the URL
+    const { id: schoolId } = useParams(); 
 
-    // Step 2: Create state for school data and loading
     const [school, setSchool] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // Step 3: Fetch school data when the component mounts or ID changes
     useEffect(() => {
-        if (!schoolId) return; // Don't fetch if there's no ID
+        if (!schoolId) return; 
 
         const fetchSchoolDetails = async () => {
             try {
                 setLoading(true);
                 const response = await getSchoolById(schoolId);
-                setSchool(response.data.data); // Set the fetched school data
+                setSchool(response.data.data); 
             } catch (error) {
                 console.error("Failed to fetch school details:", error);
                 toast.error("Could not load school details.");
-                navigate('/schools'); // Redirect if school not found
+                navigate('/schools'); 
             } finally {
                 setLoading(false);
             }
@@ -44,12 +41,10 @@ const SchoolDetailsPage = ({ currentUser, shortlist, onShortlistToggle }) => {
         fetchSchoolDetails();
     }, [schoolId, navigate]);
 
-    // Show a loading message while fetching data
     if (loading) {
         return <div className="flex justify-center items-center h-screen">Loading school details...</div>;
     }
 
-    // Show an error message if the school data couldn't be loaded
     if (!school) {
         return (
             <div className="flex flex-col justify-center items-center h-screen">
@@ -59,15 +54,19 @@ const SchoolDetailsPage = ({ currentUser, shortlist, onShortlistToggle }) => {
         );
     }
 
-    // FIX: Use school._id for comparisons
     const isShortlisted = shortlist.some(item => item._id === school._id);
 
     const handleApplyNow = () => {
         if (!currentUser || currentUser.role !== 'parent') {
+            // =================================================================
+            // ===> FIX 1: Save the destination URL before redirecting <===
+            const destinationUrl = `/apply/${school._id}`;
+            localStorage.setItem('redirectPath', destinationUrl);
+            // =================================================================
+            
             toast.error("Please log in as a Parent/Student to apply.");
             navigate('/login');
         } else {
-            // FIX: Use school._id and direct email property
             navigate(`/apply/${school._id}`, { state: { schoolEmail: school.email } });
         }
     };
@@ -92,7 +91,6 @@ const SchoolDetailsPage = ({ currentUser, shortlist, onShortlistToggle }) => {
                             <Heart size={28} className={isShortlisted ? "fill-current text-red-500" : ""} />
                         </button>
                     )}
-                    {/* FIX: Removed 'basicInfo' nesting */}
                     <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-2">{school.name}</h1>
                     <p className="text-lg text-gray-600 flex items-center mb-4"><MapPin size={18} className="mr-2" />{school.city}, {school.state}</p>
                     <p className="text-md text-gray-700">{school.description}</p>
@@ -108,7 +106,6 @@ const SchoolDetailsPage = ({ currentUser, shortlist, onShortlistToggle }) => {
                     <div className="mb-8">
                         <h2 className="text-2xl font-bold text-gray-800 mb-6 border-b pb-3">Basic Information</h2>
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                            {/* FIX: Removed 'basicInfo' nesting for all InfoBox components */}
                             <InfoBox icon={<Award size={16} />} label="Board" value={school.board} />
                             <InfoBox icon={<Users size={16} />} label="Gender Type" value={school.genderType} />
                             <InfoBox icon={<Building size={16} />} label="School Mode" value={school.schoolMode} />
@@ -124,7 +121,6 @@ const SchoolDetailsPage = ({ currentUser, shortlist, onShortlistToggle }) => {
                         <div>
                             <h2 className="text-2xl font-bold text-gray-800 mb-6 border-b pb-3">Activities & Focus</h2>
                             <div className="flex flex-wrap gap-2">
-                                {/* FIX: Removed 'activityInfo' nesting */}
                                 {school.activities?.map(activity => (
                                     <span key={activity} className="bg-teal-100 text-teal-800 text-sm font-medium px-3 py-1 rounded-full flex items-center">
                                         <CheckCircle size={14} className="mr-1.5" /> {activity}
@@ -135,7 +131,6 @@ const SchoolDetailsPage = ({ currentUser, shortlist, onShortlistToggle }) => {
                         <div>
                             <h2 className="text-2xl font-bold text-gray-800 mb-6 border-b pb-3">Amenities</h2>
                             <div className="flex flex-wrap gap-2">
-                                {/* FIX: Removed 'amenitiesInfo' nesting */}
                                 {school.predefinedAmenities?.map(amenity => (
                                     <span key={amenity} className="bg-purple-100 text-purple-800 text-sm font-medium px-3 py-1 rounded-full">{amenity}</span>
                                 ))}
@@ -146,7 +141,6 @@ const SchoolDetailsPage = ({ currentUser, shortlist, onShortlistToggle }) => {
                         
                     <div className="mt-8">
                          <h2 className="text-2xl font-bold text-gray-800 mb-6 border-b pb-3">Notable Alumni</h2>
-                         {/* FIX: Removed 'alumniInfo' nesting */}
                          {school.famousAlumnies?.length > 0 ? (
                             <div className="space-y-2">
                                 {school.famousAlumnies.map(alumni => (

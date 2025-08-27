@@ -6,7 +6,7 @@ const Header = ({ isMobileMenuOpen, setMobileMenuOpen, compareCount, currentUser
   const location = useLocation();
   const navigate = useNavigate();
   const authPages = ['/login', '/signup', '/signup-school', '/forgot-password'];
-  
+  console.log(currentUser)
   if (authPages.includes(location.pathname) || location.pathname.startsWith('/school-portal')) {
     return null;
   }
@@ -43,7 +43,7 @@ const Header = ({ isMobileMenuOpen, setMobileMenuOpen, compareCount, currentUser
       <div className="hidden md:flex items-center space-x-4">
         {currentUser ? (
             <>
-                <span className="text-gray-700">Welcome, {currentUser.name.split(' ')[0]}!</span>
+                <span className="text-gray-700">Welcome, {currentUser?.email?.split(' ')[0]}!</span>
                 <button onClick={onLogout} className="text-gray-600 hover:text-blue-600 flex items-center">
                     <LogOut size={16} className="mr-1" /> Logout
                 </button>
