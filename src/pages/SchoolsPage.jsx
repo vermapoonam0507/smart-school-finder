@@ -1,29 +1,27 @@
+// src/pages/SchoolsPage.jsx
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getSchoolsByStatus } from '../api/adminService'; 
 import SchoolCard from '../components/SchoolCard';
 import { toast } from 'react-toastify';
+import { useAuth } from '../context/AuthContext';
 
-const SchoolsPage = ({ onSelectSchool, onCompareToggle, comparisonList, currentUser, shortlist, onShortlistToggle }) => {
+// ===> FIX: Removed 'onSelectSchool' and 'currentUser' from the props list <===
+// The component now gets currentUser directly from the AuthContext.
+const SchoolsPage = ({ onCompareToggle, comparisonList, shortlist, onShortlistToggle }) => {
   const [schools, setSchools] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { user: currentUser } = useAuth(); // Get currentUser directly from context
 
   useEffect(() => {
     const loadSchools = async () => {
       try {
         setLoading(true);
-        
         const response = await getSchoolsByStatus('accepted');
-        
-        // =================================================================
-        // ===> DEBUGGING: Console log to see the actual API data <===
-        console.log("API Response Data:", response.data.data);
-        // =================================================================
-
-        // Set the data from the API response
-        setSchools(response.data.data); 
-
+        // Make sure to handle the case where response.data.data might not exist
+        setSchools(response.data?.data || []); 
       } catch (error) {
         console.error("Error fetching schools:", error);
         const errorMessage = error.response?.data?.message || "Could not load schools. Please try again later.";
@@ -36,9 +34,10 @@ const SchoolsPage = ({ onSelectSchool, onCompareToggle, comparisonList, currentU
     loadSchools();
   }, []);
   
+  // ===> FIX: Simplified the click handler to only navigate <===
+  // The onSelectSchool(school) line that caused the crash has been removed.
   const handleCardClick = (school) => {
-    onSelectSchool(school);
-    navigate(`/school/${school._id}`); // Use _id as it's common in MongoDB
+    navigate(`/school/${school._id}`);
   };
 
   if (loading) {
@@ -50,10 +49,8 @@ const SchoolsPage = ({ onSelectSchool, onCompareToggle, comparisonList, currentU
       <div className="container mx-auto px-6 py-8">
         <h1 className="text-3xl font-bold text-gray-800 mb-6">Explore Schools</h1>
         
-        {/* Check if schools is an array before mapping */}
         {Array.isArray(schools) && schools.length > 0 ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {/* SAFETY FILTER: Filter out any null or undefined school objects to prevent crashes */}
             {schools.filter(school => school).map(school => {
               const isCompared = comparisonList.some(item => item._id === school._id);
               const isShortlisted = shortlist.some(item => item._id === school._id);

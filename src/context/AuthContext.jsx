@@ -1,70 +1,63 @@
 // src/context/AuthContext.jsx
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { loginUser as apiLogin } from '../api/authService'; // Corrected path
-import apiClient from '../api/axios'; // Corrected path
+import { loginUser as apiLogin } from '../api/authService';
 
-// 1. Create the Context
 const AuthContext = createContext(null);
 
-// 2. Create the Provider Component
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(() => localStorage.getItem('authToken'));
-  const [loading, setLoading] = useState(true); // To check initial auth status
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // When the app loads, this effect runs.
-    // If a token exists, we should verify it with the backend to get user data.
-    // For now, we'll just set the token in our API client.
-    
-    // if (token) {
-      // You might want to add an API call here like `apiClient.get('/auth/me')`
-      // to fetch user data based on the token and verify it's still valid.
-      // For this example, we'll assume the token is valid if it exists.
-      // In a real app, you would decode the token or fetch user data.
-      // For now, we'll set a placeholder user if a token is found.
-      // setUser({ loggedIn: true }); // Replace with actual user data later
-    // }
+    // Pehle se login user ki details fetch karne ka logic yahan daal sakte hain
+    // Abhi ke liye, hum ise simple rakhte hain
     setLoading(false);
   }, [token]);
 
-  // Login function
   const login = async (credentials) => {
     try {
       const response = await apiLogin(credentials);
-      console.log(response)
-      const { token, auth: userData } = response.data.data; // Assuming API returns token and user object
+      const { token, auth: userData } = response.data.data;
       setToken(token);
-      setUser(userData); // Set the full user object from the API
+      setUser(userData);
       localStorage.setItem('authToken', token);
-      return true; // Indicate success
+      return true;
     } catch (error) {
       console.error("Login failed in AuthContext:", error);
-      // Re-throw the error so the component can display a message
       throw error;
     }
   };
 
-  // Logout function
   const logout = () => {
     setUser(null);
     setToken(null);
     localStorage.removeItem('authToken');
+    // Redirect logic can be handled in the component calling logout
   };
 
-  // The value that will be available to all children components
+  // ====> YEH NAYA FUNCTION SABSE IMPORTANT HAI (The Final Fix) <====
+  // Yeh function Dashboard se call hoga aur user ka data poori app mein update kar dega
+  const updateUserContext = (newUserData) => {
+    setUser(prevUser => ({
+        ...prevUser,    // Purani details (jaise authId, role) ko rakhein
+        ...newUserData  // Nayi details (jaise badla hua naam) daal dein
+    }));
+  };
+
   const value = {
     user,
     token,
     login,
     logout,
-    isAuthenticated: !!token, // A simple boolean to check if user is logged in
+    updateUserContext, // Naye function ko yahan se bhejein
+    isAuthenticated: !!token,
+    loading
   };
 
-  // We show a loading state until we've checked for a token
   if (loading) {
-    return <div>Loading application...</div>; // Or a proper spinner component
+    return <div className="flex justify-center items-center h-screen">Loading application...</div>;
   }
 
   return (
@@ -74,7 +67,6 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-// 3. Create a custom hook for easy access
 export const useAuth = () => {
   return useContext(AuthContext);
 };

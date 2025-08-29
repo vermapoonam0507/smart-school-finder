@@ -1,14 +1,24 @@
 // src/components/ProtectedRoute.jsx
 
 import React from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const ProtectedRoute = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
+  const location = useLocation();
 
+  // If auth state is still loading, show a loading message
+  if (loading) {
+    return <div className="flex justify-center items-center h-screen">Loading...</div>;
+  }
+
+  // ===> FIX: Check for authentication <===
   if (!isAuthenticated) {
-    // If the user is not authenticated, redirect them to the login page
+    // ===> FIX: Save the path the user was trying to access <===
+    localStorage.setItem('redirectPath', location.pathname);
+    
+    // Redirect them to the login page
     return <Navigate to="/login" replace />;
   }
 

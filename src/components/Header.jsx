@@ -12,7 +12,7 @@ const Header = ({ isMobileMenuOpen, setMobileMenuOpen, compareCount, currentUser
   }
 
   const handleRegisterClick = () => {
-    if (currentUser && currentUser.role === 'school') {
+    if (currentUser && currentUser.userType === 'school') {
       navigate('/school-portal');
     } else {
       navigate('/signup-school');
@@ -27,7 +27,7 @@ const Header = ({ isMobileMenuOpen, setMobileMenuOpen, compareCount, currentUser
         SchoolFinder
       </Link>
       <div className="hidden md:flex items-center space-x-8">
-        {(!currentUser || currentUser.role !== 'school') && (
+        {(!currentUser || currentUser.userType !== 'school') && (
             <>
                 <Link to="/schools" className="text-gray-600 hover:text-blue-600">Browse Schools</Link>
                 <Link to="/compare" className="text-gray-600 hover:text-blue-600 relative">
@@ -36,7 +36,7 @@ const Header = ({ isMobileMenuOpen, setMobileMenuOpen, compareCount, currentUser
                 </Link>
             </>
         )}
-        {currentUser && currentUser.role === 'parent' && (
+        {currentUser && currentUser.userType === 'parent' && (
             <Link to="/dashboard" className="text-gray-600 hover:text-blue-600">Dashboard</Link>
         )}
       </div>
@@ -65,7 +65,7 @@ const Header = ({ isMobileMenuOpen, setMobileMenuOpen, compareCount, currentUser
       <div className="md:hidden bg-white shadow-lg absolute top-full left-0 w-full">
         <Link to="/schools" className="block py-2 px-6 text-gray-600 hover:bg-gray-100" onClick={() => setMobileMenuOpen(false)}>Browse Schools</Link>
         <Link to="/compare" className="block py-2 px-6 text-gray-600 hover:bg-gray-100" onClick={() => setMobileMenuOpen(false)}>Compare {compareCount > 0 && `(${compareCount})`}</Link>
-        {currentUser && currentUser.role === 'parent' && (
+        {currentUser && currentUser.userType === 'parent' && (
             <Link to="/dashboard" className="block py-2 px-6 text-gray-600 hover:bg-gray-100" onClick={() => setMobileMenuOpen(false)}>Dashboard</Link>
         )}
         <div className="px-6 py-4 border-t">

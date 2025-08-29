@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react'; // <-- Yeh line ab theek hai
+// src/App.jsx
+
+import React, { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import Header from './components/Header';
 import LandingPage from './pages/LandingPage';
@@ -6,128 +8,104 @@ import SchoolsPage from './pages/SchoolsPage';
 import SchoolDetailsPage from './pages/SchoolDetailsPage';
 import LoginPage from './pages/LoginPage';
 import ComparePage from './pages/ComparePage';
-import RegistrationPage from './pages/RegistrationPage';
 import SignUpPage from './pages/SignUpPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import DashboardPage from './pages/DashboardPage';
 import SchoolPortalPage from './pages/SchoolPortalPage';
 import StudentApplicationPage from './pages/StudentApplicationPage';
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-
 import VerifyEmailPage from './pages/VerifyEmailPage';
-
-// Import the ProtectedRoute component
 import ProtectedRoute from './components/ProtectedRoute';
 
-// Import the useAuth hook
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
 import { useAuth } from './context/AuthContext';
+import { getShortlist, addToShortlist, removeFromShortlist } from './api/userService';
 
 function App() {
-  // Get user and logout function from the context
-  const { user: currentUser, logout: handleLogout } = useAuth();
-  
-  // All other state remains the same
-  const [selectedSchool, setSelectedSchool] = useState(null);
-  const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [shortlist, setShortlist] = useState([]);
-  const [comparisonList, setComparisonList] = useState(() => JSON.parse(localStorage.getItem('school-finder-comparisonList')) || []);
-  const [schoolRegistrations, setSchoolRegistrations] = useState(() => JSON.parse(localStorage.getItem('school-finder-registrations')) || {});
-  const [studentApplications, setStudentApplications] = useState(() => JSON.parse(localStorage.getItem('school-finder-student-apps')) || []);
-  
+  const { user: currentUser, logout } = useAuth();
   const navigate = useNavigate();
+  
+  const [shortlist, setShortlist] = useState([]);
+  const [comparisonList, setComparisonList] = useState(() => {
+    const saved = localStorage.getItem('comparisonList');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    if (currentUser) {
-      const userShortlist = JSON.parse(localStorage.getItem(`shortlist_${currentUser.email}`)) || [];
-      setShortlist(userShortlist);
-    } else {
-      setShortlist([]);
-    }
+    localStorage.setItem('comparisonList', JSON.stringify(comparisonList));
+  }, [comparisonList]);
+
+  useEffect(() => {
+    const fetchShortlist = async () => {
+      if (currentUser && currentUser.authId) {
+        try {
+          const response = await getShortlist(currentUser.authId);
+          // Your getShortlist function already returns the data array
+          setShortlist(response || []);
+        } catch (error) {
+          toast.error("Could not load your shortlisted schools.");
+        }
+      } else {
+        setShortlist([]);
+      }
+    };
+    fetchShortlist();
   }, [currentUser]);
-
-  // const handleCompareToggle = (school) => {
-  //   setComparisonList((prevList) => {
-  //     const isInList = prevList.some((item) => item.id === school.id);
-  //     return isInList ? prevList.filter((item) => item.id !== school.id) : [...prevList, school];
-  //   });
-  // };
-
-  // Naya aur Sahi Code
-const handleCompareToggle = (school) => {
-  setComparisonList((prevList) => {
-    // FIX: Ab hum '_id' se check kar rahe hain
-    const isInList = prevList.some((item) => item._id === school._id);
-    if (isInList) {
-      // FIX: Ab hum '_id' se filter kar rahe hain
-      return prevList.filter((item) => item._id !== school._id);
-    } else {
-      return [...prevList, school];
-    }
-  });
-};
-
-  // const handleShortlistToggle = (school) => {
-  //   if (!currentUser || currentUser.role !== 'parent') {
-  //     alert("Please log in as a Parent/Student to shortlist schools.");
-  //     navigate('/login');
-  //     return;
-  //   }
-  //   setShortlist((prevList) => {
-  //     const isInList = prevList.some((item) => item.id === school.id);
-  //     return isInList ? prevList.filter((item) => item.id !== school.id) : [...prevList, school];
-  //   });
-  // };
-
-  // App.jsx ke andar is function ko update karein
-
-const handleShortlistToggle = (school) => {
-  if (!currentUser || currentUser.role !== 'parent') {
-    // Ab hum alert ki jagah toast notification istemal karenge
-    toast.error("Please log in as a Parent/Student to shortlist schools.");
-    navigate('/login');
-    return;
-  }
-  setShortlist((prevList) => {
-    // FIX: 'id' ko '_id' se badal diya
-    const isInList = prevList.some((item) => item._id === school._id);
-    if (isInList) {
-      // FIX: 'id' ko '_id' se badal diya
-      return prevList.filter((item) => item._id !== school._id);
-    } else {
-      return [...prevList, school];
-    }
-  });
-};
   
-  const handleSchoolRegistration = (formData) => {
-    if (!currentUser || currentUser.role !== 'school') return false;
-    setSchoolRegistrations(prev => ({ ...prev, [currentUser.email]: { ...formData, status: 'Pending' } }));
-    alert("School registration submitted successfully!");
-    return true;
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+    toast.success("You have been logged out.");
   };
 
-  const handleStudentApplication = (formData, schoolId, schoolEmail) => {
-    if (!currentUser || currentUser.role !== 'parent') return false;
-    const newApplication = {
-        id: Date.now(),
-        ...formData,
-        schoolId: schoolId,
-        schoolEmail: schoolEmail,
-        applicantEmail: currentUser.email,
-        status: 'Pending',
-        date: new Date().toISOString().split('T')[0],
-    };
-    setStudentApplications(prev => [...prev, newApplication]);
-    alert("Application submitted successfully!");
-    navigate('/dashboard');
-    return true;
+  const handleShortlistToggle = async (school) => {
+    if (!currentUser) {
+      toast.error("Please log in to shortlist schools.");
+      localStorage.setItem('redirectPath', `/school/${school._id}`);
+      navigate('/login');
+      return;
+    }
+
+    const isShortlisted = shortlist.some((item) => item._id === school._id);
+
+    if (isShortlisted) {
+      // Logic to remove from shortlist
+      try {
+        await removeFromShortlist(school._id);
+        setShortlist((prev) => prev.filter((item) => item._id !== school._id));
+        toast.success(`${school.name} removed from shortlist.`);
+      } catch (error) {
+        toast.error(`Failed to remove ${school.name}.`);
+      }
+    } else {
+      setShortlist((prev) => [...prev, school]);
+      try {
+        // =====================================================================
+        // ===> FINAL FIX: Passing currentUser.authId as required by the backend <===
+        await addToShortlist(currentUser._id, school._id);
+        // =====================================================================
+        
+        toast.success(`${school.name} added to shortlist!`);
+      } catch (error) {
+        setShortlist((prev) => prev.filter((item) => item._id !== school._id));
+        toast.error(`Failed to shortlist ${school.name}.`);
+      }
+    }
+  };
+
+  const handleCompareToggle = (school) => {
+    setComparisonList((prevList) => {
+      const isInList = prevList.some((item) => item._id === school._id);
+      return isInList ? prevList.filter((item) => item._id !== school._id) : [...prevList, school];
+    });
   };
 
   return (
     <>
       <Header
-        isMobileMenuOpen={isMobileMenuOpen}
+        isMobileMenuOpen={mobileMenuOpen}
         setMobileMenuOpen={setMobileMenuOpen}
         compareCount={comparisonList.length}
         currentUser={currentUser}
@@ -135,39 +113,55 @@ const handleShortlistToggle = (school) => {
       />
       <main>
         <Routes>
-          {/* --- Public Routes --- */}
-          <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
+          {/* Public Routes */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignUpPage />} />
           <Route path="/signup-school" element={<SignUpPage isSchoolSignUp={true} />} />
-          <Route path="/signup-parent" element={<SignUpPage isParentSignUp={true} />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/schools" element={<SchoolsPage onSelectSchool={setSelectedSchool} onCompareToggle={handleCompareToggle} comparisonList={comparisonList} currentUser={currentUser} shortlist={shortlist} onShortlistToggle={handleShortlistToggle} />} />
-          <Route path="/school/:id" element={<SchoolDetailsPage school={selectedSchool} currentUser={currentUser} shortlist={shortlist} onShortlistToggle={handleShortlistToggle} />} />
-          <Route path="/compare" element={<ComparePage comparisonList={comparisonList} onCompareToggle={handleCompareToggle} />} />
+          <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
+          
+          <Route 
+            path="/schools" 
+            element={<SchoolsPage 
+              onCompareToggle={handleCompareToggle} 
+              comparisonList={comparisonList} 
+              shortlist={shortlist} 
+              onShortlistToggle={handleShortlistToggle} 
+            />} 
+          />
+          <Route 
+            path="/school/:id" 
+            element={<SchoolDetailsPage 
+              shortlist={shortlist} 
+              onShortlistToggle={handleShortlistToggle} 
+            />} 
+          />
+          <Route 
+            path="/compare" 
+            element={<ComparePage 
+              comparisonList={comparisonList} 
+              onCompareToggle={handleCompareToggle} 
+            />} 
+          />
 
-          {/* --- Protected Routes --- */}
+          {/* Protected Routes */}
           <Route element={<ProtectedRoute />}>
-            <Route path="/dashboard" element={<DashboardPage currentUser={currentUser} shortlist={shortlist} onShortlistToggle={handleShortlistToggle} onSelectSchool={setSelectedSchool} comparisonList={comparisonList} onCompareToggle={handleCompareToggle} />} />
-            <Route path="/school-portal/*" element={<SchoolPortalPage currentUser={currentUser} onLogout={handleLogout} registrationData={schoolRegistrations[currentUser?.email]} onRegister={handleSchoolRegistration} />} />
-            <Route path="/apply/:schoolId" element={<StudentApplicationPage onApply={handleStudentApplication} currentUser={currentUser} />} />
+            <Route 
+              path="/dashboard" 
+              element={<DashboardPage 
+                shortlist={shortlist} 
+                onShortlistToggle={handleShortlistToggle}
+                comparisonList={comparisonList}
+                onCompareToggle={handleCompareToggle}
+              />} 
+            />
+            <Route path="/school-portal/*" element={<SchoolPortalPage onLogout={handleLogout} />} />
+            <Route path="/apply/:schoolId" element={<StudentApplicationPage />} />
           </Route>
         </Routes>
       </main>
-
-      <ToastContainer
-        position="top-right"
-        autoClose={5000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="light"
-      />
+      <ToastContainer position="top-right" autoClose={3000} theme="colored" />
     </>
   );
 }

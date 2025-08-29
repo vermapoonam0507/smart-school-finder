@@ -87,7 +87,7 @@ const ViewStudentApplications = ({ schoolEmail }) => {
 const SchoolPortalPage = ({ currentUser, onLogout, onRegister }) => {
     const navigate = useNavigate();
     
-    if (!currentUser || currentUser.role !== 'school') {
+    if (!currentUser || currentUser.userType !== 'school') {
         return <div className="container mx-auto px-6 py-20 text-center"><p>Access Denied. Please log in as a school.</p></div>;
     }
     
