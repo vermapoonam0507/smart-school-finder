@@ -1,21 +1,16 @@
-// src/api/userService.js
-
 import axiosInstance from './axios';
 
 // --- Shortlist Functions ---
 export const getShortlist = async (authId) => {
   try {
     const response = await axiosInstance.get(`/users/shortlist/${authId}`);
-    return response.data; // This endpoint returns data directly
+    return response.data;
   } catch (error) {
     console.error("Error fetching shortlist:", error.response?.data || error.message);
     throw error.response?.data || error;
   }
 };
 
-// =====================================================================
-// ===> FINAL FIX: This function now sends authId as required by the backend <===
-// =====================================================================
 export const addToShortlist = async (authId, schoolId) => {
   try {
     const response = await axiosInstance.post('/users/shortlist', { authId, schoolId });
@@ -26,9 +21,9 @@ export const addToShortlist = async (authId, schoolId) => {
   }
 };
 
-export const removeFromShortlist = async (schoolId) => {
+export const removeFromShortlist = async (authId, schoolId) => {
   try {
-    const response = await axiosInstance.post('/users/shortlist/remove', { schoolId });
+    const response = await axiosInstance.post('/users/shortlist/remove', { authId, schoolId });
     return response.data;
   } catch (error) {
     console.error("Error removing from shortlist:", error.response?.data || error.message);

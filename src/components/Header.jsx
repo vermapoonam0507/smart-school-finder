@@ -44,6 +44,8 @@ const Header = ({ isMobileMenuOpen, setMobileMenuOpen, compareCount, currentUser
         {currentUser ? (
             <>
                 <span className="text-gray-700">Welcome, {currentUser?.email?.split(' ')[0]}!</span>
+
+                {/* <span className="text-gray-700">Welcome, {currentUser?.name || currentUser?.email}!</span> */}
                 <button onClick={onLogout} className="text-gray-600 hover:text-blue-600 flex items-center">
                     <LogOut size={16} className="mr-1" /> Logout
                 </button>
@@ -68,6 +70,7 @@ const Header = ({ isMobileMenuOpen, setMobileMenuOpen, compareCount, currentUser
         {currentUser && currentUser.userType === 'parent' && (
             <Link to="/dashboard" className="block py-2 px-6 text-gray-600 hover:bg-gray-100" onClick={() => setMobileMenuOpen(false)}>Dashboard</Link>
         )}
+
         <div className="px-6 py-4 border-t">
           {currentUser ? (
             <button onClick={() => { onLogout(); setMobileMenuOpen(false); }} className="w-full text-center text-gray-600 hover:text-blue-600 flex items-center justify-center">

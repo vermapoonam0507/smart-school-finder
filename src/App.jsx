@@ -15,6 +15,7 @@ import SchoolPortalPage from './pages/SchoolPortalPage';
 import StudentApplicationPage from './pages/StudentApplicationPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 import ProtectedRoute from './components/ProtectedRoute';
+import RegistrationPage from './pages/RegistrationPage';
 
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -39,13 +40,22 @@ function App() {
 
   useEffect(() => {
     const fetchShortlist = async () => {
-      if (currentUser && currentUser.authId) {
+      // ===> THE FIX: Only fetch shortlist for parent or student users <===
+      if (currentUser && (currentUser.userType === 'parent' || currentUser.userType === 'student')) {
         try {
-          const response = await getShortlist(currentUser.authId);
-          // Your getShortlist function already returns the data array
-          setShortlist(response || []);
+          const responseData = await getShortlist(currentUser._id);
+          
+          // This robust check prevents crashes if the API returns an object when empty
+          if (Array.isArray(responseData)) {
+            setShortlist(responseData);
+          } else if (responseData && Array.isArray(responseData.data)) {
+            setShortlist(responseData.data);
+          } else {
+            setShortlist([]);
+          }
         } catch (error) {
           toast.error("Could not load your shortlisted schools.");
+          setShortlist([]);
         }
       } else {
         setShortlist([]);
@@ -71,9 +81,8 @@ function App() {
     const isShortlisted = shortlist.some((item) => item._id === school._id);
 
     if (isShortlisted) {
-      // Logic to remove from shortlist
       try {
-        await removeFromShortlist(school._id);
+        await removeFromShortlist(currentUser._id, school._id);
         setShortlist((prev) => prev.filter((item) => item._id !== school._id));
         toast.success(`${school.name} removed from shortlist.`);
       } catch (error) {
@@ -82,11 +91,7 @@ function App() {
     } else {
       setShortlist((prev) => [...prev, school]);
       try {
-        // =====================================================================
-        // ===> FINAL FIX: Passing currentUser.authId as required by the backend <===
         await addToShortlist(currentUser._id, school._id);
-        // =====================================================================
-        
         toast.success(`${school.name} added to shortlist!`);
       } catch (error) {
         setShortlist((prev) => prev.filter((item) => item._id !== school._id));
@@ -156,6 +161,7 @@ function App() {
                 onCompareToggle={handleCompareToggle}
               />} 
             />
+            <Route path="/school-registration" element={<RegistrationPage />} />
             <Route path="/school-portal/*" element={<SchoolPortalPage onLogout={handleLogout} />} />
             <Route path="/apply/:schoolId" element={<StudentApplicationPage />} />
           </Route>

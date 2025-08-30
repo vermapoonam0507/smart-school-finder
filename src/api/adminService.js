@@ -1,5 +1,3 @@
-// src/api/adminService.js
-
 import apiClient from './axios';
 
 // --- School Functions ---
@@ -34,13 +32,11 @@ export const getSchoolById = (id) => {
  * @param {object} data - Data to update, jaise { status: 'accepted' }.
  */
 export const updateSchoolStatus = (id, data) => {
-  // This uses the PUT /api/admin/schools/:id endpoint from your backend
   return apiClient.put(`/admin/schools/${id}`, data);
 };
 
 
 // --- Amenity, Activity, and Alumnus Functions ---
-// (The rest of the file remains the same)
 
 export const addAmenity = (amenityData) => {
   return apiClient.post('/admin/amenities', amenityData);
@@ -64,4 +60,14 @@ export const addAlumnus = (alumnusData) => {
 
 export const getAlumnusById = (id) => {
     return apiClient.get(`/admin/alumnus/${id}`);
+};
+
+// =====================================================================
+// ===> ADDITION: The new function needed for the school dashboard <===
+// =====================================================================
+/**
+ * Checks if a school profile exists for a given auth ID.
+ */
+export const checkSchoolProfileExists = (authId) => {
+  return apiClient.get(`/admin/schools/${authId}`);
 };

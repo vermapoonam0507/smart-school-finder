@@ -5,11 +5,11 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 import { submitApplication } from '../api/userService';
-import { FileText, User, Users, Home } from 'lucide-react';
+import { FileText, User, Users, Home, BookOpen, PlusCircle, Trash2, Shield } from 'lucide-react';
 
-// A simple FormField component to reduce repeated code
-const FormField = ({ label, name, type = 'text', value, onChange, required = false, options = null }) => {
-    if (type === 'select' && options) {
+// A reusable FormField component to keep the code clean
+const FormField = ({ label, name, type = 'text', value, onChange, required = false, options = null, checked }) => {
+    if (type === 'select') {
         return (
             <div>
                 <label htmlFor={name} className="block text-sm font-medium text-gray-700">{label}{required && <span className="text-red-500">*</span>}</label>
@@ -19,6 +19,14 @@ const FormField = ({ label, name, type = 'text', value, onChange, required = fal
                 </select>
             </div>
         );
+    }
+    if (type === 'checkbox') {
+        return (
+             <div className="flex items-center pt-6">
+                <input id={name} name={name} type="checkbox" checked={checked} onChange={onChange} className="h-4 w-4 text-indigo-600 border-gray-300 rounded"/>
+                <label htmlFor={name} className="ml-2 block text-sm font-medium text-gray-900">{label}</label>
+            </div>
+        )
     }
     return (
         <div>
@@ -41,62 +49,76 @@ const StudentApplicationPage = () => {
     const { user: currentUser } = useAuth();
     const navigate = useNavigate();
     const [step, setStep] = useState(1);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // Initial state with ALL fields from the schema
     const [formData, setFormData] = useState({
-        // Student Details
         name: '', location: '', dob: '', age: '', gender: '', motherTongue: '',
         placeOfBirth: '', speciallyAbled: false, speciallyAbledType: '',
         nationality: '', religion: '', caste: '', subcaste: '', aadharNo: '',
         bloodGroup: '', allergicTo: '', interest: '',
-
-        // Last School Details
         lastSchoolName: '', classCompleted: '', lastAcademicYear: '',
         reasonForLeaving: '', board: '',
-
-        // Father Details
         fatherName: '', fatherAge: '', fatherQualification: '', fatherProfession: '',
         fatherAnnualIncome: '', fatherPhoneNo: '', fatherAadharNo: '', fatherEmail: '',
-
-        // Mother Details
         motherName: '', motherAge: '', motherQualification: '', motherProfession: '',
         motherAnnualIncome: '', motherPhoneNo: '', motherAadharNo: '', motherEmail: '',
         relationshipStatus: '',
-
-        // Guardian Details (if divorced/other)
         guardianName: '', guardianContactNo: '', guardianRelationToStudent: '',
         guardianQualification: '', guardianProfession: '', guardianEmail: '', guardianAadharNo: '',
-
-        // Address Details
         presentAddress: '', permanentAddress: '',
-
-        // Other Details
         homeLanguage: '', yearlyBudget: '',
-        // Note: 'siblings' is handled separately as it's a list
     });
+
+    const [siblings, setSiblings] = useState([]);
 
     const handleInputChange = (e) => {
         const { name, value, type, checked } = e.target;
         setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
     };
 
+    const handleSiblingChange = (index, event) => {
+        const { name, value } = event.target;
+        const values = [...siblings];
+        values[index][name] = value;
+        setSiblings(values);
+    };
+
+    const addSibling = () => {
+        setSiblings([...siblings, { name: '', age: '', sex: '', nameOfInstitute: '', className: '' }]);
+    };
+
+    const removeSibling = (index) => {
+        const values = [...siblings];
+        values.splice(index, 1);
+        setSiblings(values);
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setIsSubmitting(true);
         try {
             const payload = {
                 ...formData,
-                studId: currentUser.authId, // Using authId as the student identifier
+                siblings,
+                studId: currentUser._id,
                 schoolId: schoolId,
             };
             await submitApplication(payload);
             toast.success("Application submitted successfully!");
             navigate('/dashboard');
         } catch (error) {
-            toast.error(error.message || "Failed to submit application.");
+            toast.error("Submission failed. Please ensure all required fields are filled.");
+            console.error("Submission Error:", error);
+        } finally {
+            setIsSubmitting(false);
         }
     };
     
     const nextStep = () => setStep(prev => prev + 1);
     const prevStep = () => setStep(prev => prev - 1);
+
+    const showGuardianFields = ['Divorced', 'Single Mother', 'Single Father', 'Widowed', 'Other'].includes(formData.relationshipStatus);
 
     return (
         <div className="bg-gray-100 min-h-screen py-12">
@@ -105,70 +127,127 @@ const StudentApplicationPage = () => {
                     <div className="text-center mb-8">
                         <FileText size={40} className="mx-auto text-indigo-600 mb-4" />
                         <h1 className="text-3xl font-bold text-gray-800">Student Application Form</h1>
-                        <p className="text-gray-500 mt-2">Step {step} of 3</p>
+                        <p className="text-gray-500 mt-2">Step {step} of 4</p>
                     </div>
 
                     {step === 1 && (
-                        <section>
-                            <h2 className="text-xl font-semibold text-gray-700 mb-6 border-b pb-3 flex items-center"><User className="mr-2" />Student's Personal Details</h2>
+                        <section className="space-y-6">
+                            <h2 className="text-xl font-semibold text-gray-700 border-b pb-3 flex items-center"><User className="mr-2" />Student's Personal Details</h2>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <FormField label="Full Name" name="name" value={formData.name} onChange={handleInputChange} required />
                                 <FormField label="Location" name="location" value={formData.location} onChange={handleInputChange} required />
                                 <FormField label="Date of Birth" name="dob" type="date" value={formData.dob} onChange={handleInputChange} required />
+                                <FormField label="Age" name="age" type="number" value={formData.age} onChange={handleInputChange} required/>
                                 <FormField label="Gender" name="gender" type="select" options={['Male', 'Female', 'Other']} value={formData.gender} onChange={handleInputChange} required />
                                 <FormField label="Mother Tongue" name="motherTongue" value={formData.motherTongue} onChange={handleInputChange} required />
+                                <FormField label="Place of Birth" name="placeOfBirth" value={formData.placeOfBirth} onChange={handleInputChange} />
+                                <FormField label="Nationality" name="nationality" value={formData.nationality} onChange={handleInputChange} required />
+                                <FormField label="Religion" name="religion" value={formData.religion} onChange={handleInputChange} required />
+                                <FormField label="Caste" name="caste" value={formData.caste} onChange={handleInputChange} required />
+                                <FormField label="Subcaste" name="subcaste" value={formData.subcaste} onChange={handleInputChange} />
                                 <FormField label="Aadhar No" name="aadharNo" value={formData.aadharNo} onChange={handleInputChange} required />
                                 <FormField label="Blood Group" name="bloodGroup" value={formData.bloodGroup} onChange={handleInputChange} required />
-                                <FormField label="Interests" name="interest" value={formData.interest} onChange={handleInputChange} required />
+                                <FormField label="Any Allergies" name="allergicTo" value={formData.allergicTo} onChange={handleInputChange} />
+                                <FormField label="Interests/Hobbies" name="interest" value={formData.interest} onChange={handleInputChange} required />
+                                <div className="md:col-span-2">
+                                    <FormField label="Specially Abled" name="speciallyAbled" type="checkbox" checked={formData.speciallyAbled} onChange={handleInputChange} />
+                                    {formData.speciallyAbled && (
+                                        <FormField label="Type of Disability" name="speciallyAbledType" value={formData.speciallyAbledType} onChange={handleInputChange} />
+                                    )}
+                                </div>
                             </div>
                         </section>
                     )}
 
                     {step === 2 && (
-                        <section>
-                            <h2 className="text-xl font-semibold text-gray-700 mb-6 border-b pb-3 flex items-center"><Users className="mr-2" />Parents' Details</h2>
+                        <section className="space-y-6">
+                           <h2 className="text-xl font-semibold text-gray-700 border-b pb-3 flex items-center"><BookOpen className="mr-2" />Previous School Details (if any)</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <FormField label="Last School Name" name="lastSchoolName" value={formData.lastSchoolName} onChange={handleInputChange} />
+                                <FormField label="Class Completed" name="classCompleted" value={formData.classCompleted} onChange={handleInputChange} />
+                                <FormField label="Last Academic Year" name="lastAcademicYear" value={formData.lastAcademicYear} onChange={handleInputChange} />
+                                <FormField label="Reason For Leaving" name="reasonForLeaving" value={formData.reasonForLeaving} onChange={handleInputChange} />
+                                <FormField label="Board" name="board" value={formData.board} onChange={handleInputChange} />
+                           </div>
+                        </section>
+                    )}
+
+                    {step === 3 && (
+                        <section className="space-y-8">
+                            <h2 className="text-xl font-semibold text-gray-700 border-b pb-3 flex items-center"><Users className="mr-2" />Parents' & Guardian's Details</h2>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <FormField label="Father's Name" name="fatherName" value={formData.fatherName} onChange={handleInputChange} required />
+                                <FormField label="Father's Age" name="fatherAge" type="number" value={formData.fatherAge} onChange={handleInputChange} required />
+                                <FormField label="Father's Qualification" name="fatherQualification" value={formData.fatherQualification} onChange={handleInputChange} required />
                                 <FormField label="Father's Profession" name="fatherProfession" value={formData.fatherProfession} onChange={handleInputChange} required />
+                                <FormField label="Father's Annual Income" name="fatherAnnualIncome" value={formData.fatherAnnualIncome} onChange={handleInputChange} required />
                                 <FormField label="Father's Phone No" name="fatherPhoneNo" value={formData.fatherPhoneNo} onChange={handleInputChange} required />
+                                <FormField label="Father's Aadhar No" name="fatherAadharNo" value={formData.fatherAadharNo} onChange={handleInputChange} required />
                                 <FormField label="Father's Email" name="fatherEmail" type="email" value={formData.fatherEmail} onChange={handleInputChange} required />
-                                <FormField label="Mother's Name" name="motherName" value={formData.motherName} onChange={handleInputChange} required />
-                                <FormField label="Mother's Profession" name="motherProfession" value={formData.motherProfession} onChange={handleInputChange} required />
-                                <FormField label="Mother's Phone No" name="motherPhoneNo" value={formData.motherPhoneNo} onChange={handleInputChange} required />
-                                <FormField label="Mother's Email" name="motherEmail" type="email" value={formData.motherEmail} onChange={handleInputChange} required />
-                                <FormField label="Relationship Status" name="relationshipStatus" type="select" options={['Married', 'Divorced', 'Single Mother', 'Single Father', 'Widowed', 'Other']} value={formData.relationshipStatus} onChange={handleInputChange} required />
                             </div>
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t">
+                                <FormField label="Mother's Name" name="motherName" value={formData.motherName} onChange={handleInputChange} required />
+                                <FormField label="Mother's Age" name="motherAge" type="number" value={formData.motherAge} onChange={handleInputChange} required />
+                                <FormField label="Mother's Qualification" name="motherQualification" value={formData.motherQualification} onChange={handleInputChange} required />
+                                <FormField label="Mother's Profession" name="motherProfession" value={formData.motherProfession} onChange={handleInputChange} required />
+                                <FormField label="Mother's Annual Income" name="motherAnnualIncome" value={formData.motherAnnualIncome} onChange={handleInputChange} required />
+                                <FormField label="Mother's Phone No" name="motherPhoneNo" value={formData.motherPhoneNo} onChange={handleInputChange} required />
+                                <FormField label="Mother's Aadhar No" name="motherAadharNo" value={formData.motherAadharNo} onChange={handleInputChange} required />
+                                <FormField label="Mother's Email" name="motherEmail" type="email" value={formData.motherEmail} onChange={handleInputChange} required />
+                            </div>
+                            <FormField label="Parents' Relationship Status" name="relationshipStatus" type="select" options={['Married', 'Divorced', 'Single Mother', 'Single Father', 'Widowed', 'Other']} value={formData.relationshipStatus} onChange={handleInputChange} required />
+                            
+                            {showGuardianFields && (
+                                <div className="pt-6 border-t">
+                                    <h3 className="text-lg font-medium text-gray-700 mb-4 flex items-center"><Shield className="mr-2" />Guardian's Details</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <FormField label="Guardian's Name" name="guardianName" value={formData.guardianName} onChange={handleInputChange} />
+                                        <FormField label="Guardian's Contact" name="guardianContactNo" value={formData.guardianContactNo} onChange={handleInputChange} />
+                                        <FormField label="Relation to Student" name="guardianRelationToStudent" value={formData.guardianRelationToStudent} onChange={handleInputChange} />
+                                        <FormField label="Guardian's Qualification" name="guardianQualification" value={formData.guardianQualification} onChange={handleInputChange} />
+                                        <FormField label="Guardian's Profession" name="guardianProfession" value={formData.guardianProfession} onChange={handleInputChange} />
+                                        <FormField label="Guardian's Email" name="guardianEmail" type="email" value={formData.guardianEmail} onChange={handleInputChange} />
+                                        <FormField label="Guardian's Aadhar No" name="guardianAadharNo" value={formData.guardianAadharNo} onChange={handleInputChange} />
+                                    </div>
+                                </div>
+                            )}
                         </section>
                     )}
                     
-                    {step === 3 && (
-                         <section>
-                            <h2 className="text-xl font-semibold text-gray-700 mb-6 border-b pb-3 flex items-center"><Home className="mr-2" />Address & Other Details</h2>
+                    {step === 4 && (
+                         <section className="space-y-6">
+                            <h2 className="text-xl font-semibold text-gray-700 border-b pb-3 flex items-center"><Home className="mr-2" />Address & Sibling Details</h2>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <FormField label="Present Address" name="presentAddress" value={formData.presentAddress} onChange={handleInputChange} required />
                                 <FormField label="Permanent Address" name="permanentAddress" value={formData.permanentAddress} onChange={handleInputChange} required />
                                 <FormField label="Language Spoken at Home" name="homeLanguage" value={formData.homeLanguage} onChange={handleInputChange} required />
-                                <FormField label="Yearly School Budget" name="yearlyBudget" value={formData.yearlyBudget} onChange={handleInputChange} required />
+                                <FormField label="Yearly School Budget (INR)" name="yearlyBudget" value={formData.yearlyBudget} onChange={handleInputChange} required />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-medium text-gray-700 mb-2">Sibling Information (if any)</h3>
+                                {siblings.map((sibling, index) => (
+                                    <div key={index} className="grid grid-cols-2 md:grid-cols-6 gap-4 items-end bg-gray-50 p-4 rounded-md mb-4 relative">
+                                        <div className="col-span-2 md:col-span-1"><FormField label="Name" name="name" value={sibling.name} onChange={e => handleSiblingChange(index, e)} /></div>
+                                        <div><FormField label="Age" name="age" type="number" value={sibling.age} onChange={e => handleSiblingChange(index, e)} /></div>
+                                        <div><FormField label="Sex" name="sex" value={sibling.sex} onChange={e => handleSiblingChange(index, e)} /></div>
+                                        <div className="col-span-2"><FormField label="Institute" name="nameOfInstitute" value={sibling.nameOfInstitute} onChange={e => handleSiblingChange(index, e)} /></div>
+                                        <div className="md:col-span-1"><FormField label="Class" name="className" value={sibling.className} onChange={e => handleSiblingChange(index, e)} /></div>
+                                        <button type="button" onClick={() => removeSibling(index)} className="text-red-500 hover:text-red-700 absolute top-1 right-2"><Trash2 size={18} /></button>
+                                    </div>
+                                ))}
+                                <button type="button" onClick={addSibling} className="flex items-center text-sm text-indigo-600 hover:text-indigo-800 mt-2">
+                                    <PlusCircle size={16} className="mr-1" /> Add Sibling
+                                </button>
                             </div>
                         </section>
                     )}
 
                     <div className="flex justify-between mt-10 border-t pt-6">
-                        {step > 1 && (
-                            <button type="button" onClick={prevStep} className="px-6 py-2 font-semibold text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300">
-                                Previous
-                            </button>
-                        )}
-                        {step < 3 && (
-                            <button type="button" onClick={nextStep} className="px-6 py-2 font-semibold text-white bg-indigo-600 rounded-md hover:bg-indigo-700 ml-auto">
-                                Next
-                            </button>
-                        )}
-                        {step === 3 && (
-                            <button type="submit" className="px-6 py-2 font-semibold text-white bg-green-600 rounded-md hover:bg-green-700 ml-auto">
-                                Submit Application
-                            </button>
-                        )}
+                        {step > 1 && <button type="button" onClick={prevStep} className="px-6 py-2 font-semibold text-gray-700 bg-gray-200 rounded-md">Previous</button>}
+                        {step < 4 && <button type="button" onClick={nextStep} className="px-6 py-2 font-semibold text-white bg-indigo-600 rounded-md ml-auto">Next</button>}
+                        {step === 4 && <button type="submit" disabled={isSubmitting} className="px-6 py-2 font-semibold text-white bg-green-600 rounded-md ml-auto disabled:bg-gray-400">
+                            {isSubmitting ? 'Submitting...' : 'Submit Application'}
+                        </button>}
                     </div>
                 </form>
             </div>
