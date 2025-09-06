@@ -25,24 +25,33 @@ const SchoolDetailsPage = ({ shortlist, onShortlistToggle }) => {
     const [school, setSchool] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        if (!schoolId) return; 
+  
+useEffect(() => {
+    if (!schoolId) return; 
 
-        const fetchSchoolDetails = async () => {
-            try {
-                setLoading(true);
-                const response = await getSchoolById(schoolId);
-                // The actual school object is inside response.data.data
-                setSchool(response.data.data); 
-            } catch (error) {
-                toast.error("Could not load school details.");
-                navigate('/schools'); 
-            } finally {
-                setLoading(false);
+    const fetchSchoolDetails = async () => {
+        try {
+            setLoading(true);
+            const response = await getSchoolById(schoolId);
+            
+            // The API returns a direct object in response.data.data
+            if (response.data.data) {
+                setSchool(response.data.data);
+            } else {
+                // This case handles if API returns success but empty data
+                console.warn(`No school data returned for ID: ${schoolId}`);
             }
-        };
-        fetchSchoolDetails();
-    }, [schoolId, navigate]);
+        } catch (error) {
+            toast.error("Could not load school details.");
+            console.error("Fetch School Error:", error);
+            navigate('/schools'); 
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    fetchSchoolDetails();
+}, [schoolId, navigate]);
 
     const handleApplyNow = () => {
         // ===> FIX: Correct logic for handling Apply Now click <===
@@ -83,7 +92,7 @@ const SchoolDetailsPage = ({ shortlist, onShortlistToggle }) => {
                         </button>
                     )}
                     <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-2">{school.name}</h1>
-                    <p className="text-lg text-gray-600 flex items-center mb-4"><MapPin size={18} className="mr-2" />{school.city}, {school.state}</p>
+                    <p className="text-lg text-gray-600 flex items-center mb-4"><MapPin size={18} className="mr-2" />{school.location}</p>
                     <p className="text-md text-gray-700">{school.description}</p>
                     <div className="mt-6 flex flex-wrap gap-3">
                         <a href={school.website} target="_blank" rel="noopener noreferrer" className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors">Visit Website</a>

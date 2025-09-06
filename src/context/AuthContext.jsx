@@ -1,12 +1,18 @@
 // src/context/AuthContext.jsx
 
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react';
 import { loginUser as apiLogin } from '../api/authService';
 
 const AuthContext = createContext(null);
 
+//added by me.................>
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() =>{
+    const savedUser = localStorage.getItem('userData');
+  return savedUser ? JSON.parse(savedUser) : null;
+  });
+
+
   const [token, setToken] = useState(() => localStorage.getItem('authToken'));
   const [loading, setLoading] = useState(true);
 
@@ -22,7 +28,9 @@ export const AuthProvider = ({ children }) => {
       const { token, auth: userData } = response.data.data;
       setToken(token);
       setUser(userData);
+      console.log(response)
       localStorage.setItem('authToken', token);
+      localStorage.setItem('userData', JSON.stringify(userData)); // User data ko bhi localStorage mein save kar lein ..added by me
       return true;
     } catch (error) {
       console.error("Login failed in AuthContext:", error);
@@ -30,23 +38,27 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+
   const logout = () => {
     setUser(null);
     setToken(null);
     localStorage.removeItem('authToken');
+    localStorage.removeItem('userData'); // User data ko bhi localStorage se hata dein ..added by me
     // Redirect logic can be handled in the component calling logout
   };
 
-  // ====> YEH NAYA FUNCTION SABSE IMPORTANT HAI (The Final Fix) <====
-  // Yeh function Dashboard se call hoga aur user ka data poori app mein update kar dega
-  const updateUserContext = (newUserData) => {
-    setUser(prevUser => ({
-        ...prevUser,    // Purani details (jaise authId, role) ko rakhein
-        ...newUserData  // Nayi details (jaise badla hua naam) daal dein
-    }));
-  };
 
-  const value = {
+
+  const updateUserContext = useCallback((newUserData) => {
+        setUser(prevUser => {
+            const updatedUser = { ...prevUser, ...newUserData };
+            // Also update localStorage so the full profile persists after a refresh
+            localStorage.setItem('userData', JSON.stringify(updatedUser));
+            return updatedUser;
+        });
+    }, []); // <--- The empty array means this function is created only ONCE.
+
+  const value = useMemo(() =>({
     user,
     token,
     login,
@@ -54,7 +66,8 @@ export const AuthProvider = ({ children }) => {
     updateUserContext, // Naye function ko yahan se bhejein
     isAuthenticated: !!token,
     loading
-  };
+  }), [user, token]); // <--- This object is recreated only if user or token changes.
+
 
   if (loading) {
     return <div className="flex justify-center items-center h-screen">Loading application...</div>;

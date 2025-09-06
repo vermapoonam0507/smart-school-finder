@@ -23,7 +23,12 @@ const SchoolCard = ({ school, onCardClick, onCompareToggle, isCompared, currentU
         <div className="flex items-center text-gray-600 mb-4">
           <MapPin size={16} className="mr-2 text-blue-500" />
           {/* FIX: Changed school.basicInfo.city and .state to direct properties */}
-          <span>{school.city || 'N/A'}, {school.state || 'N/A'}</span>
+
+
+          {/* <span>{school.city || 'N/A'}, {school.state || 'N/A'}</span> */}
+          <span>{school.location}</span>
+
+
         </div>
         
         <div className="flex flex-wrap gap-2">

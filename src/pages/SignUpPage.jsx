@@ -11,7 +11,7 @@ const signUpSchema = z.object({
   name: z.string().min(1, { message: "Name is required" }),
   email: z.string().email({ message: "Invalid email address" }),
   password: z.string().min(6, { message: "Password must be at least 6 characters" }),
-  role: z.string(),
+  role: z.string(), // 'parent', 'student', or 'school'
 });
 
 const SignUpPage = ({ isSchoolSignUp = false }) => {
@@ -23,6 +23,9 @@ const SignUpPage = ({ isSchoolSignUp = false }) => {
     resolver: zodResolver(signUpSchema),
     defaultValues: {
       role: isSchoolSignUp ? 'school' : 'parent',
+      name: '',
+      email: '',
+      password: '',
     }
   });
   
@@ -31,23 +34,18 @@ const SignUpPage = ({ isSchoolSignUp = false }) => {
   const onSubmit = async (data) => {
     setIsLoading(true);
     try {
-      // =================================================================
-      // ===> FINAL FIX: Prepare the data payload for the backend <===
+      // **FIXED:** Ye payload backend ko bhejne ke liye sahi se taiyar kiya gaya hai
       const payload = {
         name: data.name,
         email: data.email,
         password: data.password,
-        userType: data.role, // Rename 'role' to 'userType'
-        authProvider: 'email', // Add the required 'authProvider' field
+        userType: data.role, // Form ke 'role' ko backend ke 'userType' se map kiya
+        authProvider: 'email', 
       };
-      // =================================================================
 
-      // Send the corrected payload to the API
-      const response = await registerUser(payload);
-      console.log('Registration successful:', response.data);
-
-      toast.success('Sign up successful! Please check your email to verify your account.');
+      await registerUser(payload);
       
+      toast.success('Sign up successful! Please log in.');
       navigate('/login');
 
     } catch (error) {
@@ -67,35 +65,43 @@ const SignUpPage = ({ isSchoolSignUp = false }) => {
             {isSchoolSignUp && <p className="mt-2 text-sm text-gray-600">for your School</p>}
         </div>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+
           {!isSchoolSignUp && (
             <div>
               <label className="text-sm font-medium text-gray-700">I am a:</label>
               <div className="flex gap-4 mt-2">
-                  <label className="flex items-center">
-                      <input type="radio" value="parent" {...register('role')} className="h-4 w-4 text-blue-600"/>
-                      <span className="ml-2">Parent / Student</span>
-                  </label>
-                  <label className="flex items-center">
-                      <input type="radio" value="school" {...register('role')} className="h-4 w-4 text-blue-600"/>
-                      <span className="ml-2">School</span>
-                  </label>
+                <label className="flex items-center">
+                    <input type="radio" value="parent" {...register('role')} className="h-4 w-4 text-blue-600"/>
+                    <span className="ml-2">Parent</span>
+                </label>
+                <label className="flex items-center">
+                    <input type="radio" value="student" {...register('role')} className="h-4 w-4 text-blue-600"/>
+                    <span className="ml-2">Student</span>
+                </label>
+                <label className="flex items-center">
+                    <input type="radio" value="school" {...register('role')} className="h-4 w-4 text-blue-600"/>
+                    <span className="ml-2">School</span>
+                </label>
               </div>
             </div>
           )}
+
           <div>
+            {/* **FIXED:** Ab ye 'parent' aur 'student' dono ke liye "Full Name" dikhayega */}
             <label htmlFor="name" className="text-sm font-medium text-gray-700">
-              {role === 'parent' ? 'Full Name' : 'School Name'}
+              {role === 'school' ? 'School Name' : 'Full Name'}
             </label>
             <input
               id="name"
               type="text"
               {...register('name')}
               className={`w-full px-3 py-2 mt-1 border rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 ${errors.name ? 'border-red-500' : 'border-gray-300'}`}
-              placeholder={role === 'parent' ? 'Poonam Verma' : 'Delhi Public School'}
+              placeholder={role === 'school' ? 'Delhi Public School' : 'Poonam Verma'}
               disabled={isLoading}
             />
             {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name.message}</p>}
           </div>
+
           <div>
             <label htmlFor="email" className="text-sm font-medium text-gray-700">Email address</label>
             <input
@@ -108,6 +114,7 @@ const SignUpPage = ({ isSchoolSignUp = false }) => {
             />
             {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>}
           </div>
+
           <div>
             <label htmlFor="password"className="text-sm font-medium text-gray-700">Password</label>
             <div className="relative">
@@ -125,13 +132,15 @@ const SignUpPage = ({ isSchoolSignUp = false }) => {
             </div>
             {errors.password && <p className="mt-1 text-xs text-red-500">{errors.password.message}</p>}
           </div>
+
           <button type="submit" disabled={isLoading} className="w-full px-4 py-2 font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
             {isLoading ? 'Creating Account...' : 'Sign Up'}
           </button>
+
           <p className="text-sm text-center text-gray-600">
             Already have an account?{' '}
             <Link to="/login" className="font-medium text-blue-600 hover:underline">
-                Sign In
+              Sign In
             </Link>
           </p>
         </form>
@@ -139,4 +148,5 @@ const SignUpPage = ({ isSchoolSignUp = false }) => {
     </div>
   );
 };
+
 export default SignUpPage;

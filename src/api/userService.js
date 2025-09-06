@@ -4,6 +4,7 @@ import axiosInstance from './axios';
 export const getShortlist = async (authId) => {
   try {
     const response = await axiosInstance.get(`/users/shortlist/${authId}`);
+    console.log(response);
     return response.data;
   } catch (error) {
     console.error("Error fetching shortlist:", error.response?.data || error.message);
@@ -42,15 +43,17 @@ export const getUserProfile = async (authId) => {
   }
 };
 
-export const updateUserProfile = async (profileData) => {
-  try {
-    const response = await axiosInstance.post('/users/', profileData);
-    return response;
-  } catch (error) {
-    console.error("Error updating user profile:", error.response?.data || error.message);
+export const updateUserProfile = async (userId, profileData) => { // Step 1: Add userId here
+try {
+    // Step 2: Change .post to .put and add userId to the URL
+ const response = await axiosInstance.put(`/users/${userId}`, profileData);
+ return response;
+} catch (error) {
+ console.error("Error updating user profile:", error.response?.data || error.message);
     throw error.response?.data || error;
   }
 };
+
 
 export const updateUserPreferences = async (preferenceData) => {
     try {

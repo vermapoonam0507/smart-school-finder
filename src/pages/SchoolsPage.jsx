@@ -37,7 +37,7 @@ const SchoolsPage = ({ onCompareToggle, comparisonList, shortlist, onShortlistTo
   // ===> FIX: Simplified the click handler to only navigate <===
   // The onSelectSchool(school) line that caused the crash has been removed.
   const handleCardClick = (school) => {
-    navigate(`/school/${school._id}`);
+    navigate(`/school/${school.schoolId}`);
   };
 
   if (loading) {
@@ -52,11 +52,11 @@ const SchoolsPage = ({ onCompareToggle, comparisonList, shortlist, onShortlistTo
         {Array.isArray(schools) && schools.length > 0 ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {schools.filter(school => school).map(school => {
-              const isCompared = comparisonList.some(item => item._id === school._id);
-              const isShortlisted = shortlist.some(item => item._id === school._id);
+              const isCompared = comparisonList.some(item => item._id === school.schoolId);
+              const isShortlisted = shortlist.some(item => item._id === school.schoolId);
               return (
                 <SchoolCard
-                  key={school._id}
+                  key={school.schoolId}
                   school={school}
                   onCardClick={() => handleCardClick(school)}
                   onCompareToggle={() => onCompareToggle(school)}
