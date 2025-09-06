@@ -45,7 +45,6 @@ const Header = ({ isMobileMenuOpen, setMobileMenuOpen, compareCount, currentUser
             <>
                 <span className="text-gray-700">Welcome, {currentUser?.email?.split(' ')[0]}!</span>
 
-                {/* <span className="text-gray-700">Welcome, {currentUser?.name || currentUser?.email}!</span> */}
                 <button onClick={onLogout} className="text-gray-600 hover:text-blue-600 flex items-center">
                     <LogOut size={16} className="mr-1" /> Logout
                 </button>

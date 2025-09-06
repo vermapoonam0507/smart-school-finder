@@ -3,7 +3,7 @@ import { MapPin, PlusCircle, CheckCircle, Heart } from 'lucide-react';
 
 const SchoolCard = ({ school, onCardClick, onCompareToggle, isCompared, currentUser, onShortlistToggle, isShortlisted }) => {
   
-  // Safety check: If for some reason the school data is not valid, render nothing to prevent a crash.
+  
   if (!school) {
     return null;
   }
@@ -17,7 +17,8 @@ const SchoolCard = ({ school, onCardClick, onCompareToggle, isCompared, currentU
       )}
       
       <div onClick={onCardClick} className="p-6 cursor-pointer flex-grow">
-        {/* FIX: Changed school.basicInfo.name to school.name */}
+       
+
         <h3 className="text-xl font-bold text-gray-900 mb-2">{school.name || 'School Name Not Available'}</h3>
         
         <div className="flex items-center text-gray-600 mb-4">
@@ -32,7 +33,7 @@ const SchoolCard = ({ school, onCardClick, onCompareToggle, isCompared, currentU
         </div>
         
         <div className="flex flex-wrap gap-2">
-          {/* FIX: Changed school.basicInfo.board and .genderType to direct properties */}
+          
           <span className="bg-blue-100 text-blue-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded-full">{school.board || 'N/A'}</span>
           <span className="bg-green-100 text-green-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded-full">{school.genderType || 'N/A'}</span>
         </div>

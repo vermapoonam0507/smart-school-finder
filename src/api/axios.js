@@ -14,22 +14,21 @@ const apiClient = axios.create({
 });
 
 
-// === Request Interceptor ===
-// Yeh function har request bhejne se pehle chalega
+
 apiClient.interceptors.request.use(
   (config) => {
-    // Hum local storage se token nikalenge
+   
     const token = localStorage.getItem('authToken');
 
-    // Agar token hai, to usko request ke header me daal denge
+ 
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
 
-    return config; // Request ko aage bhej denge
+    return config; 
   },
   (error) => {
-    // Agar request me koi error hai to usko yahan handle karenge
+   
     return Promise.reject(error);
   }
 );

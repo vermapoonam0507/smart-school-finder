@@ -27,14 +27,12 @@ const UserDashboard = ({ shortlist, comparisonList, onCompareToggle, onShortlist
                 return;
             }
 
-            // setIsLoadingProfile(true);
+            
             try {
-                // --- START OF MODIFIED LOGIC ---
-
-                // First, always fetch the user's profile (works for both student and parent)
+               
                 const profileResponse = await getUserProfile(currentUser._id);
                 
-                // Set profile data immediately
+                
                 if (profileResponse && profileResponse.data) {
                     const fullProfile = { ...profileResponse.data, email: currentUser.email };
                     setProfileData(fullProfile);
@@ -45,36 +43,36 @@ const UserDashboard = ({ shortlist, comparisonList, onCompareToggle, onShortlist
 
                 let studentIdForApplication = null;
 
-                // Check the user type to decide how to get the student ID
+                
                 if (currentUser.userType === 'parent') {
-                    // For a parent, the student ID is INSIDE their profile data
-                    // IMPORTANT: Ask your backend developer for the correct field name. I am using 'studentId'.
+                   
                     studentIdForApplication = profileResponse.data?.studentId;
                     if (!studentIdForApplication) {
                         console.warn("Parent profile does not contain a linked studentId.");
                     }
                 } else {
-                    // For a student, their own ID is the student ID
+                    
                     studentIdForApplication = currentUser._id;
                 }
 
-                // Now, fetch the application ONLY if we have a valid student ID
+                
                 if (studentIdForApplication) {
                     try {
                         await getApplication(studentIdForApplication);
                         setApplicationExists(true);
                     } catch (appError) {
-                        setApplicationExists(false); // Application not found for this student
+                        setApplicationExists(false); 
                     }
                 } else {
                     setApplicationExists(false);
                 }
                 
-                // --- END OF MODIFIED LOGIC ---
+                
 
             } catch (error) {
                 console.error("Dashboard data could not be loaded", error);
-                setProfileData({ email: currentUser.email }); // Set default profile data on error
+                setProfileData({ email: currentUser.email }); 
+
             } finally {
                 setIsLoadingProfile(false);
             }
@@ -83,7 +81,7 @@ const UserDashboard = ({ shortlist, comparisonList, onCompareToggle, onShortlist
         loadDashboardData();
     }, [currentUser?._id, updateUserContext]);
 
-    // No changes were made to the functions below this line or to the JSX
+   
     const handleProfileUpdate = async (formData) => {
         try {
             const profilePayload = {

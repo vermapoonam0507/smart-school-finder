@@ -1,4 +1,4 @@
-// src/pages/StudentApplicationPage.jsx (Final and Complete Version)
+// src/pages/StudentApplicationPage.jsx
 
 import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -7,7 +7,7 @@ import { toast } from 'react-toastify';
 import { submitApplication } from '../api/userService';
 import { FileText, User, Users, Home, BookOpen, PlusCircle, Trash2, Shield } from 'lucide-react';
 
-// A reusable FormField component to keep the code clean
+
 const FormField = ({ label, name, type = 'text', value, onChange, required = false, options = null, checked }) => {
     if (type === 'select') {
         return (

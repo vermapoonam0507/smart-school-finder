@@ -3,33 +3,33 @@ import apiClient from './axios';
 // --- School Functions ---
 
 /**
- * Status ke hisab se schools ki list get karne ke liye function.
- * @param {string} status - Jaise 'accepted', 'pending', 'rejected'.
+
+ * @param {string} status - School status (pending, accepted, rejected)
  */
 export const getSchoolsByStatus = (status) => {
   return apiClient.get(`/admin/schools/status/${status}`);
 };
 
 /**
- * Naya school add karne ke liye function.
- * @param {object} schoolData - School ke form ka poora data.
+ * Add new school function.
+ * @param {object} schoolData - School's data.
  */
 export const addSchool = (schoolData) => {
   return apiClient.post('/admin/schools', schoolData);
 };
 
 /**
- * School ki details ID se get karne ke liye function.
- * @param {string} id - School ki ID.
+ * Get school by ID function.
+ * @param {string} id - School's ID.
  */
 export const getSchoolById = (id) => {
   return apiClient.get(`/admin/schools/${id}`);
 };
 
 /**
- * School ka status update karne ke liye function (Approve/Reject).
- * @param {string} id - School ki ID.
- * @param {object} data - Data to update, jaise { status: 'accepted' }.
+ * Update school status function.
+ * @param {string} id - School's ID.
+ * @param {object} data - Data to update (e.g., { status: 'accepted' }).
  */
 export const updateSchoolStatus = (id, data) => {
   return apiClient.put(`/admin/schools/${id}`, data);
@@ -62,12 +62,8 @@ export const getAlumnusById = (id) => {
     return apiClient.get(`/admin/alumnus/${id}`);
 };
 
-// =====================================================================
-// ===> ADDITION: The new function needed for the school dashboard <===
-// =====================================================================
-/**
- * Checks if a school profile exists for a given auth ID.
- */
+
+ 
 export const checkSchoolProfileExists = (authId) => {
   return apiClient.get(`/admin/schools/${authId}`);
 };

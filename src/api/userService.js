@@ -43,9 +43,9 @@ export const getUserProfile = async (authId) => {
   }
 };
 
-export const updateUserProfile = async (userId, profileData) => { // Step 1: Add userId here
+export const updateUserProfile = async (userId, profileData) => { // Add userId here
 try {
-    // Step 2: Change .post to .put and add userId to the URL
+    // Change .post to .put and add userId to the URL
  const response = await axiosInstance.put(`/users/${userId}`, profileData);
  return response;
 } catch (error) {

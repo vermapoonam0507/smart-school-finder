@@ -7,13 +7,11 @@ import SchoolCard from '../components/SchoolCard';
 import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
 
-// ===> FIX: Removed 'onSelectSchool' and 'currentUser' from the props list <===
-// The component now gets currentUser directly from the AuthContext.
 const SchoolsPage = ({ onCompareToggle, comparisonList, shortlist, onShortlistToggle }) => {
   const [schools, setSchools] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const { user: currentUser } = useAuth(); // Get currentUser directly from context
+  const { user: currentUser } = useAuth(); 
 
   useEffect(() => {
     const loadSchools = async () => {
@@ -34,8 +32,7 @@ const SchoolsPage = ({ onCompareToggle, comparisonList, shortlist, onShortlistTo
     loadSchools();
   }, []);
   
-  // ===> FIX: Simplified the click handler to only navigate <===
-  // The onSelectSchool(school) line that caused the crash has been removed.
+  
   const handleCardClick = (school) => {
     navigate(`/school/${school.schoolId}`);
   };

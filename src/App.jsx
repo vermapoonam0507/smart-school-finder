@@ -1,50 +1,58 @@
 // src/App.jsx
 
-import React, { useState, useEffect } from 'react';
-import { Routes, Route, useNavigate } from 'react-router-dom';
-import Header from './components/Header';
-import LandingPage from './pages/LandingPage';
-import SchoolsPage from './pages/SchoolsPage';
-import SchoolDetailsPage from './pages/SchoolDetailsPage';
-import LoginPage from './pages/LoginPage';
-import ComparePage from './pages/ComparePage';
-import SignUpPage from './pages/SignUpPage';
-import ForgotPasswordPage from './pages/ForgotPasswordPage';
-import DashboardPage from './pages/DashboardPage';
-import SchoolPortalPage from './pages/SchoolPortalPage';
-import StudentApplicationPage from './pages/StudentApplicationPage';
-import VerifyEmailPage from './pages/VerifyEmailPage';
-import ProtectedRoute from './components/ProtectedRoute';
-import RegistrationPage from './pages/RegistrationPage';
+import React, { useState, useEffect } from "react";
+import { Routes, Route, useNavigate } from "react-router-dom";
+import Header from "./components/Header";
+import LandingPage from "./pages/LandingPage";
+import SchoolsPage from "./pages/SchoolsPage";
+import SchoolDetailsPage from "./pages/SchoolDetailsPage";
+import LoginPage from "./pages/LoginPage";
+import ComparePage from "./pages/ComparePage";
+import SignUpPage from "./pages/SignUpPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import DashboardPage from "./pages/DashboardPage";
+import SchoolPortalPage from "./pages/SchoolPortalPage";
+import StudentApplicationPage from "./pages/StudentApplicationPage";
+import VerifyEmailPage from "./pages/VerifyEmailPage";
+import ProtectedRoute from "./components/ProtectedRoute";
+import RegistrationPage from "./pages/RegistrationPage";
 
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
-import { useAuth } from './context/AuthContext';
-import { getShortlist, addToShortlist, removeFromShortlist } from './api/userService';
+import { useAuth } from "./context/AuthContext";
+import {
+  getShortlist,
+  addToShortlist,
+  removeFromShortlist,
+} from "./api/userService";
 
 function App() {
   const { user: currentUser, logout } = useAuth();
   const navigate = useNavigate();
-  
+
   const [shortlist, setShortlist] = useState([]);
   const [comparisonList, setComparisonList] = useState(() => {
-    const saved = localStorage.getItem('comparisonList');
+    const saved = localStorage.getItem("comparisonList");
     return saved ? JSON.parse(saved) : [];
   });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem('comparisonList', JSON.stringify(comparisonList));
+    localStorage.setItem("comparisonList", JSON.stringify(comparisonList));
   }, [comparisonList]);
 
   useEffect(() => {
     const fetchShortlist = async () => {
       // ===> THE FIX: Only fetch shortlist for parent or student users <===
-      if (currentUser && (currentUser.userType === 'parent' || currentUser.userType === 'student')) {
+      if (
+        currentUser &&
+        (currentUser.userType === "parent" ||
+          currentUser.userType === "student")
+      ) {
         try {
           const responseData = await getShortlist(currentUser._id);
-          
+
           // This robust check prevents crashes if the API returns an object when empty
           if (Array.isArray(responseData)) {
             setShortlist(responseData);
@@ -63,18 +71,18 @@ function App() {
     };
     fetchShortlist();
   }, [currentUser]);
-  
+
   const handleLogout = () => {
     logout();
-    navigate('/');
+    navigate("/");
     toast.success("You have been logged out.");
   };
 
   const handleShortlistToggle = async (school) => {
     if (!currentUser) {
       toast.error("Please log in to shortlist schools.");
-      localStorage.setItem('redirectPath', `/school/${school._id}`);
-      navigate('/login');
+      localStorage.setItem("redirectPath", `/school/${school._id}`);
+      navigate("/login");
       return;
     }
 
@@ -103,7 +111,9 @@ function App() {
   const handleCompareToggle = (school) => {
     setComparisonList((prevList) => {
       const isInList = prevList.some((item) => item._id === school._id);
-      return isInList ? prevList.filter((item) => item._id !== school._id) : [...prevList, school];
+      return isInList
+        ? prevList.filter((item) => item._id !== school._id)
+        : [...prevList, school];
     });
   };
 
@@ -122,48 +132,65 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignUpPage />} />
-          <Route path="/signup-school" element={<SignUpPage isSchoolSignUp={true} />} />
+          <Route
+            path="/signup-school"
+            element={<SignUpPage isSchoolSignUp={true} />}
+          />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
-          
-          <Route 
-            path="/schools" 
-            element={<SchoolsPage 
-              onCompareToggle={handleCompareToggle} 
-              comparisonList={comparisonList} 
-              shortlist={shortlist} 
-              onShortlistToggle={handleShortlistToggle} 
-            />} 
+
+          <Route
+            path="/schools"
+            element={
+              <SchoolsPage
+                onCompareToggle={handleCompareToggle}
+                comparisonList={comparisonList}
+                shortlist={shortlist}
+                onShortlistToggle={handleShortlistToggle}
+              />
+            }
           />
-          <Route 
-            path="/school/:id" 
-            element={<SchoolDetailsPage 
-              shortlist={shortlist} 
-              onShortlistToggle={handleShortlistToggle} 
-            />} 
+          <Route
+            path="/school/:id"
+            element={
+              <SchoolDetailsPage
+                shortlist={shortlist}
+                onShortlistToggle={handleShortlistToggle}
+              />
+            }
           />
-          <Route 
-            path="/compare" 
-            element={<ComparePage 
-              comparisonList={comparisonList} 
-              onCompareToggle={handleCompareToggle} 
-            />} 
+          <Route
+            path="/compare"
+            element={
+              <ComparePage
+                comparisonList={comparisonList}
+                onCompareToggle={handleCompareToggle}
+              />
+            }
           />
 
           {/* Protected Routes */}
           <Route element={<ProtectedRoute />}>
-            <Route 
-              path="/dashboard" 
-              element={<DashboardPage 
-                shortlist={shortlist} 
-                onShortlistToggle={handleShortlistToggle}
-                comparisonList={comparisonList}
-                onCompareToggle={handleCompareToggle}
-              />} 
+            <Route
+              path="/dashboard"
+              element={
+                <DashboardPage
+                  shortlist={shortlist}
+                  onShortlistToggle={handleShortlistToggle}
+                  comparisonList={comparisonList}
+                  onCompareToggle={handleCompareToggle}
+                />
+              }
             />
             <Route path="/school-registration" element={<RegistrationPage />} />
-            <Route path="/school-portal/*" element={<SchoolPortalPage onLogout={handleLogout} />} />
-            <Route path="/apply/:schoolId" element={<StudentApplicationPage />} />
+            <Route
+              path="/school-portal/*"
+              element={<SchoolPortalPage onLogout={handleLogout} />}
+            />
+            <Route
+              path="/apply/:schoolId"
+              element={<StudentApplicationPage />}
+            />
           </Route>
         </Routes>
       </main>
