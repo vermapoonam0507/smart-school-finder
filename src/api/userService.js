@@ -111,6 +111,28 @@ export const updateUserPreferences = async (preferenceData) => {
     }
 };
 
+// Preferences API aligned to backend routes
+export const getUserPreferences = async (studentId) => {
+  try {
+    const response = await axiosInstance.get(`/users/preferences/${studentId}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching user preferences:", error.response?.data || error.message);
+    throw error.response?.data || error;
+  }
+};
+
+export const saveUserPreferences = async (studentId, preferenceData) => {
+  try {
+    // For new user, create first using POST; backend has POST /users/preferences/
+    const response = await axiosInstance.post(`/users/preferences/`, preferenceData);
+    return response.data;
+  } catch (error) {
+    console.error("Error saving user preferences:", error.response?.data || error.message);
+    throw error.response?.data || error;
+  }
+};
+
 // --- Student Application Functions ---
 export const submitApplication = async (applicationData) => {
   try {
@@ -128,6 +150,28 @@ export const getApplication = async (studId) => {
     return response;
   } catch (error) { 
     console.error("Error fetching application:", error.response?.data || error.message);
+    throw error.response?.data || error;
+  }
+};
+
+// --- Student PDF ---
+export const generateStudentPdf = async (studId) => {
+  try {
+    const response = await axiosInstance.post(`/users/pdf/generate/${studId}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error generating PDF:", error.response?.data || error.message);
+    throw error.response?.data || error;
+  }
+};
+
+// --- Forms (Applications) by Student ---
+export const getFormsByStudent = async (studId) => {
+  try {
+    const response = await axiosInstance.get(`/form/student/${studId}`);
+    return response.data; // expects { data: [...] } with schoolId populated (name)
+  } catch (error) {
+    console.error("Error fetching forms by student:", error.response?.data || error.message);
     throw error.response?.data || error;
   }
 };

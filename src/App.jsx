@@ -98,41 +98,50 @@ useEffect(() => {
   const handleShortlistToggle = async (school) => {
     if (!currentUser) {
       toast.info("Please log in to shortlist schools.");
-        return;
+      return;
     }
-     const schoolId = school.schoolId || school._id;
-    const isShortlisted = shortlist.some(item => (item.schoolId || item._id) === schoolId);
+    const schoolId = school.schoolId || school._id;
+    const isShortlisted = shortlist.some(
+      (item) => (item.schoolId || item._id) === schoolId
+    );
 
     if (isShortlisted) {
+      // Optimistic remove
+      const prevShortlist = shortlist;
+      setShortlist((prev) =>
+        prev.filter((item) => (item.schoolId || item._id) !== schoolId)
+      );
       try {
         await removeFromShortlist(
           currentUser.authId || currentUser._id,
-          school.schoolId || school._id
+          schoolId
         );
-
-        setShortlist((prev) =>
-          prev.filter(
-            (item) =>
-              (item.schoolId || item._id) !== (school.schoolId || school._id)
-          )
-        );
-
         toast.success(`${school.name} removed from shortlist.`);
       } catch (error) {
+        // Revert on failure
+        setShortlist(prevShortlist);
         toast.error(`Failed to remove ${school.name}.`);
       }
     } else {
+      // Optimistic add
+      const prevShortlist = shortlist;
+      setShortlist((prev) => [...prev, school]);
       try {
-        await addToShortlist(currentUser.authId || currentUser._id, school.schoolId || school._id); // We re-fetch the shortlist after adding to ensure our data is fresh from the server
-
-        const responseData = await getShortlist(currentUser.authId || currentUser._id);
-
-        if (responseData && Array.isArray(responseData.data)) {
-          setShortlist(responseData.data);
-        }
-
+        await addToShortlist(
+          currentUser.authId || currentUser._id,
+          schoolId
+        );
+        // Optionally refresh in background to sync with server shape
+        try {
+          const responseData = await getShortlist(currentUser.authId || currentUser._id);
+          if (responseData && Array.isArray(responseData.data)) {
+            setShortlist(responseData.data);
+          }
+        } catch (_) {}
         toast.success(`${school.name} added to shortlist!`);
       } catch (error) {
+        // Revert on failure
+        setShortlist(prevShortlist);
         toast.error(`Failed to shortlist ${school.name}.`);
       }
     }
@@ -160,6 +169,7 @@ useEffect(() => {
         isMobileMenuOpen={mobileMenuOpen}
         setMobileMenuOpen={setMobileMenuOpen}
         compareCount={comparisonList.length}
+        shortlistCount={shortlist.length}
         currentUser={currentUser}
         onLogout={handleLogout}
       />
@@ -174,7 +184,6 @@ useEffect(() => {
             path="/signup-school"
             element={<SignUpPage isSchoolSignUp={true} />}
           />
-          <Route path="/user-dashboard" element={<UserDashboard  shortlist={shortlist}/>} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
           <Route

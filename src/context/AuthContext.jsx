@@ -3,7 +3,7 @@
 import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react';
 import { loginUser as apiLogin } from '../api/authService';
 import { toast } from 'react-toastify';
-import { getUserProfile } from '../api/userService'; 
+import { getUserProfile, getUserPreferences } from '../api/userService'; 
 
 const AuthContext = createContext(null);
 
@@ -53,7 +53,15 @@ export const AuthProvider = ({ children }) => {
 
             try {
                 const profileResponse = await getUserProfile(basicAuthData.authId || userId);
-                const fullUserData = { ...basicAuthData, ...profileResponse.data.data };
+                const studentId = profileResponse.data?.data?._id || profileResponse.data?._id;
+                let preferences = null;
+                try {
+                    if (studentId) {
+                        const prefResponse = await getUserPreferences(studentId);
+                        preferences = prefResponse?.data || prefResponse;
+                    }
+                } catch (_) {}
+                const fullUserData = { ...basicAuthData, ...(profileResponse.data?.data || profileResponse.data), ...(preferences ? { preferences } : {}) };
                 setUser(fullUserData);
                 localStorage.setItem('userData', JSON.stringify(fullUserData));
             } catch (profileError) {

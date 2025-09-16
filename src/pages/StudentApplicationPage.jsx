@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
-import { submitApplication } from '../api/userService';
+import { submitApplication, generateStudentPdf } from '../api/userService';
 import { FileText, User, Users, Home, BookOpen, PlusCircle, Trash2, Shield } from 'lucide-react';
 
 
@@ -98,14 +98,19 @@ const StudentApplicationPage = () => {
         e.preventDefault();
         setIsSubmitting(true);
         try {
+            console.log('Submitting application with schoolId:', schoolId, 'and student:', currentUser?._id);
             const payload = {
                 ...formData,
                 siblings,
                 studId: currentUser._id,
                 schoolId: schoolId,
             };
+            console.log('Application payload:', payload);
             await submitApplication(payload);
-            toast.success("Application submitted successfully!");
+            try {
+                await generateStudentPdf(currentUser._id);
+            } catch (_) {}
+            toast.success("Application submitted successfully! PDF is ready to download on Dashboard.");
             navigate('/dashboard');
         } catch (error) {
             toast.error("Submission failed. Please ensure all required fields are filled.");

@@ -40,8 +40,21 @@ const SchoolsPage = ({
   }, []);
 
   const handleCardClick = (school) => {
-    // navigate(`/school/${school.schoolId}`);
-    navigate(`/school/${school.schoolId || school._id}`);
+    navigate(`/school/${school._id || school.schoolId}`);
+  };
+
+  const handleApplyClick = (school) => {
+    const schoolId = school._id || school.schoolId;
+    if (schoolId) {
+      try { localStorage.setItem('lastAppliedSchoolId', String(schoolId)); } catch (_) {}
+    }
+    const dest = `/apply/${schoolId}`;
+    if (!currentUser) {
+      localStorage.setItem('redirectPath', dest);
+      navigate('/login');
+      return;
+    }
+    navigate(dest);
   };
 
   if (loading) {
@@ -78,6 +91,7 @@ const SchoolsPage = ({
                     currentUser={currentUser}
                     onShortlistToggle={() => onShortlistToggle(school)}
                     isShortlisted={isShortlisted}
+                    onApply={() => handleApplyClick(school)}
                   />
                 );
               })}

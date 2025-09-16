@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import UserProfileForm from '../components/UserProfileForm';
 import { useAuth } from '../context/AuthContext';
-import { createStudentProfile } from '../api/userService';
+import { createStudentProfile, saveUserPreferences } from '../api/userService';
 
 const CreateProfilePage = () => {
     const { user, updateUserContext } = useAuth();
@@ -34,7 +34,32 @@ const CreateProfilePage = () => {
 
             const response = await createStudentProfile(payload);
 
-            updateUserContext(response.data); 
+            // Save preferences against created student id
+            const studentId = response.data?._id || response.data?.data?._id;
+            if (studentId) {
+                await saveUserPreferences(studentId, {
+                    studentId,
+                    state: formData.state,
+                    city: formData.city,
+                    boards: formData.boards,
+                    preferredStandard: formData.preferredStandard,
+                    interests: formData.interests,
+                    schoolType: formData.schoolType,
+                    shift: formData.shift,
+                });
+            }
+
+            // Enrich context with preferences so Dashboard pre-fills immediately
+            const fullProfile = { ...(response.data?.data || response.data), preferences: {
+                state: formData.state,
+                city: formData.city,
+                boards: formData.boards,
+                preferredStandard: formData.preferredStandard,
+                interests: formData.interests,
+                schoolType: formData.schoolType,
+                shift: formData.shift,
+            }};
+            updateUserContext(fullProfile);
             toast.success("Profile created successfully! Welcome.");
             navigate('/dashboard');
         } catch (error) {
