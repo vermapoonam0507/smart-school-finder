@@ -37,7 +37,7 @@ const ComparePage = ({ comparisonList, onCompareToggle }) => {
               <th className="p-4 text-left font-semibold text-gray-700 w-1/5">Feature</th>
               {comparisonList.map(school => (
 
-                <th key={school._id} className="p-4 text-left font-semibold text-gray-700 border-l">
+                <th key={school.schoolId} className="p-4 text-left font-semibold text-gray-700 border-l">
                   <div className="flex justify-between items-center">
                    
                     <span>{school.name}</span>
@@ -54,9 +54,9 @@ const ComparePage = ({ comparisonList, onCompareToggle }) => {
               <tr key={feature.key} className="border-t">
                 <td className="p-4 font-medium text-gray-600">{feature.label}</td>
                 {comparisonList.map(school => (
-                  // FIX: Use school._id for the key
-                  <td key={school._id} className="p-4 border-l text-gray-800">
-                    {/* FIX: Changed school.basicInfo[feature.key] to school[feature.key] */}
+                  
+                  <td key={school.schoolId} className="p-4 border-l text-gray-800">
+                    
                     {school[feature.key] || 'N/A'}
                   </td>
                 ))}

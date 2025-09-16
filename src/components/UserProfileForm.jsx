@@ -1,8 +1,13 @@
 import React, { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Save } from "lucide-react";
+import { getUserProfile } from "../api/userService";
 
 const UserProfileForm = ({ currentUser, onProfileUpdate }) => {
+
+
+  // --- ADD THIS LINE ---
+  console.log("UserProfileForm received this currentUser prop:", currentUser);
   const {
     register,
     handleSubmit,
@@ -10,27 +15,58 @@ const UserProfileForm = ({ currentUser, onProfileUpdate }) => {
     reset,
   } = useForm();
 
-  useEffect(() => {
-    if (currentUser) {
-      reset({
-        name: currentUser.name || "",
-        email: currentUser.email || "",
-        contactNo: currentUser.contactNo || "",
-        dateOfBirth: currentUser.dateOfBirth
-          ? new Date(currentUser.dateOfBirth).toISOString().split("T")[0]
-          : "",
-        gender: currentUser.gender || "",
-        state: currentUser.state || "",
-        city: currentUser.city || "",
-        userType: currentUser.userType || "parent",
-        boards: currentUser.preferences?.boards || "",
-        preferredStandard: currentUser.preferences?.preferredStandard || "",
-        interests: currentUser.preferences?.interests || "",
-        schoolType: currentUser.preferences?.schoolType || "",
-        shift: currentUser.preferences?.shift || "",
-      });
-    }
-  }, [currentUser, reset]);
+  // UserProfileForm.jsx mein isse update karein
+
+useEffect(() => {
+    const fetchCurrent = async () => {
+        // Agar user login nahi hai, to aage mat badho
+        if (!currentUser) {
+            return;
+        }
+
+        // No student profile for school users
+        if (currentUser.userType === 'school') {
+            return;
+        }
+
+        try {
+            const res = await getUserProfile(currentUser.authId || currentUser._id);
+            const data = res.data;
+            console.log("Fetched profile data:", data);
+            
+            // Form ko fetched data se bhar do
+            reset({
+                name: data.name || "",
+                email: data.email || "",
+                contactNo: data.contactNo || "",
+                dateOfBirth: data.dateOfBirth
+                    ? new Date(data.dateOfBirth).toISOString().split("T")[0]
+                    : "",
+                gender: data.gender || "",
+                state: data.state || "",
+                city: data.city || "",
+                userType: data.userType || "parent",
+                boards: data.preferences?.boards || "",
+                preferredStandard: data.preferences?.preferredStandard || "",
+                interests: data.preferences?.interests || "",
+                schoolType: data.preferences?.schoolType || "",
+                shift: data.preferences?.shift || "",
+            });
+
+        } catch (error) {
+            // Agar profile nahi milta (naya user), to form ko khaali rakho, sirf email bhar do
+            if (error.response?.data?.message === 'Student Not Found') {
+                console.log("New user, no profile to fetch yet.");
+                reset({ email: currentUser.email }); 
+            } else {
+                console.error("Failed to fetch profile:", error);
+            }
+        }
+    };
+
+    fetchCurrent(); // Ab yeh useEffect ke andar hai
+
+}, [currentUser, reset]);
 
   const onSubmit = async (data) => {
     await onProfileUpdate(data);

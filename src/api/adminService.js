@@ -67,3 +67,74 @@ export const getAlumnusById = (id) => {
 export const checkSchoolProfileExists = (authId) => {
   return apiClient.get(`/admin/schools/${authId}`);
 };
+
+/**
+ * Deletes a specific photo for a school.
+ * @param {string} schoolId - The ID of the school.
+ * @param {string} publicId - The public ID of the photo to delete.
+ */
+export const deleteSchoolPhoto = (schoolId, publicId) => {
+  // Note: The exact URL depends on your backend API design.
+  // This is a common pattern.
+  return apiClient.delete(`/admin/schools/${schoolId}/photos/${publicId}`);
+};
+
+
+/**
+ * Deletes the video for a school.
+ * @param {string} schoolId - The ID of the school.
+ * @param {string} publicId - The public ID of the video to delete.
+ */
+export const deleteSchoolVideo = (schoolId, publicId) => {
+  // Note: The exact URL depends on your backend API design.
+  return apiClient.delete(`/admin/schools/${schoolId}/videos/${publicId}`);
+};
+
+
+/**
+ * Gets all photos for a specific school.
+ * @param {string} schoolId - The ID of the school.
+ */
+export const getSchoolPhotos = (schoolId) => {
+  return apiClient.get(`/admin/schools/${schoolId}/photos`);
+};
+
+/**
+ * Gets the video for a specific school.
+ * @param {string} schoolId - The ID of the school.
+ */
+export const getSchoolVideos = (schoolId) => {
+  return apiClient.get(`/admin/schools/${schoolId}/videos`);
+};
+
+/**
+ * Uploads one or more photos for a school.
+ * @param {string} schoolId - The ID of the school.
+ * @param {FileList} files - The file(s) from the input element.
+ */
+export const uploadSchoolPhotos = (schoolId, files) => {
+  const formData = new FormData();
+  for (let i = 0; i < files.length; i++) {
+    formData.append("photos", files[i]);
+  }
+  return apiClient.post(`/admin/schools/${schoolId}/photos`, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+};
+
+/**
+ * Uploads a single video for a school.
+ * @param {string} schoolId - The ID of the school.
+ * @param {File} file - The video file from the input element.
+ */
+export const uploadSchoolVideo = (schoolId, file) => {
+  const formData = new FormData();
+  formData.append("video", file);
+  return apiClient.post(`/admin/schools/${schoolId}/video`, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+};

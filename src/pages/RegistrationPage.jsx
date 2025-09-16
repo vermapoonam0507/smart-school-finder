@@ -4,6 +4,7 @@ import { addSchool } from "../api/adminService";
 import { useAuth } from "../context/AuthContext";
 import { PlusCircle, Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
+import apiClient from "../api/axios";
 
 
 const FormField = ({
@@ -75,9 +76,15 @@ const FormField = ({
 };
 
 
-const DynamicListField = ({ label, fields, value, onChange }) => {
+const DynamicListField = ({ label, fields, value, onChange, type = "famous" }) => {
   const list = value || [];
-  const handleAddItem = () => onChange([...list, { name: "", profession: "" }]);
+  const getDefaultItem = () => {
+    if (type === "famous") return { name: "", profession: "" };
+    if (type === "top" || type === "other") return { name: "", percentage: "" };
+    return { name: "", profession: "" };
+  };
+  
+  const handleAddItem = () => onChange([...list, getDefaultItem()]);
   const handleRemoveItem = (index) =>
     onChange(list.filter((_, i) => i !== index));
   const handleItemChange = (index, fieldName, fieldValue) => {
@@ -105,11 +112,11 @@ const DynamicListField = ({ label, fields, value, onChange }) => {
           </div>
           <div>
             <FormField
-              label="Profession"
-              name={`alumni-profession-${index}`}
-              value={item.profession}
+              label={type === "famous" ? "Profession" : "Percentage"}
+              name={`alumni-${type === "famous" ? "profession" : "percentage"}-${index}`}
+              value={type === "famous" ? item.profession : item.percentage}
               onChange={(e) =>
-                handleItemChange(index, "profession", e.target.value)
+                handleItemChange(index, type === "famous" ? "profession" : "percentage", e.target.value)
               }
             />
           </div>
@@ -163,6 +170,10 @@ const RegistrationPage = () => {
   });
 
   const [famousAlumnies, setFamousAlumnies] = useState([]);
+  const [topAlumnies, setTopAlumnies] = useState([]);
+  const [otherAlumnies, setOtherAlumnies] = useState([]);
+  const [selectedPhotos, setSelectedPhotos] = useState([]);
+  const [selectedVideo, setSelectedVideo] = useState(null);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -182,14 +193,84 @@ const RegistrationPage = () => {
     }
   };
 
+  const handlePhotoChange = (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length > 4) {
+      toast.error("Maximum 4 photos allowed");
+      return;
+    }
+    setSelectedPhotos(files);
+  };
+
+  const handleVideoChange = (e) => {
+    const file = e.target.files[0];
+    if (file && file.size > 20 * 1024 * 1024) {
+      toast.error("Video must be less than 20MB");
+      return;
+    }
+    setSelectedVideo(file);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!currentUser?._id) return toast.error("You must be logged in.");
     setIsSubmitting(true);
 
     try {
-      const payload = { ...formData, famousAlumnies, authId: currentUser._id };
-      await addSchool(payload);
+      // Normalize to backend schema
+      const allowedSchoolModes = ['convent', 'private', 'government'];
+      const normalizedSchoolMode = allowedSchoolModes.includes((formData.schoolMode || '').toLowerCase())
+        ? (formData.schoolMode || '').toLowerCase()
+        : 'private';
+
+      const rawGender = (formData.genderType || '').toLowerCase();
+      const normalizedGender = rawGender === 'boys' ? 'boy' : rawGender === 'girls' ? 'girl' : rawGender || 'co-ed';
+
+      let normalizedFeeRange = formData.feeRange || '';
+      if (/^\d+\s?-\s?\d+$/.test(normalizedFeeRange)) {
+        const [a, b] = normalizedFeeRange.split('-').map(s => s.trim());
+        normalizedFeeRange = `${a} - ${b}`;
+      }
+
+      const payload = {
+        ...formData,
+        schoolMode: normalizedSchoolMode,
+        genderType: normalizedGender,
+        feeRange: normalizedFeeRange,
+        shifts: Array.isArray(formData.shifts) ? formData.shifts : [formData.shifts].filter(Boolean),
+        languageMedium: Array.isArray(formData.languageMedium) ? formData.languageMedium : [formData.languageMedium].filter(Boolean),
+        mobileNo: formData.phoneNo,
+        pinCode: formData.pincode ? Number(formData.pincode) : undefined,
+        famousAlumnies,
+        topAlumnies,
+        otherAlumnies,
+        authId: currentUser._id,
+      };
+      delete payload.phoneNo;
+      delete payload.pincode;
+
+      // Create school first
+      const schoolResponse = await addSchool(payload);
+      const schoolId = schoolResponse.data.data._id;
+
+      // Upload photos if selected
+      if (selectedPhotos.length > 0) {
+        const photoFormData = new FormData();
+        selectedPhotos.forEach(photo => photoFormData.append('files', photo));
+        await apiClient.post(`/admin/${schoolId}/upload/photos`, photoFormData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+      }
+
+      // Upload video if selected
+      if (selectedVideo) {
+        const videoFormData = new FormData();
+        videoFormData.append('file', selectedVideo);
+        await apiClient.post(`/admin/${schoolId}/upload/video`, videoFormData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+      }
+
       toast.success(
         "School Registration Successful! Your profile is pending approval."
       );
@@ -210,12 +291,31 @@ const RegistrationPage = () => {
     "Auditorium",
   ];
   const activitiesOptions = [
-    "Sports",
-    "Music",
-    "Dance",
-    "Art & Craft",
-    "Debate",
-    "Drama",
+    "Focusing on Academics",
+    "Focuses on Practical Learning",
+    "Focuses on Theoretical Learning",
+    "Empowering in Sports",
+    "Empowering in Arts",
+    "Special Focus on Mathematics",
+    "Special Focus on Science",
+    "Special Focus on Physical Education",
+    "Leadership Development",
+    "STEM Activities",
+    "Cultural Education",
+    "Technology Integration",
+    "Environmental Awareness"
+  ];
+  const feeRangeOptions = [
+    "1000 - 10000",
+    "10000 - 25000",
+    "25000 - 50000",
+    "50000 - 75000",
+    "75000 - 100000",
+    "1 Lakh - 2 Lakh",
+    "2 Lakh - 3 Lakh",
+    "3 Lakh - 4 Lakh",
+    "4 Lakh - 5 Lakh",
+    "More than 5 Lakh",
   ];
 
   return (
@@ -316,8 +416,10 @@ const RegistrationPage = () => {
                 required
               />
               <FormField
-                label="Fee Range (e.g., 50000-100000)"
+                label="Fee Range"
                 name="feeRange"
+                type="select"
+                options={feeRangeOptions}
                 value={formData.feeRange}
                 onChange={handleInputChange}
                 required
@@ -366,15 +468,85 @@ const RegistrationPage = () => {
           </div>
 
           <div className="border-t pt-6">
-            <DynamicListField
-              label="Notable Alumni"
-              fields={[
-                { name: "name", label: "Alumni Name" },
-                { name: "profession", label: "Profession" },
-              ]}
-              value={famousAlumnies}
-              onChange={setFamousAlumnies}
-            />
+            <h2 className="text-xl font-semibold text-gray-700 mb-6">
+              Alumni Information
+            </h2>
+            <div className="space-y-8">
+              <DynamicListField
+                label="Famous Alumni (Name & Profession)"
+                fields={[
+                  { name: "name", label: "Alumni Name" },
+                  { name: "profession", label: "Profession" },
+                ]}
+                value={famousAlumnies}
+                onChange={setFamousAlumnies}
+                type="famous"
+              />
+              
+              <DynamicListField
+                label="Top Alumni (Name & Percentage)"
+                fields={[
+                  { name: "name", label: "Alumni Name" },
+                  { name: "percentage", label: "Percentage" },
+                ]}
+                value={topAlumnies}
+                onChange={setTopAlumnies}
+                type="top"
+              />
+              
+              <DynamicListField
+                label="Other Alumni (Name & Percentage)"
+                fields={[
+                  { name: "name", label: "Alumni Name" },
+                  { name: "percentage", label: "Percentage" },
+                ]}
+                value={otherAlumnies}
+                onChange={setOtherAlumnies}
+                type="other"
+              />
+            </div>
+          </div>
+
+          <div className="border-t pt-6">
+            <h2 className="text-xl font-semibold text-gray-700 mb-6">
+              School Media
+            </h2>
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  School Photos (Max 4 photos, 5MB each)
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handlePhotoChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                />
+                {selectedPhotos.length > 0 && (
+                  <p className="text-sm text-gray-600 mt-1">
+                    {selectedPhotos.length} photo(s) selected
+                  </p>
+                )}
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  School Video (Max 20MB)
+                </label>
+                <input
+                  type="file"
+                  accept="video/*"
+                  onChange={handleVideoChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                />
+                {selectedVideo && (
+                  <p className="text-sm text-gray-600 mt-1">
+                    Video selected: {selectedVideo.name}
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
 
           <button

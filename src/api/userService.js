@@ -4,7 +4,6 @@ import axiosInstance from './axios';
 export const getShortlist = async (authId) => {
   try {
     const response = await axiosInstance.get(`/users/shortlist/${authId}`);
-    console.log(response);
     return response.data;
   } catch (error) {
     console.error("Error fetching shortlist:", error.response?.data || error.message);
@@ -32,27 +31,74 @@ export const removeFromShortlist = async (authId, schoolId) => {
   }
 };
 
-// --- User Profile & Preferences Functions ---
+//<==================================================================================>
+// import axiosInstance from './axios';
+
+// 1. GET User Profile (Used in AuthContext to check if profile exists)
+// This function calls the "getStudent" controller on your backend.
 export const getUserProfile = async (authId) => {
   try {
     const response = await axiosInstance.get(`/users/${authId}`);
-    return response; 
+    return response.data; // The backend wraps data in a "data" property
   } catch (error) {
     console.error("Error fetching user profile:", error.response?.data || error.message);
+    throw error; // Throw error so AuthContext can catch it
+  }
+};
+
+
+// 2. CREATE Student Profile (Used by CreateProfilePage.jsx)
+// This function calls the "addStudent" controller on your backend.
+export const createStudentProfile = async (profileData) => {
+  try {
+    // THIS IS THE CORRECTED LINE:
+    const response = await axiosInstance.post('/users/', profileData); 
+    return response.data;
+  } catch (error) {
+    console.error("Error creating user profile:", error.response?.data || error.message);
     throw error.response?.data || error;
   }
 };
 
-export const updateUserProfile = async (userId, profileData) => { // Add userId here
-try {
-    // Change .post to .put and add userId to the URL
- const response = await axiosInstance.put(`/users/${userId}`, profileData);
- return response;
-} catch (error) {
- console.error("Error updating user profile:", error.response?.data || error.message);
+
+// 3. UPDATE User Profile (Used by UserDashboard.jsx)
+// This function calls the "updateStudent" controller on your backend.
+export const updateUserProfile = async (authId, profileData) => {
+  try {
+    // align with backend route: PUT /users/:authId
+    const response = await axiosInstance.put(`/users/${authId}`, profileData);
+    return response.data;
+  } catch (error) {
+    console.error("Error updating user profile:", error.response?.data || error.message);
     throw error.response?.data || error;
   }
 };
+
+// --- You can keep your other service functions below ---
+//<==================================================================================>
+
+
+// --- User Profile & Preferences Functions ---
+// export const getUserProfile = async (authId) => {
+//   try {
+//     const response = await axiosInstance.get(`/users/${authId}`);
+//     return response; 
+//   } catch (error) {
+//     console.error("Error fetching user profile:", error.response?.data || error.message);
+//     throw error.response?.data || error;
+//   }
+// };
+
+// export const updateUserProfile = async (userId, profileData) => { // Add userId here
+// try {
+//     // Change .post to .put and add userId to the URL
+//  const response = await axiosInstance.put(`/users/${userId}`, profileData);
+//  return response;
+// } catch (error) {
+//  console.error("Error updating user profile:", error.response?.data || error.message);
+//     throw error.response?.data || error;
+//   }
+// };
 
 
 export const updateUserPreferences = async (preferenceData) => {

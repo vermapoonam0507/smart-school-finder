@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { Routes, Route, Link, useNavigate } from "react-router-dom";
-import { School, LogOut, FileText, Eye, Check, X } from "lucide-react";
+import { School, LogOut, FileText, Eye, Check, X, Image as ImageIcon, Video } from "lucide-react";
+import {
+  getSchoolPhotos,
+  getSchoolVideos,
+  uploadSchoolPhotos,
+  uploadSchoolVideo,
+  deleteSchoolPhoto,
+  deleteSchoolVideo,
+} from "../api/adminService";
 import RegistrationPage from "./RegistrationPage";
 import { fetchStudentApplications } from "../api/apiService";
 
@@ -16,6 +24,12 @@ const SchoolHeader = ({ schoolName, onLogout }) => (
           className="text-gray-600 hover:text-blue-600 flex items-center"
         >
           <FileText size={18} className="mr-2" /> My School Profile
+        </Link>
+        <Link
+          to="/school-portal/media"
+          className="text-gray-600 hover:text-blue-600 flex items-center"
+        >
+          <ImageIcon size={18} className="mr-2" /> Media (Photos & Video)
         </Link>
         <Link
           to="/school-portal/applications"
@@ -35,6 +49,118 @@ const SchoolHeader = ({ schoolName, onLogout }) => (
     </nav>
   </header>
 );
+
+const MediaManager = ({ schoolId }) => {
+  const [photos, setPhotos] = useState([]);
+  const [video, setVideo] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+
+  const loadMedia = async () => {
+    try {
+      setLoading(true);
+      const [pRes, vRes] = await Promise.all([
+        getSchoolPhotos(schoolId),
+        getSchoolVideos(schoolId),
+      ]);
+      setPhotos(pRes.data?.data || []);
+      setVideo(vRes.data?.data || null);
+    } catch (e) {
+      setPhotos([]);
+      setVideo(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!schoolId) {
+      setLoading(false);
+      return;
+    }
+    loadMedia();
+  }, [schoolId]);
+
+  const onUploadPhotos = async (e) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    try {
+      await uploadSchoolPhotos(schoolId, files);
+      await loadMedia();
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const onUploadVideo = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      await uploadSchoolVideo(schoolId, file);
+      await loadMedia();
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const onDeletePhoto = async (publicId) => {
+    await deleteSchoolPhoto(schoolId, publicId);
+    await loadMedia();
+  };
+
+  const onDeleteVideo = async (publicId) => {
+    await deleteSchoolVideo(schoolId, publicId);
+    await loadMedia();
+  };
+
+  if (loading) return <div className="p-8">Loading media...</div>;
+
+  if (!schoolId) {
+    return (
+      <div className="p-8 space-y-2">
+        <h2 className="text-xl font-semibold">No school profile linked</h2>
+        <p className="text-gray-600">Please complete School Registration first so we can use your school id to upload media. After approval, return here.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-8 space-y-8">
+      <div>
+        <h2 className="text-2xl font-semibold mb-4">Upload Photos (max 4, 5MB each)</h2>
+        <input type="file" accept="image/*" multiple onChange={onUploadPhotos} disabled={uploading} />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+          {photos.map((p) => (
+            <div key={p.publicId} className="relative group">
+              <img src={p.url} alt="school" className="w-full h-32 object-cover rounded" />
+              <button onClick={() => onDeletePhoto(p.publicId)} className="absolute top-2 right-2 bg-white/80 px-2 py-1 text-xs rounded shadow">
+                Delete
+              </button>
+            </div>
+          ))}
+          {photos.length === 0 && <p className="text-gray-500">No photos uploaded yet.</p>}
+        </div>
+      </div>
+
+      <div>
+        <h2 className="text-2xl font-semibold mb-4">Upload Video (single, up to 20MB)</h2>
+        <input type="file" accept="video/*" onChange={onUploadVideo} disabled={uploading} />
+        <div className="mt-4">
+          {video?.url ? (
+            <div className="space-y-2">
+              <video src={video.url} controls className="w-full max-w-xl rounded" />
+              <button onClick={() => onDeleteVideo(video.publicId)} className="bg-gray-200 px-3 py-1 rounded">Delete Video</button>
+            </div>
+          ) : (
+            <p className="text-gray-500">No video uploaded yet.</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const ViewStudentApplications = ({ schoolEmail }) => {
   const [applications, setApplications] = useState([]);
@@ -161,6 +287,10 @@ const SchoolPortalPage = ({ currentUser, onLogout, onRegister }) => {
         <Route
           path="applications"
           element={<ViewStudentApplications schoolEmail={currentUser?.email} />}
+        />
+        <Route
+          path="media"
+          element={<MediaManager schoolId={currentUser?.schoolId || currentUser?._id} />}
         />
         <Route
           path="register"

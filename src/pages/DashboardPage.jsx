@@ -36,7 +36,6 @@ const DashboardPage = ({
   onCompareToggle,
 }) => {
   const { user: currentUser } = useAuth();
-
   if (!currentUser) {
     return (
       <div className="flex justify-center items-center h-screen">

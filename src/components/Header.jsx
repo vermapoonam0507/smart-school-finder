@@ -6,6 +6,7 @@ const Header = ({ isMobileMenuOpen, setMobileMenuOpen, compareCount, currentUser
   const location = useLocation();
   const navigate = useNavigate();
   const authPages = ['/login', '/signup', '/signup-school', '/forgot-password'];
+
   console.log(currentUser)
   if (authPages.includes(location.pathname) || location.pathname.startsWith('/school-portal')) {
     return null;
@@ -36,9 +37,16 @@ const Header = ({ isMobileMenuOpen, setMobileMenuOpen, compareCount, currentUser
                 </Link>
             </>
         )}
-        {currentUser && currentUser.userType === 'parent' && (
+
+        {/* {currentUser && currentUser.userType === 'parent' && (
             <Link to="/dashboard" className="text-gray-600 hover:text-blue-600">Dashboard</Link>
-        )}
+        )} */}
+
+
+         {currentUser && (currentUser.userType === 'parent' || currentUser.userType === 'student') && (
+                        <Link to="/dashboard" className="text-gray-600 hover:text-blue-600">Dashboard</Link>
+                    )}
+
       </div>
       <div className="hidden md:flex items-center space-x-4">
         {currentUser ? (
@@ -66,9 +74,15 @@ const Header = ({ isMobileMenuOpen, setMobileMenuOpen, compareCount, currentUser
       <div className="md:hidden bg-white shadow-lg absolute top-full left-0 w-full">
         <Link to="/schools" className="block py-2 px-6 text-gray-600 hover:bg-gray-100" onClick={() => setMobileMenuOpen(false)}>Browse Schools</Link>
         <Link to="/compare" className="block py-2 px-6 text-gray-600 hover:bg-gray-100" onClick={() => setMobileMenuOpen(false)}>Compare {compareCount > 0 && `(${compareCount})`}</Link>
-        {currentUser && currentUser.userType === 'parent' && (
+
+        {/* {currentUser && currentUser.userType === 'parent' && (
             <Link to="/dashboard" className="block py-2 px-6 text-gray-600 hover:bg-gray-100" onClick={() => setMobileMenuOpen(false)}>Dashboard</Link>
-        )}
+        )} */}
+
+        {currentUser && (currentUser.userType === 'parent' || currentUser.userType === 'student') && (
+                        <Link to="/dashboard" className="block py-2 px-6 text-gray-600 hover:bg-gray-100" onClick={() => setMobileMenuOpen(false)}>Dashboard</Link>
+                    )}
+                    
 
         <div className="px-6 py-4 border-t">
           {currentUser ? (
