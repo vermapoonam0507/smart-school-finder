@@ -35,7 +35,7 @@ const Header = ({ isMobileMenuOpen, setMobileMenuOpen, compareCount, shortlistCo
                   Compare
                   {compareCount > 0 && <span className="absolute -top-2 -right-4 bg-blue-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">{compareCount}</span>}
                 </Link>
-                <Link to="/dashboard" className="text-gray-600 hover:text-blue-600 relative">
+                <Link to="/shortlist" className="text-gray-600 hover:text-blue-600 relative">
                   Shortlist
                   {shortlistCount > 0 && <span className="absolute -top-2 -right-6 bg-rose-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">{shortlistCount}</span>}
                 </Link>
@@ -48,7 +48,7 @@ const Header = ({ isMobileMenuOpen, setMobileMenuOpen, compareCount, shortlistCo
 
 
          {currentUser && (currentUser.userType === 'parent' || currentUser.userType === 'student') && (
-                        <Link to="/dashboard" className="text-gray-600 hover:text-blue-600">Dashboard</Link>
+                        <Link to="/dashboard" className="text-gray-600 hover:text-blue-600">Profile</Link>
                     )}
 
       </div>
@@ -72,16 +72,20 @@ const Header = ({ isMobileMenuOpen, setMobileMenuOpen, compareCount, shortlistCo
     </nav>
     {isMobileMenuOpen && (
       <div className="md:hidden bg-white shadow-lg absolute top-full left-0 w-full">
-        <Link to="/schools" className="block py-2 px-6 text-gray-600 hover:bg-gray-100" onClick={() => setMobileMenuOpen(false)}>Browse Schools</Link>
-        <Link to="/compare" className="block py-2 px-6 text-gray-600 hover:bg-gray-100" onClick={() => setMobileMenuOpen(false)}>Compare {compareCount > 0 && `(${compareCount})`}</Link>
-        <Link to="/dashboard" className="block py-2 px-6 text-gray-600 hover:bg-gray-100" onClick={() => setMobileMenuOpen(false)}>Shortlist {shortlistCount > 0 && `(${shortlistCount})`}</Link>
+        {(!currentUser || currentUser.userType !== 'school') && (
+          <>
+            <Link to="/schools" className="block py-2 px-6 text-gray-600 hover:bg-gray-100" onClick={() => setMobileMenuOpen(false)}>Browse Schools</Link>
+            <Link to="/compare" className="block py-2 px-6 text-gray-600 hover:bg-gray-100" onClick={() => setMobileMenuOpen(false)}>Compare {compareCount > 0 && `(${compareCount})`}</Link>
+            <Link to="/shortlist" className="block py-2 px-6 text-gray-600 hover:bg-gray-100" onClick={() => setMobileMenuOpen(false)}>Shortlist {shortlistCount > 0 && `(${shortlistCount})`}</Link>
+          </>
+        )}
 
         {/* {currentUser && currentUser.userType === 'parent' && (
             <Link to="/dashboard" className="block py-2 px-6 text-gray-600 hover:bg-gray-100" onClick={() => setMobileMenuOpen(false)}>Dashboard</Link>
         )} */}
 
         {currentUser && (currentUser.userType === 'parent' || currentUser.userType === 'student') && (
-                        <Link to="/dashboard" className="block py-2 px-6 text-gray-600 hover:bg-gray-100" onClick={() => setMobileMenuOpen(false)}>Dashboard</Link>
+                        <Link to="/dashboard" className="block py-2 px-6 text-gray-600 hover:bg-gray-100" onClick={() => setMobileMenuOpen(false)}>Profile</Link>
                     )}
                     
 
@@ -131,7 +135,7 @@ const ProfileDropdown = ({ currentUser, onLogout }) => {
       {open && (
         <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-50">
           {(currentUser.userType === 'parent' || currentUser.userType === 'student') && (
-            <Link to="/dashboard" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Dashboard</Link>
+            <Link to="/dashboard" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</Link>
           )}
           {currentUser.userType === 'school' && (
             <Link to="/school-portal" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">School Portal</Link>

@@ -31,6 +31,17 @@ export const removeFromShortlist = async (authId, schoolId) => {
   }
 };
 
+// Get count of shortlisted schools for a user
+export const getShortlistCount = async (authId) => {
+  try {
+    const response = await axiosInstance.get(`/users/shortlist/count/${authId}`);
+    return response.data; // expect a number or { count }
+  } catch (error) {
+    console.error("Error fetching shortlist count:", error.response?.data || error.message);
+    throw error.response?.data || error;
+  }
+};
+
 //<==================================================================================>
 // import axiosInstance from './axios';
 

@@ -166,7 +166,12 @@ const RegistrationPage = () => {
     predefinedAmenities: [],
     customAmenities: "",
     activities: [],
+    customActivities: "",
     transportAvailable: "no",
+    latitude: "",
+    longitude: "",
+    studentsPerTeacher: "", // numeric derived from ratio
+    teacherStudentRatio: "", // string input e.g., 1:20
   });
 
   const [famousAlumnies, setFamousAlumnies] = useState([]);
@@ -177,7 +182,56 @@ const RegistrationPage = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    // Special handling: keep ratio and numeric in sync
+    if (name === 'teacherStudentRatio') {
+      const raw = value.trim();
+      let students = '';
+      const parts = raw.split(':').map(p => p.trim());
+      if (parts.length === 2) {
+        const teacher = Number(parts[0]);
+        const stud = Number(parts[1]);
+        if (!Number.isNaN(teacher) && teacher > 0 && !Number.isNaN(stud) && stud > 0) {
+          students = String(stud);
+        }
+      } else if (/^\d+$/.test(raw)) {
+        // allow entering just the student count
+        students = raw;
+      }
+      setFormData((prev) => ({ ...prev, teacherStudentRatio: value, studentsPerTeacher: students }));
+      return;
+    }
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error("Geolocation is not supported by your browser.");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setFormData((prev) => ({
+          ...prev,
+          latitude: String(latitude.toFixed(6)),
+          longitude: String(longitude.toFixed(6)),
+        }));
+        toast.success("Location captured from GPS.");
+      },
+      (err) => {
+        const code = err?.code;
+        if (code === 1) {
+          toast.error("Permission denied for location. Please allow access.");
+        } else if (code === 2) {
+          toast.error("Position unavailable. Try again.");
+        } else if (code === 3) {
+          toast.error("Location request timed out. Try again.");
+        } else {
+          toast.error("Could not get current location.");
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
   };
 
   const handleCheckboxChange = (e) => {
@@ -245,6 +299,40 @@ const RegistrationPage = () => {
         topAlumnies,
         otherAlumnies,
         authId: currentUser._id,
+        latitude: formData.latitude ? Number(formData.latitude) : undefined,
+        longitude: formData.longitude ? Number(formData.longitude) : undefined,
+        // normalize ratio -> always store as 1:NN and numeric
+        ...(function() {
+          const raw = (formData.teacherStudentRatio || '').trim();
+          let stud = formData.studentsPerTeacher;
+          if (raw) {
+            const parts = raw.split(':').map(p => p.trim());
+            if (parts.length === 2) {
+              const t = Number(parts[0]);
+              const s = Number(parts[1]);
+              if (!Number.isNaN(t) && t > 0 && !Number.isNaN(s) && s > 0) {
+                stud = String(s);
+              }
+            } else if (/^\d+$/.test(raw)) {
+              stud = raw;
+            }
+          }
+          const studNum = stud ? Number(stud) : undefined;
+          return {
+            studentsPerTeacher: studNum,
+            teacherStudentRatio: studNum ? `1:${studNum}` : undefined,
+          };
+        })(),
+        // merge customActivities into activities array
+        ...(function() {
+          const customActs = (formData.customActivities || '')
+            .split(',')
+            .map(s => s.trim())
+            .filter(Boolean);
+          const baseActs = Array.isArray(formData.activities) ? formData.activities : [];
+          const merged = [...baseActs, ...customActs];
+          return { activities: merged };
+        })(),
       };
       delete payload.phoneNo;
       delete payload.pincode;
@@ -370,6 +458,34 @@ const RegistrationPage = () => {
                 required
               />
               <FormField
+                label="Teacher:Student Ratio (e.g., 1:20)"
+                name="teacherStudentRatio"
+                type="text"
+                value={formData.teacherStudentRatio}
+                onChange={handleInputChange}
+              />
+              <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <FormField
+                  label="Latitude (GPS)"
+                  name="latitude"
+                  value={formData.latitude}
+                  onChange={handleInputChange}
+                />
+                <FormField
+                  label="Longitude (GPS)"
+                  name="longitude"
+                  value={formData.longitude}
+                  onChange={handleInputChange}
+                />
+                <button
+                  type="button"
+                  onClick={handleUseCurrentLocation}
+                  className="h-10 mt-7 bg-indigo-600 text-white rounded-md px-4 hover:bg-indigo-700"
+                >
+                  Use Current Location
+                </button>
+              </div>
+              <FormField
                 label="City"
                 name="city"
                 value={formData.city}
@@ -463,6 +579,12 @@ const RegistrationPage = () => {
                 options={activitiesOptions}
                 value={formData.activities}
                 onChange={handleCheckboxChange}
+              />
+              <FormField
+                label="Other Activities (comma separated)"
+                name="customActivities"
+                value={formData.customActivities}
+                onChange={handleInputChange}
               />
             </div>
           </div>

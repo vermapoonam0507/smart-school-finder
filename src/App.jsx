@@ -9,6 +9,7 @@ import ComparePage from "./pages/ComparePage";
 import SignUpPage from "./pages/SignUpPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import DashboardPage from "./pages/DashboardPage";
+import ShortlistPage from "./pages/ShortlistPage";
 import SchoolPortalPage from "./pages/SchoolPortalPage";
 import StudentApplicationPage from "./pages/StudentApplicationPage";
 import VerifyEmailPage from "./pages/VerifyEmailPage";
@@ -215,6 +216,17 @@ useEffect(() => {
               />
             }
           />
+          <Route
+            path="/shortlist"
+            element={
+              <ShortlistPage
+                shortlist={shortlist}
+                onShortlistToggle={handleShortlistToggle}
+                comparisonList={comparisonList}
+                onCompareToggle={handleCompareToggle}
+              />
+            }
+          />
      {/* Protected Routes */}
           <Route element={<ProtectedRoute />}>
             <Route
@@ -231,7 +243,7 @@ useEffect(() => {
             <Route path="/school-registration" element={<RegistrationPage />} />
             <Route
               path="/school-portal/*"
-              element={<SchoolPortalPage onLogout={handleLogout} />}
+            element={<SchoolPortalPage currentUser={currentUser} onLogout={handleLogout} />}
             />
             <Route
               path="/apply/:schoolId"

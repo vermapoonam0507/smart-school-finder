@@ -1,5 +1,5 @@
 // src/pages/CreateProfilePage.jsx
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import UserProfileForm from '../components/UserProfileForm';
@@ -9,6 +9,14 @@ import { createStudentProfile, saveUserPreferences } from '../api/userService';
 const CreateProfilePage = () => {
     const { user, updateUserContext } = useAuth();
     const navigate = useNavigate();
+
+    // Block school users from accessing student profile creation
+    useEffect(() => {
+        if (user?.userType === 'school') {
+            toast.info('School accounts do not need a student profile.');
+            navigate('/school-portal');
+        }
+    }, [user?.userType, navigate]);
 
     const handleProfileCreation = async (formData) => {
         try {
