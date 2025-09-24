@@ -64,20 +64,17 @@ const SchoolDetailsPage = ({ shortlist, onShortlistToggle }) => {
   }, [schoolId, navigate]);
 
   const handleApplyNow = () => {
-   
     if (!currentUser) {
       toast.info("Please log in to apply.");
-     
-      navigate(`/apply/${school._id}`);
-    } else if (
-      currentUser.userType !== "parent" &&
-      currentUser.userType !== "student"
-    ) {
-      toast.error("Only Parents or Students are allowed to apply.");
-    } else {
-      
-      navigate(`/apply/${school._id}`);
+      navigate(`/login`);
+      return;
     }
+    if (currentUser.userType === "school") {
+      toast.error("School accounts cannot submit student applications.");
+      navigate('/school-portal');
+      return;
+    }
+    navigate(`/apply/${school._id}`);
   };
 
   if (loading) {

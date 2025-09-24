@@ -77,6 +77,13 @@ export const AuthProvider = ({ children }) => {
             }
         } catch (error) {
             console.error("Login failed:", error);
+            // Clear any stale auth so protected routes don't render with invalid session
+            setUser(null);
+            setToken(null);
+            try {
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('userData');
+            } catch (_) {}
             toast.error("Login failed. Please check your credentials.");
             throw error;
         }

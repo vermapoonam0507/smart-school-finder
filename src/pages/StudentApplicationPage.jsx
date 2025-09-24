@@ -1,6 +1,6 @@
 // src/pages/StudentApplicationPage.jsx
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
@@ -50,6 +50,14 @@ const StudentApplicationPage = () => {
     const navigate = useNavigate();
     const [step, setStep] = useState(1);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Prevent school users from accessing student application form
+    useEffect(() => {
+        if (currentUser && currentUser.userType === 'school') {
+            toast.error('School accounts cannot submit student applications.');
+            navigate('/school-portal');
+        }
+    }, [currentUser, navigate]);
 
     // Initial state with ALL fields from the schema
     const [formData, setFormData] = useState({

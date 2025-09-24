@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -37,6 +37,16 @@ const SignUpPage = ({ isSchoolSignUp = false }) => {
   });
 
   const role = watch("role");
+
+  // Keep users on the correct signup screen based on role selection
+  useEffect(() => {
+    if (!isSchoolSignUp && role === "school") {
+      navigate("/signup-school");
+    }
+    if (isSchoolSignUp && role && role !== "school") {
+      navigate("/signup");
+    }
+  }, [role, isSchoolSignUp, navigate]);
 
   const onSubmit = async (data) => {
     setIsLoading(true);
@@ -210,6 +220,14 @@ const SignUpPage = ({ isSchoolSignUp = false }) => {
               Sign In
             </Link>
           </p>
+          {isSchoolSignUp && (
+            <p className="text-sm text-center text-gray-600">
+              Not a school?{" "}
+              <Link to="/signup" className="font-medium text-blue-600 hover:underline">
+                Sign up as Parent/Student
+              </Link>
+            </p>
+          )}
         </form>
       </div>
     </div>

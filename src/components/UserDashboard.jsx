@@ -6,7 +6,7 @@ import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
 import SchoolCard from './SchoolCard';
 import UserProfileForm from './UserProfileForm';
-import { updateUserProfile, updateUserPreferences, getApplication } from '../api/userService';
+import { updateUserProfile, updateUserPreferences, getApplication, createStudentProfile, getUserProfile, saveUserPreferences } from '../api/userService';
 import { getSchoolById } from '../api/adminService';
 import { Download } from 'lucide-react';
 
@@ -20,6 +20,7 @@ const UserDashboard = ({ shortlist, comparisonList, onCompareToggle, onShortlist
     const [applications, setApplications] = useState([]);
     const [schoolNameById, setSchoolNameById] = useState({});
     const [forms, setForms] = useState([]);
+    const [isEditingProfile, setIsEditingProfile] = useState(() => !currentUser?.contactNo);
 
     useEffect(() => {
         const checkApplication = async () => {
@@ -81,27 +82,70 @@ const UserDashboard = ({ shortlist, comparisonList, onCompareToggle, onShortlist
     }, [applications, schoolNameById]);
 
     const handleProfileUpdate = async (formData) => {
+        const profilePayload = {
+            name: formData.name,
+            contactNo: formData.contactNo,
+            dateOfBirth: formData.dateOfBirth,
+            gender: formData.gender,
+            state: formData.state,
+            city: formData.city,
+            userType: formData.userType,
+            authId: currentUser._id,
+            email: currentUser.email,
+        };
+        const preferencePayloadBase = {
+            state: formData.state,
+            city: formData.city,
+            boards: formData.boards,
+            preferredStandard: formData.preferredStandard,
+            interests: formData.interests,
+            schoolType: formData.schoolType,
+            shift: formData.shift,
+        };
         try {
-            const profilePayload = {
-                name: formData.name, contactNo: formData.contactNo, dateOfBirth: formData.dateOfBirth,
-                gender: formData.gender, state: formData.state, city: formData.city,
-                userType: formData.userType, authId: currentUser._id, email: currentUser.email,
-            };
-            const preferencePayload = {
-                boards: formData.boards, shift: formData.shift,
-                preferredStandard: formData.preferredStandard, interests: formData.interests,
-                schoolType: formData.schoolType, state: formData.state, city: formData.city,
-                studentId: currentUser._id,
-            };
-            await Promise.all([
-                updateUserProfile(currentUser._id, profilePayload),
-                updateUserPreferences(preferencePayload)
-            ]);
-            const updatedFullProfile = { ...currentUser, ...profilePayload, preferences: preferencePayload };
+            // First try to update existing profile by authId
+            await updateUserProfile(currentUser._id, profilePayload);
+
+            // Obtain studentId to save preferences properly
+            let studentId = currentUser.studentId;
+            if (!studentId) {
+                try {
+                    const prof = await getUserProfile(currentUser._id);
+                    studentId = prof?.data?.data?._id || prof?.data?._id;
+                } catch (_) {}
+            }
+            if (studentId) {
+                await saveUserPreferences(studentId, { studentId, ...preferencePayloadBase });
+            } else {
+                await updateUserPreferences({ ...preferencePayloadBase, studentId: currentUser._id });
+            }
+
+            const updatedFullProfile = { ...currentUser, ...profilePayload, preferences: preferencePayloadBase };
             updateUserContext(updatedFullProfile);
             toast.success("Your details have been saved successfully!");
+            setIsEditingProfile(false);
         } catch (error) {
-            console.error("Profile update error:", error.response?.data || error.message);
+            const msg = error?.response?.data?.message || error?.message || '';
+            const isStudentMissing = msg.toLowerCase().includes('student not found') || (error?.response?.status === 400);
+            try {
+                if (isStudentMissing) {
+                    // Create profile then save preferences
+                    const created = await createStudentProfile({ ...profilePayload, preferences: preferencePayloadBase });
+                    const createdStudent = created?.data?.data || created?.data || created;
+                    const studentId = createdStudent?._id;
+                    if (studentId) {
+                        await saveUserPreferences(studentId, { studentId, ...preferencePayloadBase });
+                    }
+                    const updatedFullProfile = { ...currentUser, ...createdStudent, preferences: preferencePayloadBase };
+                    updateUserContext(updatedFullProfile);
+                    toast.success("Your profile has been created successfully!");
+                    setIsEditingProfile(false);
+                    return;
+                }
+            } catch (innerErr) {
+                console.error("Profile creation error:", innerErr?.response?.data || innerErr?.message);
+            }
+            console.error("Profile update error:", error?.response?.data || error?.message);
             toast.error("Could not save details. Please try again.");
         }
     };
@@ -120,6 +164,33 @@ const UserDashboard = ({ shortlist, comparisonList, onCompareToggle, onShortlist
     if (!currentUser) {
         return <div className="text-center p-8 bg-white rounded-lg shadow"><p>Loading your profile...</p></div>;
     }
+
+    const ProfileSummary = () => {
+        const profile = currentUser || {};
+        return (
+            <div className="bg-white p-6 rounded-xl shadow-lg">
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-2xl font-semibold text-gray-700">My Profile</h2>
+                    <button
+                        type="button"
+                        onClick={() => setIsEditingProfile(true)}
+                        className="inline-flex items-center bg-indigo-600 text-white font-semibold px-3 py-1.5 rounded-md hover:bg-indigo-700"
+                    >
+                        Edit
+                    </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div><span className="text-gray-500">Name:</span> <span className="text-gray-900">{profile.name || '—'}</span></div>
+                    <div><span className="text-gray-500">Email:</span> <span className="text-gray-900">{profile.email || '—'}</span></div>
+                    <div><span className="text-gray-500">Contact:</span> <span className="text-gray-900">{profile.contactNo || '—'}</span></div>
+                    <div><span className="text-gray-500">DOB:</span> <span className="text-gray-900">{profile.dateOfBirth ? new Date(profile.dateOfBirth).toLocaleDateString() : '—'}</span></div>
+                    <div><span className="text-gray-500">Gender:</span> <span className="text-gray-900">{profile.gender || '—'}</span></div>
+                    <div><span className="text-gray-500">Location:</span> <span className="text-gray-900">{[profile.city, profile.state].filter(Boolean).join(', ') || '—'}</span></div>
+                    <div className="md:col-span-2"><span className="text-gray-500">Preferences:</span> <span className="text-gray-900">{profile.preferences ? [profile.preferences.boards, profile.preferences.preferredStandard, profile.preferences.schoolType, profile.preferences.shift].filter(Boolean).join(' • ') : '—'}</span></div>
+                </div>
+            </div>
+        );
+    };
 
     return (
         <div className="space-y-12">
@@ -202,7 +273,11 @@ const UserDashboard = ({ shortlist, comparisonList, onCompareToggle, onShortlist
             )}
 
             <div>
-                <UserProfileForm currentUser={currentUser} onProfileUpdate={handleProfileUpdate} />
+                {isEditingProfile ? (
+                    <UserProfileForm currentUser={currentUser} onProfileUpdate={handleProfileUpdate} />
+                ) : (
+                    <ProfileSummary />
+                )}
             </div>
         </div>
     );
