@@ -166,53 +166,47 @@ const UserDashboard = ({ shortlist, comparisonList, onCompareToggle, onShortlist
 
     const handleProfileUpdate = async (profileData, preferenceData) => {
         try {
-          // 1. First create/update the profile
-          let updatedProfile;
-          if (isStudentMissing) {
-            // Create new profile
-            const response = await createStudentProfile(profileData);
-            updatedProfile = response?.data?.data || response?.data;
-            if (!updatedProfile?._id) {
-              throw new Error("Failed to create student profile");
-            }
-          } else {
-            // Update existing profile
-            const response = await updateUserProfile(currentUser._id, profileData);
-            updatedProfile = response?.data?.data || response?.data;
+          let studentId = currentUser.studentId;
+      
+          // 1️⃣ Check if student profile exists
+          if (!studentId) {
+            const profileRes = await getUserProfile(currentUser._id);
+            studentId = profileRes?.data?.data?._id || profileRes?.data?._id;
           }
       
-          // 2. Then save preferences
+          // 2️⃣ If still missing, create student profile
+          if (!studentId) {
+            const createRes = await createStudentProfile({ ...profileData });
+            studentId = createRes?.data?.data?._id || createRes?.data?._id;
+          }
+      
+          if (!studentId) throw new Error("Cannot determine student ID");
+      
+          // 3️⃣ Update profile
+          await updateUserProfile(studentId, profileData);
+      
+          // 4️⃣ Save preferences
           if (preferenceData) {
-            try {
-              await saveUserPreferences(updatedProfile._id, {
-                ...preferenceData,
-                studentId: updatedProfile._id
-              });
-            } catch (prefError) {
-              console.error("Error saving preferences:", prefError);
-              // Continue even if preferences fail to save
-            }
+            await saveUserPreferences(studentId, { studentId, ...preferenceData });
           }
       
-          // 3. Update context and UI
+          // 5️⃣ Update frontend context
           updateUserContext({
             ...currentUser,
-            ...updatedProfile,
+            ...profileData,
+            studentId,
             preferences: preferenceData || currentUser.preferences
           });
-          
+      
           toast.success("Profile updated successfully!");
           setIsEditingProfile(false);
-          
-        } catch (error) {
-          console.error("Profile update error:", {
-            error: error?.response?.data || error?.message,
-            profileData,
-            preferenceData
-          });
-          toast.error(error?.response?.data?.message || "Failed to update profile. Please try again.");
+      
+        } catch (err) {
+          console.error("Profile update error:", err?.response?.data || err?.message);
+          toast.error(err?.response?.data?.message || "Failed to update profile");
         }
       };
+      
     
     const handleCardClick = (school) => {
         navigate(`/school/${school._id || school.schoolId}`);
@@ -346,5 +340,41 @@ const UserDashboard = ({ shortlist, comparisonList, onCompareToggle, onShortlist
         </div>
     );
 };
+// to handle if user doesnot exists 
+useEffect(() => {
+    const ensureStudentProfile = async () => {
+        if (!currentUser?._id) return;
+
+        try {
+            // 1️⃣ Check if student profile exists
+            let studentId = currentUser.studentId;
+            if (!studentId) {
+                const profileRes = await getUserProfile(currentUser._id);
+                studentId = profileRes?.data?.data?._id || profileRes?.data?._id;
+            }
+
+            // 2️⃣ If still missing, create student profile
+            if (!studentId) {
+                const createRes = await createStudentProfile({
+                    name: currentUser.name || '',
+                    email: currentUser.email,
+                    authId: currentUser._id
+                });
+                studentId = createRes?.data?.data?._id || createRes?.data?._id;
+            }
+
+            // 3️⃣ Update context with studentId
+            if (studentId) {
+                updateUserContext({ ...currentUser, studentId });
+            }
+
+        } catch (err) {
+            console.error("Error ensuring student profile:", err?.response?.data || err?.message);
+        }
+    };
+
+    ensureStudentProfile();
+}, [currentUser]);
+
 
 export default UserDashboard;
