@@ -219,15 +219,32 @@ export const submitApplication = async (applicationData) => {
   }
 };
 
+// export const getApplication = async (studId) => {
+//   try {
+//     const response = await axiosInstance.get(`/applications/${studId}`);
+//     return response;
+//   } catch (error) { 
+//     console.error("Error fetching application:", error.response?.data || error.message);
+//     throw error.response?.data || error;
+//   }
+// };
 export const getApplication = async (studId) => {
   try {
     const response = await axiosInstance.get(`/applications/${studId}`);
-    return response;
-  } catch (error) { 
-    console.error("Error fetching application:", error.response?.data || error.message);
-    throw error.response?.data || error;
+    return response.data;
+  } catch (error) {
+    if (error.response?.status === 404) {
+      // Return null or empty data structure instead of throwing
+      return { data: null, status: 'Not Found' };
+    }
+    console.error("Error fetching application:", {
+      error: error.response?.data || error.message,
+      studId
+    });
+    throw error;
   }
 };
+
 
 // --- Student PDF ---
 export const generateStudentPdf = async (studId) => {

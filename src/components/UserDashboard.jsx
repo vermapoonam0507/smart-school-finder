@@ -24,24 +24,38 @@ const UserDashboard = ({ shortlist, comparisonList, onCompareToggle, onShortlist
 
     useEffect(() => {
         const checkApplication = async () => {
-            if (currentUser && currentUser._id) {
+            if (currentUser?._id) {
                 try {
                     const studentId = currentUser.studentId || currentUser._id;
                     const res = await getApplication(studentId);
+                    
+                    // Handle case when no application exists
+                    if (res?.status === 'Not Found' || !res?.data) {
+                        console.log("No application found for this user, which is normal.");
+                        setApplicationExists(false);
+                        setApplications([]);
+                        return;
+                    }
+        
                     console.log('applications api data:', res?.data);
                     const list = res?.data?.data || [];
                     setApplications(Array.isArray(list) ? list : (list ? [list] : []));
                     setApplicationExists((Array.isArray(list) ? list.length : list ? 1 : 0) > 0);
+                    
+                    // Load forms if needed
                     try {
                         const { getFormsByStudent } = await import('../api/userService');
                         const formsRes = await getFormsByStudent(studentId);
                         const formsList = formsRes?.data || [];
                         setForms(Array.isArray(formsList) ? formsList : (formsList ? [formsList] : []));
-                    } catch (_) {}
+                    } catch (formsError) {
+                        console.log("Error loading forms:", formsError);
+                        setForms([]);
+                    }
                 } catch (error) {
-
-                    console.log("No application found for this user, which is normal.");
+                    console.log("Error checking application:", error);
                     setApplicationExists(false);
+                    setApplications([]);
                 }
             }
         };
