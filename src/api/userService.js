@@ -112,16 +112,6 @@ export const updateUserProfile = async (authId, profileData) => {
 // };
 
 
-export const updateUserPreferences = async (preferenceData) => {
-    try {
-        const response = await axiosInstance.post('/users/preferences/', preferenceData);
-        return response;
-    } catch (error) {
-        console.error("Error updating user preferences:", error.response?.data || error.message);
-        throw error.response?.data || error;
-    }
-};
-
 // Preferences API aligned to backend routes
 export const getUserPreferences = async (studentId) => {
   try {
@@ -133,16 +123,56 @@ export const getUserPreferences = async (studentId) => {
   }
 };
 
+// / Create preference (first time)
+export const createUserPreferences = async (preferenceData) => {
+  try {
+    const response = await axiosInstance.post('/users/preferences/', preferenceData);
+    return response.data;
+  } catch (error) {
+    console.error("Error creating user preferences:", error.response?.data || error.message);
+    throw error.response?.data || error;
+  }
+};
+// Update preference (if exists)
+export const updateUserPreferences = async (studentId, preferenceData) => {
+  try {
+    const response = await axiosInstance.put(`/users/preferences/${studentId}`, preferenceData);
+    return response.data;
+  } catch (error) {
+    console.error("Error updating user preferences:", error.response?.data || error.message);
+    throw error.response?.data || error;
+  }
+};
+
+// Save preference (new or existing)
+// export const saveUserPreferences = async (studentId, preferenceData) => {
+//   try {
+//     // For new user, create first using POST; backend has POST /users/preferences/
+//     const response = await axiosInstance.post(`/users/preferences/`, preferenceData);
+//     return response.data;
+//   } catch (error) {
+//     console.error("Error saving user preferences:", error.response?.data || error.message);
+//     throw error.response?.data || error;
+//   }
+// };
+
 export const saveUserPreferences = async (studentId, preferenceData) => {
   try {
-    // For new user, create first using POST; backend has POST /users/preferences/
-    const response = await axiosInstance.post(`/users/preferences/`, preferenceData);
-    return response.data;
+    if (!studentId) {
+      // No ID yet → create new
+      const response = await axiosInstance.post('/users/preferences/', preferenceData);
+      return response.data;
+    } else {
+      // Existing student → update instead
+      const response = await axiosInstance.put(`/users/preferences/${studentId}`, preferenceData);
+      return response.data;
+    }
   } catch (error) {
     console.error("Error saving user preferences:", error.response?.data || error.message);
     throw error.response?.data || error;
   }
 };
+
 
 // --- Student Application Functions ---
 export const submitApplication = async (applicationData) => {
@@ -186,3 +216,6 @@ export const getFormsByStudent = async (studId) => {
     throw error.response?.data || error;
   }
 };
+
+
+
