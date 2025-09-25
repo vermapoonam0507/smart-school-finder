@@ -156,19 +156,53 @@ export const updateUserPreferences = async (studentId, preferenceData) => {
 //   }
 // };
 
+// export const saveUserPreferences = async (studentId, preferenceData) => {
+//   try {
+//     if (!studentId) {
+//       // No ID yet → create new
+//       const response = await axiosInstance.post('/users/preferences/', preferenceData);
+//       return response.data;
+//     } else {
+//       // Existing student → update instead
+//       const response = await axiosInstance.put(`/users/preferences/${studentId}`, preferenceData);
+//       return response.data;
+//     }
+//   } catch (error) {
+//     console.error("Error saving user preferences:", error.response?.data || error.message);
+//     throw error.response?.data || error;
+//   }
+// };
 export const saveUserPreferences = async (studentId, preferenceData) => {
   try {
     if (!studentId) {
-      // No ID yet → create new
-      const response = await axiosInstance.post('/users/preferences/', preferenceData);
+      throw new Error("Student ID is required to save preferences");
+    }
+    
+    // First try to update existing preferences
+    try {
+      const response = await axiosInstance.put(
+        `/users/preferences/${studentId}`, 
+        preferenceData
+      );
       return response.data;
-    } else {
-      // Existing student → update instead
-      const response = await axiosInstance.put(`/users/preferences/${studentId}`, preferenceData);
-      return response.data;
+    } catch (updateError) {
+      // If update fails with 404 or 400, try creating new preferences
+      if (updateError.response?.status === 404 || updateError.response?.status === 400) {
+        const response = await axiosInstance.post(
+          '/users/preferences/', 
+          { ...preferenceData, studentId }
+        );
+        return response.data;
+      }
+      // Re-throw if it's not a 404 or 400 error
+      throw updateError;
     }
   } catch (error) {
-    console.error("Error saving user preferences:", error.response?.data || error.message);
+    console.error("Error saving preferences:", {
+      error: error.response?.data || error.message,
+      studentId,
+      preferenceData
+    });
     throw error.response?.data || error;
   }
 };

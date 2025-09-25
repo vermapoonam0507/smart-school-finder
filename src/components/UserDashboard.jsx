@@ -81,74 +81,124 @@ const UserDashboard = ({ shortlist, comparisonList, onCompareToggle, onShortlist
         loadSchoolNames();
     }, [applications, schoolNameById]);
 
-    const handleProfileUpdate = async (formData) => {
-        const profilePayload = {
-            name: formData.name,
-            contactNo: formData.contactNo,
-            dateOfBirth: formData.dateOfBirth,
-            gender: formData.gender,
-            state: formData.state,
-            city: formData.city,
-            userType: formData.userType,
-            authId: currentUser._id,
-            email: currentUser.email,
-        };
-        const preferencePayloadBase = {
-            state: formData.state,
-            city: formData.city,
-            boards: formData.boards,
-            preferredStandard: formData.preferredStandard,
-            interests: formData.interests,
-            schoolType: formData.schoolType,
-            shift: formData.shift,
-        };
+    // const handleProfileUpdate = async (formData) => {
+    //     const profilePayload = {
+    //         name: formData.name,
+    //         contactNo: formData.contactNo,
+    //         dateOfBirth: formData.dateOfBirth,
+    //         gender: formData.gender,
+    //         state: formData.state,
+    //         city: formData.city,
+    //         userType: formData.userType,
+    //         authId: currentUser._id,
+    //         email: currentUser.email,
+    //     };
+    //     const preferencePayloadBase = {
+    //         state: formData.state,
+    //         city: formData.city,
+    //         boards: formData.boards,
+    //         preferredStandard: formData.preferredStandard,
+    //         interests: formData.interests,
+    //         schoolType: formData.schoolType,
+    //         shift: formData.shift,
+    //     };
+    //     try {
+    //         // First try to update existing profile by authId
+    //         await updateUserProfile(currentUser._id, profilePayload);
+
+    //         // Obtain studentId to save preferences properly
+    //         let studentId = currentUser.studentId;
+    //         if (!studentId) {
+    //             try {
+    //                 const prof = await getUserProfile(currentUser._id);
+    //                 studentId = prof?.data?.data?._id || prof?.data?._id;
+    //             } catch (_) {}
+    //         }
+    //         if (studentId) {
+    //             await saveUserPreferences(studentId, { studentId, ...preferencePayloadBase });
+    //         } else {
+    //             await updateUserPreferences({ ...preferencePayloadBase, studentId: currentUser._id });
+    //         }
+
+    //         const updatedFullProfile = { ...currentUser, ...profilePayload, preferences: preferencePayloadBase };
+    //         updateUserContext(updatedFullProfile);
+    //         toast.success("Your details have been saved successfully!");
+    //         setIsEditingProfile(false);
+    //     } catch (error) {
+    //         const msg = error?.response?.data?.message || error?.message || '';
+    //         const isStudentMissing = msg.toLowerCase().includes('student not found') || (error?.response?.status === 400);
+    //         try {
+    //             if (isStudentMissing) {
+    //                 // Create profile then save preferences
+    //                 const created = await createStudentProfile({ ...profilePayload, preferences: preferencePayloadBase });
+    //                 const createdStudent = created?.data?.data || created?.data || created;
+    //                 const studentId = createdStudent?._id;
+    //                 if (studentId) {
+    //                     await saveUserPreferences(studentId, { studentId, ...preferencePayloadBase });
+    //                 }
+    //                 const updatedFullProfile = { ...currentUser, ...createdStudent, preferences: preferencePayloadBase };
+    //                 updateUserContext(updatedFullProfile);
+    //                 toast.success("Your profile has been created successfully!");
+    //                 setIsEditingProfile(false);
+    //                 return;
+    //             }
+    //         } catch (innerErr) {
+    //             console.error("Profile creation error:", innerErr?.response?.data || innerErr?.message);
+    //         }
+    //         console.error("Profile update error:", error?.response?.data || error?.message);
+    //         toast.error("Could not save details. Please try again.");
+    //     }
+    // };
+
+    const handleProfileUpdate = async (profileData, preferenceData) => {
         try {
-            // First try to update existing profile by authId
-            await updateUserProfile(currentUser._id, profilePayload);
-
-            // Obtain studentId to save preferences properly
-            let studentId = currentUser.studentId;
-            if (!studentId) {
-                try {
-                    const prof = await getUserProfile(currentUser._id);
-                    studentId = prof?.data?.data?._id || prof?.data?._id;
-                } catch (_) {}
+          // 1. First create/update the profile
+          let updatedProfile;
+          if (isStudentMissing) {
+            // Create new profile
+            const response = await createStudentProfile(profileData);
+            updatedProfile = response?.data?.data || response?.data;
+            if (!updatedProfile?._id) {
+              throw new Error("Failed to create student profile");
             }
-            if (studentId) {
-                await saveUserPreferences(studentId, { studentId, ...preferencePayloadBase });
-            } else {
-                await updateUserPreferences({ ...preferencePayloadBase, studentId: currentUser._id });
-            }
-
-            const updatedFullProfile = { ...currentUser, ...profilePayload, preferences: preferencePayloadBase };
-            updateUserContext(updatedFullProfile);
-            toast.success("Your details have been saved successfully!");
-            setIsEditingProfile(false);
-        } catch (error) {
-            const msg = error?.response?.data?.message || error?.message || '';
-            const isStudentMissing = msg.toLowerCase().includes('student not found') || (error?.response?.status === 400);
+          } else {
+            // Update existing profile
+            const response = await updateUserProfile(currentUser._id, profileData);
+            updatedProfile = response?.data?.data || response?.data;
+          }
+      
+          // 2. Then save preferences
+          if (preferenceData) {
             try {
-                if (isStudentMissing) {
-                    // Create profile then save preferences
-                    const created = await createStudentProfile({ ...profilePayload, preferences: preferencePayloadBase });
-                    const createdStudent = created?.data?.data || created?.data || created;
-                    const studentId = createdStudent?._id;
-                    if (studentId) {
-                        await saveUserPreferences(studentId, { studentId, ...preferencePayloadBase });
-                    }
-                    const updatedFullProfile = { ...currentUser, ...createdStudent, preferences: preferencePayloadBase };
-                    updateUserContext(updatedFullProfile);
-                    toast.success("Your profile has been created successfully!");
-                    setIsEditingProfile(false);
-                    return;
-                }
-            } catch (innerErr) {
-                console.error("Profile creation error:", innerErr?.response?.data || innerErr?.message);
+              await saveUserPreferences(updatedProfile._id, {
+                ...preferenceData,
+                studentId: updatedProfile._id
+              });
+            } catch (prefError) {
+              console.error("Error saving preferences:", prefError);
+              // Continue even if preferences fail to save
             }
-            console.error("Profile update error:", error?.response?.data || error?.message);
-            toast.error("Could not save details. Please try again.");
+          }
+      
+          // 3. Update context and UI
+          updateUserContext({
+            ...currentUser,
+            ...updatedProfile,
+            preferences: preferenceData || currentUser.preferences
+          });
+          
+          toast.success("Profile updated successfully!");
+          setIsEditingProfile(false);
+          
+        } catch (error) {
+          console.error("Profile update error:", {
+            error: error?.response?.data || error?.message,
+            profileData,
+            preferenceData
+          });
+          toast.error(error?.response?.data?.message || "Failed to update profile. Please try again.");
         }
-    };
+      };
     
     const handleCardClick = (school) => {
         navigate(`/school/${school._id || school.schoolId}`);
