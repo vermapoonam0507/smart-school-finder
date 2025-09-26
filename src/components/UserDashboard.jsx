@@ -1,5 +1,4 @@
 // src/components/UserDashboard.jsx
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
@@ -11,7 +10,7 @@ import {
   getApplication,
   createStudentProfile,
   getUserProfile,
-  saveUserPreferences,
+  saveUserPreferences
 } from '../api/userService';
 import { getSchoolById } from '../api/adminService';
 import { Download } from 'lucide-react';
@@ -26,175 +25,140 @@ const UserDashboard = ({ shortlist, comparisonList, onCompareToggle, onShortlist
   const [forms, setForms] = useState([]);
   const [isEditingProfile, setIsEditingProfile] = useState(() => !currentUser?.contactNo);
 
-  // ------------------------------
+  // -------------------------------
   // Ensure student profile exists
-  // ------------------------------
   useEffect(() => {
     const ensureStudentProfile = async () => {
       if (!currentUser?._id) return;
 
       try {
-        let studentId = currentUser.studentId;
-
-        if (!studentId) {
-          const profileRes = await getUserProfile(currentUser._id);
-          studentId = profileRes?.data?.data?._id || profileRes?.data?._id;
-        }
-
-        if (!studentId) {
+        // Try fetching existing student profile using authId
+        const profileRes = await getUserProfile(currentUser._id);
+        const profileData = profileRes?.data?.data || profileRes?.data;
+        
+        // If profile doesn't exist, create it
+        if (!profileData) {
           const createRes = await createStudentProfile({
             name: currentUser.name || '',
             email: currentUser.email,
-            authId: currentUser._id,
+            authId: currentUser._id
           });
-          studentId = createRes?.data?.data?._id || createRes?.data?._id;
-        }
-
-        if (studentId) {
-          updateUserContext({ ...currentUser, studentId });
+          const createdProfileData = createRes?.data?.data || createRes?.data;
+          if (createdProfileData) {
+            updateUserContext({ ...currentUser, ...createdProfileData });
+          }
+        } else if (!currentUser.contactNo) {
+          // If profile exists but is missing contact info, update the context
+          updateUserContext({ ...currentUser, ...profileData });
         }
       } catch (err) {
-        console.error('Error ensuring student profile:', err?.response?.data || err?.message);
+        console.error("Error ensuring student profile:", err);
       }
     };
 
     ensureStudentProfile();
   }, [currentUser, updateUserContext]);
 
-  // ------------------------------
-  // Load applications
-  // ------------------------------
-  useEffect(() => {
-    const checkApplication = async () => {
-      if (!currentUser?._id) return;
-
-      try {
-        const studentId = currentUser.studentId || currentUser._id;
-        const res = await getApplication(studentId);
-
-        if (res?.status === 'Not Found' || !res?.data) {
-          setApplicationExists(false);
-          setApplications([]);
-          return;
-        }
-
-        const list = res?.data?.data || [];
-        setApplications(Array.isArray(list) ? list : list ? [list] : []);
-        setApplicationExists((Array.isArray(list) ? list.length : list ? 1 : 0) > 0);
-
-        try {
-          const { getFormsByStudent } = await import('../api/userService');
-          const formsRes = await getFormsByStudent(studentId);
-          const formsList = formsRes?.data || [];
-          setForms(Array.isArray(formsList) ? formsList : formsList ? [formsList] : []);
-        } catch (formsError) {
-          console.log('Error loading forms:', formsError);
-          setForms([]);
-        }
-      } catch (error) {
-        console.log('Error checking application:', error);
-        setApplicationExists(false);
-        setApplications([]);
-      }
-    };
-
-    checkApplication();
-  }, [currentUser]);
-
-  // ------------------------------
-  // Load school names
-  // ------------------------------
+  // -------------------------------
+  // Load school names for applications
+  // -------------------------------
   useEffect(() => {
     const loadSchoolNames = async () => {
-      const idStrings = (applications || [])
-        .map((app) => {
-          const ref = app.schoolId || app.school;
-          if (!ref) return null;
-          return typeof ref === 'object' ? ref._id : ref;
-        })
+      const ids = applications
+        .map(app => typeof (app.schoolId || app.school) === 'object'
+          ? (app.schoolId || app.school)?._id
+          : (app.schoolId || app.school))
         .filter(Boolean);
 
-      const uniqueIds = Array.from(new Set(idStrings));
-      const idsToFetch = uniqueIds.filter((id) => !schoolNameById[id]);
+      const uniqueIds = Array.from(new Set(ids));
+      const idsToFetch = uniqueIds.filter(id => !schoolNameById[id]);
       if (!idsToFetch.length) return;
 
       try {
-        const results = await Promise.allSettled(idsToFetch.map((id) => getSchoolById(id)));
-        const mapUpdate = {};
-
+        const results = await Promise.allSettled(idsToFetch.map(id => getSchoolById(id)));
+        const newMap = {};
         results.forEach((res, idx) => {
           const id = idsToFetch[idx];
-          if (res.status === 'fulfilled') {
-            const data = res.value?.data?.data || res.value?.data;
-            const name = data?.name || data?.school?.name || 'School';
-            mapUpdate[id] = name;
-          } else {
-            mapUpdate[id] = 'School';
-          }
+          newMap[id] = res.status === 'fulfilled'
+            ? res.value?.data?.data?.name || res.value?.data?.name || 'School'
+            : 'School';
         });
-
-        if (Object.keys(mapUpdate).length) {
-          setSchoolNameById((prev) => ({ ...prev, ...mapUpdate }));
-        }
-      } catch (_) {}
+        setSchoolNameById(prev => ({ ...prev, ...newMap }));
+      } catch (err) {
+        console.error("Error loading school names:", err);
+      }
     };
 
     loadSchoolNames();
   }, [applications, schoolNameById]);
 
-  // ------------------------------
+  // -------------------------------
   // Handle profile update
-  // ------------------------------
+  // -------------------------------
   const handleProfileUpdate = async (profileData, preferenceData) => {
     try {
-      let studentId = currentUser.studentId;
-
-      if (!studentId) {
-        const profileRes = await getUserProfile(currentUser._id);
-        studentId = profileRes?.data?.data?._id || profileRes?.data?._id;
+      // Use authId if available, otherwise fall back to _id
+      const authId = currentUser.authId || currentUser._id;
+      if (!authId) {
+        const error = new Error("User ID not found. Cannot update profile.");
+        console.error(error.message, { currentUser });
+        throw error;
       }
 
-      if (!studentId) {
-        const createRes = await createStudentProfile({ ...profileData });
-        studentId = createRes?.data?.data?._id || createRes?.data?._id;
-      }
-
-      if (!studentId) throw new Error('Cannot determine student ID');
-
-      await updateUserProfile(studentId, profileData);
-
-      if (preferenceData) {
-        await saveUserPreferences(studentId, { studentId, ...preferenceData });
-      }
-
-      updateUserContext({
-        ...currentUser,
-        ...profileData,
-        studentId,
-        preferences: preferenceData || currentUser.preferences,
+      console.log("Updating profile with data:", { 
+        authId, 
+        profileData,
+        hasPreferenceData: !!preferenceData,
+        hasStudentId: !!currentUser.studentId 
       });
 
-      toast.success('Profile updated successfully!');
+      // Update student profile
+      const updatedProfile = await updateUserProfile(authId, profileData);
+      console.log("Profile update response:", updatedProfile);
+
+      // Save preferences if provided (requires studentId)
+      if (currentUser.studentId && preferenceData) {
+        console.log("Saving user preferences:", preferenceData);
+        const prefsResponse = await saveUserPreferences(currentUser.studentId, preferenceData);
+        console.log("Preferences update response:", prefsResponse);
+      }
+
+      // Update the user context with the new profile data
+      updateUserContext({ 
+        ...currentUser, 
+        ...profileData,
+        preferences: preferenceData ? preferenceData : currentUser.preferences
+      });
+
+      toast.success("Profile updated successfully!");
       setIsEditingProfile(false);
+      return updatedProfile;
+
     } catch (err) {
-      console.error('Profile update error:', err?.response?.data || err?.message);
-      toast.error(err?.response?.data?.message || 'Failed to update profile');
+      console.error("Profile update error:", {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+      });
+      
+      const errorMessage = err.response?.data?.message || 
+                         err.message || 
+                         "Failed to update profile. Please try again.";
+      
+      toast.error(errorMessage);
+      throw err; // Re-throw to allow form to handle the error state
     }
   };
 
-  // ------------------------------
-  // Card / Apply handlers
-  // ------------------------------
-  const handleCardClick = (school) => {
-    navigate(`/school/${school._id || school.schoolId}`);
-  };
-
-  const handleApplyClick = (school) => {
+  // -------------------------------
+  // Card and Apply actions
+  // -------------------------------
+  const handleCardClick = school => navigate(`/school/${school._id || school.schoolId}`);
+  const handleApplyClick = school => {
     const schoolId = school._id || school.schoolId;
     if (!schoolId) return;
-    try {
-      localStorage.setItem('lastAppliedSchoolId', String(schoolId));
-    } catch (_) {}
+    localStorage.setItem('lastAppliedSchoolId', String(schoolId));
     navigate(`/apply/${schoolId}`);
   };
 
@@ -206,6 +170,9 @@ const UserDashboard = ({ shortlist, comparisonList, onCompareToggle, onShortlist
     );
   }
 
+  // -------------------------------
+  // Profile Summary component
+  // -------------------------------
   const ProfileSummary = () => {
     const profile = currentUser || {};
     return (
@@ -221,46 +188,17 @@ const UserDashboard = ({ shortlist, comparisonList, onCompareToggle, onShortlist
           </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-          <div>
-            <span className="text-gray-500">Name:</span>{' '}
-            <span className="text-gray-900">{profile.name || '—'}</span>
-          </div>
-          <div>
-            <span className="text-gray-500">Email:</span>{' '}
-            <span className="text-gray-900">{profile.email || '—'}</span>
-          </div>
-          <div>
-            <span className="text-gray-500">Contact:</span>{' '}
-            <span className="text-gray-900">{profile.contactNo || '—'}</span>
-          </div>
-          <div>
-            <span className="text-gray-500">DOB:</span>{' '}
-            <span className="text-gray-900">
-              {profile.dateOfBirth ? new Date(profile.dateOfBirth).toLocaleDateString() : '—'}
-            </span>
-          </div>
-          <div>
-            <span className="text-gray-500">Gender:</span>{' '}
-            <span className="text-gray-900">{profile.gender || '—'}</span>
-          </div>
-          <div>
-            <span className="text-gray-500">Location:</span>{' '}
-            <span className="text-gray-900">
-              {[profile.city, profile.state].filter(Boolean).join(', ') || '—'}
-            </span>
-          </div>
+          <div><span className="text-gray-500">Name:</span> <span className="text-gray-900">{profile.name || '—'}</span></div>
+          <div><span className="text-gray-500">Email:</span> <span className="text-gray-900">{profile.email || '—'}</span></div>
+          <div><span className="text-gray-500">Contact:</span> <span className="text-gray-900">{profile.contactNo || '—'}</span></div>
+          <div><span className="text-gray-500">DOB:</span> <span className="text-gray-900">{profile.dateOfBirth ? new Date(profile.dateOfBirth).toLocaleDateString() : '—'}</span></div>
+          <div><span className="text-gray-500">Gender:</span> <span className="text-gray-900">{profile.gender || '—'}</span></div>
+          <div><span className="text-gray-500">Location:</span> <span className="text-gray-900">{[profile.city, profile.state].filter(Boolean).join(', ') || '—'}</span></div>
           <div className="md:col-span-2">
-            <span className="text-gray-500">Preferences:</span>{' '}
+            <span className="text-gray-500">Preferences:</span>
             <span className="text-gray-900">
-              {profile.preferences
-                ? [
-                    profile.preferences.boards,
-                    profile.preferences.preferredStandard,
-                    profile.preferences.schoolType,
-                    profile.preferences.shift,
-                  ]
-                    .filter(Boolean)
-                    .join(' • ')
+              {profile.preferences ?
+                [profile.preferences.boards, profile.preferences.preferredStandard, profile.preferences.schoolType, profile.preferences.shift].filter(Boolean).join(' • ')
                 : '—'}
             </span>
           </div>
@@ -269,25 +207,26 @@ const UserDashboard = ({ shortlist, comparisonList, onCompareToggle, onShortlist
     );
   };
 
+  // -------------------------------
+  // Main render
+  // -------------------------------
   return (
     <div className="space-y-12">
+
+      {/* Shortlist */}
       <div>
         <h2 className="text-2xl font-semibold text-gray-700 mb-6">Your Shortlisted Schools</h2>
         {shortlist && shortlist.length > 0 ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {shortlist.map((school) => (
+            {shortlist.map(school => (
               <SchoolCard
                 key={school.schoolId || school._id}
                 school={school}
                 onCardClick={() => handleCardClick(school)}
                 onShortlistToggle={() => onShortlistToggle(school)}
-                isShortlisted={shortlist?.some(
-                  (item) => (item.schoolId || item._id) === (school.schoolId || school._id)
-                )}
+                isShortlisted={shortlist.some(item => (item.schoolId || item._id) === (school.schoolId || school._id))}
                 onCompareToggle={() => onCompareToggle(school)}
-                isCompared={comparisonList?.some(
-                  (item) => (item.schoolId || item._id) === (school.schoolId || school._id)
-                )}
+                isCompared={comparisonList?.some(item => (item.schoolId || item._id) === (school.schoolId || school._id))}
                 currentUser={currentUser}
                 onApply={() => handleApplyClick(school)}
               />
@@ -300,6 +239,7 @@ const UserDashboard = ({ shortlist, comparisonList, onCompareToggle, onShortlist
         )}
       </div>
 
+      {/* Applications */}
       {applicationExists && (
         <div>
           <h2 className="text-2xl font-semibold text-gray-700 mb-6">My Applications</h2>
@@ -314,21 +254,15 @@ const UserDashboard = ({ shortlist, comparisonList, onCompareToggle, onShortlist
                   </tr>
                 </thead>
                 <tbody>
-                  {(forms.length ? forms : applications).map((row) => {
+                  {(forms.length ? forms : applications).map(row => {
                     const schoolRef = row.schoolId || row.school;
                     let schoolIdStr = typeof schoolRef === 'object' ? schoolRef?._id : schoolRef;
-                    if (!schoolIdStr) {
-                      try {
-                        schoolIdStr = localStorage.getItem('lastAppliedSchoolId') || null;
-                      } catch (_) {}
-                    }
-                    const displayName =
-                      (typeof schoolRef === 'object' ? schoolRef?.name : schoolNameById[schoolIdStr]) ||
-                      schoolIdStr ||
-                      '—';
+                    if (!schoolIdStr) schoolIdStr = localStorage.getItem('lastAppliedSchoolId') || null;
+                    const displayName = typeof schoolRef === 'object' ? schoolRef?.name : schoolNameById[schoolIdStr] || schoolIdStr || '—';
                     const idToShow = row._id || row.applicationId || '—';
+
                     return (
-                      <tr key={`${row._id || row.applicationId}`} className="border-b last:border-0">
+                      <tr key={row._id || row.applicationId} className="border-b last:border-0">
                         <td className="py-2 pr-4">{displayName}</td>
                         <td className="py-2 pr-4">{idToShow}</td>
                         <td className="py-2 pr-4">
@@ -360,6 +294,7 @@ const UserDashboard = ({ shortlist, comparisonList, onCompareToggle, onShortlist
         </div>
       )}
 
+      {/* Profile Section */}
       <div>
         {isEditingProfile ? (
           <UserProfileForm currentUser={currentUser} onProfileUpdate={handleProfileUpdate} />
