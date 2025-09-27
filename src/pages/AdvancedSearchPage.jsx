@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Filter, X, MapPin, DollarSign, Award, Users, Building, BookOpen, Calendar, CheckCircle } from 'lucide-react';
 import { toast } from 'react-toastify';
 import SchoolCard from '../components/SchoolCard';
+import { searchSchools as searchSchoolsApi } from '../api/searchService';
 
 const AdvancedSearchPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -25,58 +26,28 @@ const AdvancedSearchPage = () => {
   const [pagination, setPagination] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Fetch filter options on component mount
-  useEffect(() => {
-    fetchFilterOptions();
-  }, []);
-
-  // Search schools when filters change
+  // Initial search
   useEffect(() => {
     searchSchools();
-  }, [filters, currentPage]);
-
-  const fetchFilterOptions = async () => {
-    try {
-      const response = await fetch('http://localhost:8080/api/search/filters');
-      const data = await response.json();
-      if (data.success) {
-        setFilterOptions(data.data);
-      }
-    } catch (error) {
-      console.error('Error fetching filter options:', error);
-    }
-  };
+  }, [currentPage]);
 
   const searchSchools = async () => {
     setLoading(true);
     try {
-      const queryParams = new URLSearchParams();
-      
-      if (searchQuery) queryParams.append('query', searchQuery);
-      if (filters.feeRange.length > 0) queryParams.append('feeRange', filters.feeRange.join(','));
-      if (filters.board.length > 0) queryParams.append('board', filters.board.join(','));
-      if (filters.facilities.length > 0) queryParams.append('facilities', filters.facilities.join(','));
-      if (filters.schoolType.length > 0) queryParams.append('schoolType', filters.schoolType.join(','));
-      if (filters.ownership.length > 0) queryParams.append('ownership', filters.ownership.join(','));
-      if (filters.coEdStatus.length > 0) queryParams.append('coEdStatus', filters.coEdStatus.join(','));
-      if (filters.language.length > 0) queryParams.append('language', filters.language.join(','));
-      if (filters.classOffered.length > 0) queryParams.append('classOffered', filters.classOffered.join(','));
-      if (filters.academicSession.length > 0) queryParams.append('academicSession', filters.academicSession.join(','));
-      if (filters.admissionProcess.length > 0) queryParams.append('admissionProcess', filters.admissionProcess.join(','));
-      if (filters.location.length > 0) queryParams.append('location', filters.location.join(','));
-      
-      queryParams.append('page', currentPage);
-      queryParams.append('limit', '12');
-
-      const response = await fetch(`http://localhost:8080/api/search/search?${queryParams}`);
-      const data = await response.json();
-      
-      if (data.success) {
-        setSchools(data.data.schools);
-        setPagination(data.data.pagination);
-      } else {
-        toast.error('Error searching schools');
-      }
+      const boards = filters.board;
+      const cities = filters.location;
+      const state = [];
+      const resp = await searchSchoolsApi({
+        search: searchQuery,
+        boards,
+        cities,
+        state,
+        page: currentPage,
+        limit: 12
+      });
+      const { data, pagination: pg } = resp || {};
+      setSchools(Array.isArray(data) ? data : []);
+      setPagination(pg || {});
     } catch (error) {
       console.error('Search error:', error);
       toast.error('Error searching schools');
@@ -272,7 +243,7 @@ const AdvancedSearchPage = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-xl font-semibold text-gray-800">
-                    {pagination.totalSchools || 0} Schools Found
+                    {(pagination.total || schools.length) || 0} Schools Found
                   </h2>
                   <p className="text-gray-600">
                     {filters.feeRange.length > 0 && `Fee Range: ${filters.feeRange.join(', ')}`}
@@ -323,19 +294,19 @@ const AdvancedSearchPage = () => {
               <div className="flex justify-center items-center space-x-2 mt-8">
                 <button
                   onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                  disabled={!pagination.hasPrev}
+                  disabled={currentPage <= 1}
                   className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
                 >
                   Previous
                 </button>
                 
                 <span className="px-4 py-2 text-gray-600">
-                  Page {pagination.currentPage} of {pagination.totalPages}
+                  Page {pagination.page || currentPage} of {pagination.totalPages}
                 </span>
                 
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(prev + 1, pagination.totalPages))}
-                  disabled={!pagination.hasNext}
+                  disabled={currentPage >= (pagination.totalPages || 1)}
                   className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
                 >
                   Next

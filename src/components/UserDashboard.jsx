@@ -8,7 +8,7 @@ import SchoolCard from './SchoolCard';
 import UserProfileForm from './UserProfileForm';
 import { updateUserProfile, updateUserPreferences, getApplication, createStudentProfile, getUserProfile, saveUserPreferences } from '../api/userService';
 import { getSchoolById } from '../api/adminService';
-import { Download } from 'lucide-react';
+import { Download, Search, Brain } from 'lucide-react';
 
 const UserDashboard = ({ shortlist, comparisonList, onCompareToggle, onShortlistToggle }) => {
     const navigate = useNavigate();
@@ -194,6 +194,33 @@ const UserDashboard = ({ shortlist, comparisonList, onCompareToggle, onShortlist
 
     return (
         <div className="space-y-12">
+            {/* Quick Actions */}
+            <div className="bg-white p-6 rounded-xl shadow-lg">
+                <h2 className="text-2xl font-semibold text-gray-700 mb-4">Quick Actions</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <button
+                        onClick={() => navigate('/search-schools')}
+                        className="flex items-center justify-center p-4 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors"
+                    >
+                        <Search size={24} className="text-blue-600 mr-3" />
+                        <div className="text-left">
+                            <h3 className="font-semibold text-gray-900">Search Schools</h3>
+                            <p className="text-sm text-gray-600">Find schools by location, board, and preferences</p>
+                        </div>
+                    </button>
+                    <button
+                        onClick={() => navigate('/predictor')}
+                        className="flex items-center justify-center p-4 bg-purple-50 hover:bg-purple-100 rounded-lg border border-purple-200 transition-colors"
+                    >
+                        <Brain size={24} className="text-purple-600 mr-3" />
+                        <div className="text-left">
+                            <h3 className="font-semibold text-gray-900">Predict Schools</h3>
+                            <p className="text-sm text-gray-600">Get AI-powered school recommendations</p>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
             <div>
                 <h2 className="text-2xl font-semibold text-gray-700 mb-6">Your Shortlisted Schools</h2>
                 {shortlist && shortlist.length > 0 ? (

@@ -15,6 +15,10 @@ import StudentApplicationPage from "./pages/StudentApplicationPage";
 import VerifyEmailPage from "./pages/VerifyEmailPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import RegistrationPage from "./pages/RegistrationPage";
+import AdvancedSearchPage from "./pages/AdvancedSearchPage";
+import PredictorPage from "./pages/PredictorPage";
+import ChatbotPage from "./pages/ChatbotPage";
+import SearchPage from "./pages/SearchPage";
 import CreateProfilePage from "./pages/CreateProfilePage";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -25,6 +29,7 @@ import {
   removeFromShortlist,
 } from "./api/userService";
 import UserDashboard from "./components/UserDashboard";
+import ChatbotFab from "./components/ChatbotFab";
 
 
 function App() {
@@ -198,6 +203,10 @@ useEffect(() => {
               />
             }
           />
+          <Route path="/search" element={<AdvancedSearchPage />} />
+          <Route path="/search-schools" element={<SearchPage />} />
+          <Route path="/predictor" element={<PredictorPage />} />
+          <Route path="/chatbot" element={<ChatbotPage />} />
           <Route
             path="/school/:id"
             element={
@@ -252,6 +261,7 @@ useEffect(() => {
           </Route>
         </Routes>
       </main>
+      <ChatbotFab />
       <ToastContainer position="top-right" autoClose={3000} theme="colored" /> 
     </>
   );

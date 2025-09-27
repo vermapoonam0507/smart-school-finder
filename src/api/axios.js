@@ -2,15 +2,11 @@
 
 import axios from 'axios';
 
-// // Yahan hum server ka main URL daal rahe hain
-// const apiClient = axios.create({
-//   baseURL: 'http://localhost:8080/api', 
-// });
+// Hardcode API base to avoid relative/localhost issues in dev
+const apiBaseURL = 'https://backend-tc-sa-v2.onrender.com/api';
 
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL, 
-  // baseURL: 'https://backend-tc-sa-v2.onrender.com/api', 
-   
+	baseURL: apiBaseURL,
 });
 
 
@@ -32,5 +28,10 @@ apiClient.interceptors.request.use(
     return Promise.reject(error);
   }
 );
+
+// Final safety: ensure absolute base URL
+if (!apiClient.defaults.baseURL || apiClient.defaults.baseURL.startsWith('/')) {
+  apiClient.defaults.baseURL = apiBaseURL;
+}
 
 export default apiClient;

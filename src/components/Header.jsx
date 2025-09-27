@@ -31,6 +31,12 @@ const Header = ({ isMobileMenuOpen, setMobileMenuOpen, compareCount, shortlistCo
         {(!currentUser || currentUser.userType !== 'school') && (
             <>
                 <Link to="/schools" className="text-gray-600 hover:text-blue-600">Browse Schools</Link>
+                {currentUser && (
+                  <>
+                    <Link to="/search-schools" className="text-gray-600 hover:text-blue-600">Search Schools</Link>
+                    <Link to="/predictor" className="text-gray-600 hover:text-blue-600">Predict Schools</Link>
+                  </>
+                )}
                 <Link to="/compare" className="text-gray-600 hover:text-blue-600 relative">
                   Compare
                   {compareCount > 0 && <span className="absolute -top-2 -right-4 bg-blue-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">{compareCount}</span>}
@@ -75,6 +81,12 @@ const Header = ({ isMobileMenuOpen, setMobileMenuOpen, compareCount, shortlistCo
         {(!currentUser || currentUser.userType !== 'school') && (
           <>
             <Link to="/schools" className="block py-2 px-6 text-gray-600 hover:bg-gray-100" onClick={() => setMobileMenuOpen(false)}>Browse Schools</Link>
+            {currentUser && (
+              <>
+                <Link to="/search-schools" className="block py-2 px-6 text-gray-600 hover:bg-gray-100" onClick={() => setMobileMenuOpen(false)}>Search Schools</Link>
+                <Link to="/predictor" className="block py-2 px-6 text-gray-600 hover:bg-gray-100" onClick={() => setMobileMenuOpen(false)}>Predict Schools</Link>
+              </>
+            )}
             <Link to="/compare" className="block py-2 px-6 text-gray-600 hover:bg-gray-100" onClick={() => setMobileMenuOpen(false)}>Compare {compareCount > 0 && `(${compareCount})`}</Link>
             <Link to="/shortlist" className="block py-2 px-6 text-gray-600 hover:bg-gray-100" onClick={() => setMobileMenuOpen(false)}>Shortlist {shortlistCount > 0 && `(${shortlistCount})`}</Link>
           </>
