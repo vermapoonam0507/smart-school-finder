@@ -1,6 +1,14 @@
 import axiosInstance from './axios';
 
-// --- Shortlist Functions ---
+/**
+ * User Services - Frontend API calls for user-related operations
+ * This file contains all functions needed to interact with user-related backend endpoints.
+ */
+
+// =============================================================================
+// SHORTLIST FUNCTIONS
+// =============================================================================
+
 export const getShortlist = async (authId) => {
   try {
     const response = await axiosInstance.get(`/users/shortlist/${authId}`);
@@ -31,98 +39,116 @@ export const removeFromShortlist = async (authId, schoolId) => {
   }
 };
 
-// Get count of shortlisted schools for a user
 export const getShortlistCount = async (authId) => {
   try {
     const response = await axiosInstance.get(`/users/shortlist/count/${authId}`);
-    return response.data; // expect a number or { count }
+    return response.data;
   } catch (error) {
     console.error("Error fetching shortlist count:", error.response?.data || error.message);
     throw error.response?.data || error;
   }
 };
 
-//<==================================================================================>
-// import axiosInstance from './axios';
+// =============================================================================
+// USER PROFILE FUNCTIONS
+// =============================================================================
 
-// 1. GET User Profile (Used in AuthContext to check if profile exists)
-// This function calls the "getStudent" controller on your backend.
+// Fetch user profile by authId
 export const getUserProfile = async (authId) => {
   try {
     const response = await axiosInstance.get(`/users/${authId}`);
-    return response.data; // The backend wraps data in a "data" property
+    return response.data;
   } catch (error) {
     console.error("Error fetching user profile:", error.response?.data || error.message);
-    throw error; // Throw error so AuthContext can catch it
+    throw error.response?.data || error;
   }
 };
 
-
-// 2. CREATE Student Profile (Used by CreateProfilePage.jsx)
-// This function calls the "addStudent" controller on your backend.
+// Create student profile
 export const createStudentProfile = async (profileData) => {
   try {
-    // THIS IS THE CORRECTED LINE:
-    const response = await axiosInstance.post('/users/', profileData); 
+    const response = await axiosInstance.post('/users/add', profileData);
     return response.data;
   } catch (error) {
-    console.error("Error creating user profile:", error.response?.data || error.message);
+    console.error("Error creating student profile:", error.response?.data || error.message);
     throw error.response?.data || error;
   }
 };
 
-
-// 3. UPDATE User Profile (Used by UserDashboard.jsx)
-// This function calls the "updateStudent" controller on your backend.
+// Update student profile by authId
 export const updateUserProfile = async (authId, profileData) => {
+  console.log('Attempting to update profile with data:', {
+    authId,
+    profileData,
+    baseURL: axiosInstance.defaults.baseURL
+  });
+
   try {
-    // align with backend route: PUT /users/:authId
+    // Try with the standard endpoint first
     const response = await axiosInstance.put(`/users/${authId}`, profileData);
+    console.log('Profile update successful:', response.data);
     return response.data;
   } catch (error) {
-    console.error("Error updating user profile:", error.response?.data || error.message);
-    throw error.response?.data || error;
+    console.error("Error updating profile (standard endpoint):", {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      message: error.message,
+      config: {
+        url: error.config?.url,
+        method: error.config?.method,
+        data: error.config?.data
+      }
+    });
+    
+    // Try with the update endpoint
+    try {
+      console.log("Trying update endpoint...");
+      const response = await axiosInstance.put(`/users/update/${authId}`, profileData);
+      console.log('Profile update successful (update endpoint):', response.data);
+      return response.data;
+    } catch (updateError) {
+      console.error("Error with update endpoint:", {
+        status: updateError.response?.status,
+        statusText: updateError.response?.statusText,
+        data: updateError.response?.data,
+        message: updateError.message,
+        config: {
+          url: updateError.config?.url,
+          method: updateError.config?.method,
+          data: updateError.config?.data
+        }
+      });
+      
+      // As a last resort, try with the full path
+      try {
+        console.log("Trying full path endpoint...");
+        const response = await axiosInstance.put(`/api/users/${authId}`, profileData);
+        console.log('Profile update successful (full path):', response.data);
+        return response.data;
+      } catch (finalError) {
+        console.error("All update attempts failed:", {
+          status: finalError.response?.status,
+          statusText: finalError.response?.statusText,
+          data: finalError.response?.data,
+          message: finalError.message,
+          config: {
+            url: finalError.config?.url,
+            method: finalError.config?.method,
+            data: finalError.config?.data
+          }
+        });
+        
+        throw new Error(finalError.response?.data?.message || 'Failed to update profile. Please try again.');
+      }
+    }
   }
 };
 
-// --- You can keep your other service functions below ---
-//<==================================================================================>
+// =============================================================================
+// USER PREFERENCES FUNCTIONS
+// =============================================================================
 
-
-// --- User Profile & Preferences Functions ---
-// export const getUserProfile = async (authId) => {
-//   try {
-//     const response = await axiosInstance.get(`/users/${authId}`);
-//     return response; 
-//   } catch (error) {
-//     console.error("Error fetching user profile:", error.response?.data || error.message);
-//     throw error.response?.data || error;
-//   }
-// };
-
-// export const updateUserProfile = async (userId, profileData) => { // Add userId here
-// try {
-//     // Change .post to .put and add userId to the URL
-//  const response = await axiosInstance.put(`/users/${userId}`, profileData);
-//  return response;
-// } catch (error) {
-//  console.error("Error updating user profile:", error.response?.data || error.message);
-//     throw error.response?.data || error;
-//   }
-// };
-
-
-export const updateUserPreferences = async (preferenceData) => {
-    try {
-        const response = await axiosInstance.post('/users/preferences/', preferenceData);
-        return response;
-    } catch (error) {
-        console.error("Error updating user preferences:", error.response?.data || error.message);
-        throw error.response?.data || error;
-    }
-};
-
-// Preferences API aligned to backend routes
 export const getUserPreferences = async (studentId) => {
   try {
     const response = await axiosInstance.get(`/users/preferences/${studentId}`);
@@ -133,22 +159,51 @@ export const getUserPreferences = async (studentId) => {
   }
 };
 
-export const saveUserPreferences = async (studentId, preferenceData) => {
+export const createUserPreferences = async (preferenceData) => {
   try {
-    // For new user, create first using POST; backend has POST /users/preferences/
-    const response = await axiosInstance.post(`/users/preferences/`, preferenceData);
+    const response = await axiosInstance.post('/users/preferences/', preferenceData);
     return response.data;
   } catch (error) {
-    console.error("Error saving user preferences:", error.response?.data || error.message);
+    console.error("Error creating user preferences:", error.response?.data || error.message);
     throw error.response?.data || error;
   }
 };
 
-// --- Student Application Functions ---
+export const updateUserPreferences = async (studentId, preferenceData) => {
+  try {
+    const response = await axiosInstance.put(`/users/preferences/${studentId}`, preferenceData);
+    return response.data;
+  } catch (error) {
+    console.error("Error updating user preferences:", error.response?.data || error.message);
+    throw error.response?.data || error;
+  }
+};
+
+export const saveUserPreferences = async (studentId, preferenceData) => {
+  if (!studentId) throw new Error("Student ID is required to save preferences");
+
+  try {
+    // Try updating first
+    const response = await axiosInstance.put(`/users/preferences/${studentId}`, preferenceData);
+    return response.data;
+  } catch (updateError) {
+    // If update fails with 404 or 400, create new preferences
+    if (updateError.response?.status === 404 || updateError.response?.status === 400) {
+      const response = await axiosInstance.post('/users/preferences/', { ...preferenceData, studentId });
+      return response.data;
+    }
+    throw updateError;
+  }
+};
+
+// =============================================================================
+// STUDENT APPLICATION FUNCTIONS
+// =============================================================================
+
 export const submitApplication = async (applicationData) => {
   try {
     const response = await axiosInstance.post('/applications/', applicationData);
-    return response;
+    return response.data;
   } catch (error) {
     console.error("Error submitting application:", error.response?.data || error.message);
     throw error.response?.data || error;
@@ -158,14 +213,18 @@ export const submitApplication = async (applicationData) => {
 export const getApplication = async (studId) => {
   try {
     const response = await axiosInstance.get(`/applications/${studId}`);
-    return response;
-  } catch (error) { 
+    return response.data;
+  } catch (error) {
+    if (error.response?.status === 404) return { data: null, status: 'Not Found' };
     console.error("Error fetching application:", error.response?.data || error.message);
-    throw error.response?.data || error;
+    throw error;
   }
 };
 
-// --- Student PDF ---
+// =============================================================================
+// PDF AND DOCUMENT FUNCTIONS
+// =============================================================================
+
 export const generateStudentPdf = async (studId) => {
   try {
     const response = await axiosInstance.post(`/users/pdf/generate/${studId}`);
@@ -176,11 +235,14 @@ export const generateStudentPdf = async (studId) => {
   }
 };
 
-// --- Forms (Applications) by Student ---
+// =============================================================================
+// FORMS FUNCTIONS
+// =============================================================================
+
 export const getFormsByStudent = async (studId) => {
   try {
     const response = await axiosInstance.get(`/form/student/${studId}`);
-    return response.data; // expects { data: [...] } with schoolId populated (name)
+    return response.data;
   } catch (error) {
     console.error("Error fetching forms by student:", error.response?.data || error.message);
     throw error.response?.data || error;
