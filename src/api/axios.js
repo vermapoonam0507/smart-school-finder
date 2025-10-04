@@ -3,7 +3,7 @@
 import axios from 'axios';
 
 // Hardcode API base to avoid relative/localhost issues in dev
-const apiBaseURL = 'https://backend-tc-sa-v2.onrender.com/api';
+const apiBaseURL = 'http://localhost:8080/api';
 
 const apiClient = axios.create({
 	baseURL: apiBaseURL,

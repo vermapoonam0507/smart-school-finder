@@ -1,9 +1,57 @@
+// src/api/adminService.js
+
 import apiClient from './axios';
 
-// --- School Functions ---
+/**
+ * Admin authentication service
+ * Handles admin-specific API calls
+ */
 
 /**
+ * Register a new admin user
+ * @param {object} adminData - Admin registration data
+ */
+export const registerAdmin = (adminData) => {
+  return apiClient.post('/auth/register', {
+    ...adminData,
+    userType: 'admin'
+  });
+};
 
+/**
+ * Login admin user
+ * @param {object} credentials - Admin login credentials
+ */
+export const loginAdmin = (credentials) => {
+  return apiClient.post('/auth/login', {
+    ...credentials,
+    userType: 'admin'
+  });
+};
+
+/**
+ * Get admin dashboard statistics
+ */
+export const getAdminStats = () => {
+  return apiClient.get('/admin/stats');
+};
+
+/**
+ * Get all users (for admin management)
+ */
+export const getAllUsers = () => {
+  return apiClient.get('/admin/users');
+};
+
+/**
+ * Get all schools (for admin management)
+ */
+export const getAllSchools = () => {
+  return apiClient.get('/admin/schools/status/all');
+};
+
+/**
+ * Get schools by status (for admin management)
  * @param {string} status - School status (pending, accepted, rejected)
  */
 export const getSchoolsByStatus = (status) => {
@@ -11,130 +59,107 @@ export const getSchoolsByStatus = (status) => {
 };
 
 /**
- * Add new school function.
- * @param {object} schoolData - School's data.
+ * Get a single school by id
+ * @param {string} schoolId
  */
-export const addSchool = (schoolData) => {
-  return apiClient.post('/admin/schools', schoolData);
+export const getSchoolById = (schoolId) => {
+  return apiClient.get(`/admin/schools/${encodeURIComponent(schoolId)}`);
 };
 
 /**
- * Get school by ID function.
- * @param {string} id - School's ID.
+ * Update user status (activate/deactivate)
+ * @param {string} userId - User ID
+ * @param {object} statusData - Status update data
  */
-export const getSchoolById = (id) => {
-  return apiClient.get(`/admin/schools/${id}`);
+export const updateUserStatus = (userId, statusData) => {
+  return apiClient.patch(`/admin/users/${userId}/status`, statusData);
 };
 
 /**
- * Update school status function.
- * @param {string} id - School's ID.
- * @param {object} data - Data to update (e.g., { status: 'accepted' }).
+ * Update school status (approve/reject)
+ * @param {string} schoolId - School ID
+ * @param {object} statusData - Status update data
  */
-export const updateSchoolStatus = (id, data) => {
-  return apiClient.put(`/admin/schools/${id}`, data);
+export const updateSchoolStatus = (schoolId, statusData) => {
+  return apiClient.put(`/admin/schools/${schoolId}`, statusData);
 };
 
-
-// --- Amenity, Activity, and Alumnus Functions ---
-
-export const addAmenity = (amenityData) => {
-  return apiClient.post('/admin/amenities', amenityData);
-};
-
-export const getAmenityById = (id) => {
-    return apiClient.get(`/admin/amenities/${id}`);
-};
-
-export const addActivity = (activityData) => {
-  return apiClient.post('/admin/activities', activityData);
-};
-
-export const getActivityById = (id) => {
-    return apiClient.get(`/admin/activities/${id}`);
-};
-
-export const addAlumnus = (alumnusData) => {
-  return apiClient.post('/admin/alumnus', alumnusData);
-};
-
-export const getAlumnusById = (id) => {
-    return apiClient.get(`/admin/alumnus/${id}`);
-};
-
-
- 
-export const checkSchoolProfileExists = (authId) => {
-  return apiClient.get(`/admin/schools/${authId}`);
-};
-
-/**
- * Deletes a specific photo for a school.
- * @param {string} schoolId - The ID of the school.
- * @param {string} publicId - The public ID of the photo to delete.
- */
-export const deleteSchoolPhoto = (schoolId, publicId) => {
-  // Note: The exact URL depends on your backend API design.
-  // This is a common pattern.
-  return apiClient.delete(`/admin/schools/${schoolId}/photos/${publicId}`);
-};
-
-
-/**
- * Deletes the video for a school.
- * @param {string} schoolId - The ID of the school.
- * @param {string} publicId - The public ID of the video to delete.
- */
-export const deleteSchoolVideo = (schoolId, publicId) => {
-  // Note: The exact URL depends on your backend API design.
-  return apiClient.delete(`/admin/schools/${schoolId}/videos/${publicId}`);
-};
-
-
-/**
- * Gets all photos for a specific school.
- * @param {string} schoolId - The ID of the school.
- */
+/** Media APIs for School (photos/videos) */
 export const getSchoolPhotos = (schoolId) => {
-  return apiClient.get(`/admin/schools/${schoolId}/photos`);
+  return apiClient.get(`/admin/${encodeURIComponent(schoolId)}/photos`);
 };
 
-/**
- * Gets the video for a specific school.
- * @param {string} schoolId - The ID of the school.
- */
 export const getSchoolVideos = (schoolId) => {
-  return apiClient.get(`/admin/schools/${schoolId}/videos`);
+  return apiClient.get(`/admin/${encodeURIComponent(schoolId)}/videos`);
 };
 
-/**
- * Uploads one or more photos for a school.
- * @param {string} schoolId - The ID of the school.
- * @param {FileList} files - The file(s) from the input element.
- */
 export const uploadSchoolPhotos = (schoolId, files) => {
   const formData = new FormData();
-  for (let i = 0; i < files.length; i++) {
-    formData.append("photos", files[i]);
-  }
-  return apiClient.post(`/admin/schools/${schoolId}/photos`, formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
+  Array.from(files).forEach((f) => formData.append('files', f));
+  return apiClient.post(`/admin/${encodeURIComponent(schoolId)}/upload/photos`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
   });
 };
 
-/**
- * Uploads a single video for a school.
- * @param {string} schoolId - The ID of the school.
- * @param {File} file - The video file from the input element.
- */
 export const uploadSchoolVideo = (schoolId, file) => {
   const formData = new FormData();
-  formData.append("video", file);
-  return apiClient.post(`/admin/schools/${schoolId}/video`, formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
+  formData.append('file', file);
+  return apiClient.post(`/admin/${encodeURIComponent(schoolId)}/upload/video`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
   });
+};
+
+export const deleteSchoolPhoto = (schoolId, publicId) => {
+  return apiClient.delete(`/admin/${encodeURIComponent(schoolId)}/photo/${encodeURIComponent(publicId)}`);
+};
+
+export const deleteSchoolVideo = (schoolId, publicId) => {
+  return apiClient.delete(`/admin/${encodeURIComponent(schoolId)}/video/${encodeURIComponent(publicId)}`);
+};
+
+/**
+ * Check if a school profile exists for an authId (fallback to by-id)
+ * Backend does not have a dedicated endpoint, so reuse get by id
+ */
+export const checkSchoolProfileExists = (authId) => {
+  return getSchoolById(authId);
+};
+
+/**
+ * Delete a user
+ * @param {string} userId - User ID
+ */
+export const deleteUser = (userId) => {
+  return apiClient.delete(`/admin/users/${userId}`);
+};
+
+/**
+ * Delete a school
+ * @param {string} schoolId - School ID
+ */
+export const deleteSchool = (schoolId) => {
+  return apiClient.delete(`/admin/schools/${schoolId}`);
+};
+
+/**
+ * Get admin profile
+ */
+export const getAdminProfile = () => {
+  return apiClient.get('/admin/profile');
+};
+
+/**
+ * Update admin profile
+ * @param {object} profileData - Profile update data
+ */
+export const updateAdminProfile = (profileData) => {
+  return apiClient.patch('/admin/profile', profileData);
+};
+
+/**
+ * Change admin password
+ * @param {object} passwordData - Password change data
+ */
+export const changeAdminPassword = (passwordData) => {
+  return apiClient.patch('/admin/change-password', passwordData);
 };

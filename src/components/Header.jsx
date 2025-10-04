@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { School, Menu, X, LogOut, User, ChevronDown } from 'lucide-react';
+import { School, Menu, X, LogOut, User, ChevronDown, Shield } from 'lucide-react';
 
 const Header = ({ isMobileMenuOpen, setMobileMenuOpen, compareCount, shortlistCount = 0, currentUser, onLogout }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const authPages = ['/login', '/signup', '/signup-school', '/forgot-password'];
+  const authPages = ['/login', '/signup', '/signup-school', '/forgot-password', '/admin/login', '/admin/signup'];
 
   console.log(currentUser)
-  if (authPages.includes(location.pathname) || location.pathname.startsWith('/school-portal')) {
+  if (authPages.includes(location.pathname) || location.pathname.startsWith('/school-portal') || location.pathname.startsWith('/admin/dashboard')) {
     return null;
   }
 
@@ -45,6 +45,7 @@ const Header = ({ isMobileMenuOpen, setMobileMenuOpen, compareCount, shortlistCo
                   Shortlist
                   {shortlistCount > 0 && <span className="absolute -top-2 -right-6 bg-rose-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">{shortlistCount}</span>}
                 </Link>
+                <Link to="/blog" className="text-gray-600 hover:text-blue-600">Blog</Link>
             </>
         )}
 
@@ -66,6 +67,10 @@ const Header = ({ isMobileMenuOpen, setMobileMenuOpen, compareCount, shortlistCo
         ) : (
             <>
                 <Link to="/login" className="text-gray-600 hover:text-blue-600">Sign In</Link>
+                <Link to="/admin/login" className="text-gray-600 hover:text-blue-600 flex items-center">
+                  <Shield className="w-4 h-4 mr-1" />
+                  Admin
+                </Link>
                 <button onClick={handleRegisterClick} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Register Your School</button>
             </>
         )}
@@ -89,6 +94,7 @@ const Header = ({ isMobileMenuOpen, setMobileMenuOpen, compareCount, shortlistCo
             )}
             <Link to="/compare" className="block py-2 px-6 text-gray-600 hover:bg-gray-100" onClick={() => setMobileMenuOpen(false)}>Compare {compareCount > 0 && `(${compareCount})`}</Link>
             <Link to="/shortlist" className="block py-2 px-6 text-gray-600 hover:bg-gray-100" onClick={() => setMobileMenuOpen(false)}>Shortlist {shortlistCount > 0 && `(${shortlistCount})`}</Link>
+            <Link to="/blog" className="block py-2 px-6 text-gray-600 hover:bg-gray-100" onClick={() => setMobileMenuOpen(false)}>Blog</Link>
           </>
         )}
 
@@ -109,6 +115,10 @@ const Header = ({ isMobileMenuOpen, setMobileMenuOpen, compareCount, shortlistCo
           ) : (
             <>
               <Link to="/login" className="block w-full text-center text-gray-600 hover:text-blue-600 mb-2 py-2" onClick={() => setMobileMenuOpen(false)}>Sign In</Link>
+              <Link to="/admin/login" className="block w-full text-center text-gray-600 hover:text-blue-600 mb-2 py-2 flex items-center justify-center" onClick={() => setMobileMenuOpen(false)}>
+                <Shield className="w-4 h-4 mr-1" />
+                Admin Login
+              </Link>
               <button onClick={() => { handleRegisterClick(); setMobileMenuOpen(false); }} className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Register Your School</button>
             </>
           )}

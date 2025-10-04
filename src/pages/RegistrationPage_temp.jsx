@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-
+import { addSchool } from "../api/adminService";
 import { useAuth } from "../context/AuthContext";
 import { PlusCircle, Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
@@ -1468,20 +1468,927 @@ const RegistrationPage = () => {
           </div>
         </div>
 
-       
+        {/* Diversity & Inclusivity Section */}
+        <div className="border-t pt-6">
+          <h2 className="text-xl font-semibold text-gray-700 mb-6">Diversity & Inclusivity</h2>
+          
+          {/* Gender Ratio */}
+          <div className="mb-6">
+            <h3 className="text-lg font-medium text-gray-700 mb-4">Gender Ratio</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Male (%)</label>
+                <input
+                  type="number"
+                  name="genderRatioMale"
+                  value={formData.genderRatioMale}
+                  onChange={handleInputChange}
+                  placeholder="e.g., 45"
+                  min="0"
+                  max="100"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Female (%)</label>
+                <input
+                  type="number"
+                  name="genderRatioFemale"
+                  value={formData.genderRatioFemale}
+                  onChange={handleInputChange}
+                  placeholder="e.g., 50"
+                  min="0"
+                  max="100"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Others (%)</label>
+                <input
+                  type="number"
+                  name="genderRatioOthers"
+                  value={formData.genderRatioOthers}
+                  onChange={handleInputChange}
+                  placeholder="e.g., 5"
+                  min="0"
+                  max="100"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+            </div>
+            
+            {/* Gender Ratio Pie Chart Visualization */}
+            <div className="mt-4">
+              <h4 className="text-sm font-medium text-gray-700 mb-3">Gender Distribution</h4>
+              <div className="flex items-center justify-center">
+                <div className="relative w-48 h-48">
+                  <svg className="w-48 h-48 transform -rotate-90" viewBox="0 0 100 100">
+                    {(() => {
+                      const male = Number(formData.genderRatioMale || 0);
+                      const female = Number(formData.genderRatioFemale || 0);
+                      const others = Number(formData.genderRatioOthers || 0);
+                      const total = male + female + others;
+                      
+                      if (total === 0) {
+                        return (
+                          <circle
+                            cx="50"
+                            cy="50"
+                            r="40"
+                            fill="#e5e7eb"
+                            stroke="#d1d5db"
+                            strokeWidth="2"
+                          />
+                        );
+                      }
+                      
+                      let cumulative = 0;
+                      const segments = [];
+                      
+                      if (male > 0) {
+                        const angle = (male / total) * 360;
+                        segments.push(
+                          <path
+                            key="male"
+                            d={`M 50,50 L 50,10 A 40,40 0 ${angle > 180 ? 1 : 0},1 ${50 + 40 * Math.cos((angle * Math.PI) / 180)},${50 - 40 * Math.sin((angle * Math.PI) / 180)} Z`}
+                            fill="#3b82f6"
+                          />
+                        );
+                        cumulative += angle;
+                      }
+                      
+                      if (female > 0) {
+                        const angle = (female / total) * 360;
+                        const startAngle = cumulative;
+                        const endAngle = cumulative + angle;
+                        segments.push(
+                          <path
+                            key="female"
+                            d={`M 50,50 L ${50 + 40 * Math.cos((startAngle * Math.PI) / 180)},${50 - 40 * Math.sin((startAngle * Math.PI) / 180)} A 40,40 0 ${angle > 180 ? 1 : 0},1 ${50 + 40 * Math.cos((endAngle * Math.PI) / 180)},${50 - 40 * Math.sin((endAngle * Math.PI) / 180)} Z`}
+                            fill="#ec4899"
+                          />
+                        );
+                        cumulative += angle;
+                      }
+                      
+                      if (others > 0) {
+                        const angle = (others / total) * 360;
+                        const startAngle = cumulative;
+                        const endAngle = cumulative + angle;
+                        segments.push(
+                          <path
+                            key="others"
+                            d={`M 50,50 L ${50 + 40 * Math.cos((startAngle * Math.PI) / 180)},${50 - 40 * Math.sin((startAngle * Math.PI) / 180)} A 40,40 0 ${angle > 180 ? 1 : 0},1 ${50 + 40 * Math.cos((endAngle * Math.PI) / 180)},${50 - 40 * Math.sin((endAngle * Math.PI) / 180)} Z`}
+                            fill="#10b981"
+                          />
+                        );
+                      }
+                      
+                      return segments;
+                    })()}
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="text-lg font-semibold text-gray-900">
+                        {Number(formData.genderRatioMale || 0) + Number(formData.genderRatioFemale || 0) + Number(formData.genderRatioOthers || 0)}%
+                      </div>
+                      <div className="text-xs text-gray-500">Total</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="flex justify-center gap-6 mt-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                  <span className="text-sm text-gray-700">Male: {formData.genderRatioMale || 0}%</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-pink-500 rounded-full"></div>
+                  <span className="text-sm text-gray-700">Female: {formData.genderRatioFemale || 0}%</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                  <span className="text-sm text-gray-700">Others: {formData.genderRatioOthers || 0}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
 
-        
+          {/* Scholarship Diversity */}
+          <div className="mb-6">
+            <h3 className="text-lg font-medium text-gray-700 mb-4">Scholarship Diversity</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Scholarship Types Offered</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {['Merit', 'Sports', 'Socio-economic', 'Community', 'Cultural', 'Academic Excellence'].map(type => (
+                    <label key={type} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        name="scholarshipDiversityTypes"
+                        value={type}
+                        checked={(formData.scholarshipDiversityTypes || []).includes(type)}
+                        onChange={(e) => {
+                          const { checked, value } = e.target;
+                          const current = formData.scholarshipDiversityTypes || [];
+                          const next = checked ? [...current, value] : current.filter(v => v !== value);
+                          setFormData(prev => ({ ...prev, scholarshipDiversityTypes: next }));
+                        }}
+                        className="h-4 w-4 text-indigo-600 border-gray-300 rounded"
+                      />
+                      <span className="ml-2 text-gray-700">{type}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">% of Students Covered</label>
+                <input
+                  type="number"
+                  name="scholarshipDiversityCoverage"
+                  value={formData.scholarshipDiversityCoverage}
+                  onChange={handleInputChange}
+                  placeholder="e.g., 25"
+                  min="0"
+                  max="100"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Special Needs Support */}
+          <div className="mb-6">
+            <h3 className="text-lg font-medium text-gray-700 mb-4">Special Needs Support</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Dedicated Staff</label>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    name="specialNeedsStaff"
+                    checked={formData.specialNeedsStaff}
+                    onChange={(e) => setFormData(prev => ({ ...prev, specialNeedsStaff: e.target.checked }))}
+                    className="h-4 w-4 text-indigo-600 border-gray-300 rounded"
+                  />
+                  <span className="ml-2 text-gray-700">👩‍🏫 Special Educator available</span>
+                </label>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">% of Special Needs Students Supported</label>
+                <input
+                  type="number"
+                  name="specialNeedsSupportPercentage"
+                  value={formData.specialNeedsSupportPercentage}
+                  onChange={handleInputChange}
+                  placeholder="e.g., 80"
+                  min="0"
+                  max="100"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+            </div>
+            
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Facilities Available</label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {['Ramps', 'Special educators', 'Resource room', 'Assistive devices', 'Wheelchair access', 'Learning support'].map(facility => (
+                  <label key={facility} className="flex items-center">
+                    <input
+                      type="checkbox"
+                      name="specialNeedsFacilities"
+                      value={facility}
+                      checked={(formData.specialNeedsFacilities || []).includes(facility)}
+                      onChange={(e) => {
+                        const { checked, value } = e.target;
+                        const current = formData.specialNeedsFacilities || [];
+                        const next = checked ? [...current, value] : current.filter(v => v !== value);
+                        setFormData(prev => ({ ...prev, specialNeedsFacilities: next }));
+                      }}
+                      className="h-4 w-4 text-indigo-600 border-gray-300 rounded"
+                    />
+                    <span className="ml-2 text-gray-700">
+                      {facility === 'Ramps' ? '♿' : 
+                       facility === 'Special educators' ? '👩‍🏫' : 
+                       facility === 'Learning support' ? '📘' : ''} {facility}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Diversity Visualization */}
+          <div className="mt-6">
+            <h4 className="text-sm font-medium text-gray-700 mb-3">Visualization: Diversity Overview</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-white border rounded-lg p-4 text-center">
+                <div className="text-gray-500 text-sm">Gender Balance</div>
+                <div className="text-lg font-semibold text-gray-900">
+                  {(() => {
+                    const male = Number(formData.genderRatioMale || 0);
+                    const female = Number(formData.genderRatioFemale || 0);
+                    const others = Number(formData.genderRatioOthers || 0);
+                    const total = male + female + others;
+                    if (total === 0) return '—';
+                    const balance = Math.abs(male - female);
+                    return balance <= 10 ? 'Balanced' : balance <= 20 ? 'Moderate' : 'Imbalanced';
+                  })()}
+                </div>
+              </div>
+              <div className="bg-white border rounded-lg p-4 text-center">
+                <div className="text-gray-500 text-sm">Scholarship Coverage</div>
+                <div className="text-lg font-semibold text-gray-900">
+                  {formData.scholarshipDiversityCoverage ? `${formData.scholarshipDiversityCoverage}%` : '—'}
+                </div>
+              </div>
+              <div className="bg-white border rounded-lg p-4 text-center">
+                <div className="text-gray-500 text-sm">Special Needs</div>
+                <div className="text-lg font-semibold text-gray-900">
+                  {formData.specialNeedsStaff ? 'Supported' : '—'}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Parent Reviews Section */}
+        <div className="border-t pt-6">
+          <h2 className="text-xl font-semibold text-gray-700 mb-6">Parent Reviews</h2>
+          
+          {/* Review Settings */}
+          <div className="mb-6">
+            <h3 className="text-lg font-medium text-gray-700 mb-4">Review Settings</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Review System</label>
+                <div className="space-y-2">
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      name="reviewsEnabled"
+                      checked={formData.reviewsEnabled}
+                      onChange={(e) => setFormData(prev => ({ ...prev, reviewsEnabled: e.target.checked }))}
+                      className="h-4 w-4 text-indigo-600 border-gray-300 rounded"
+                    />
+                    <span className="ml-2 text-gray-700">Enable parent reviews</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      name="reviewVerificationRequired"
+                      checked={formData.reviewVerificationRequired}
+                      onChange={(e) => setFormData(prev => ({ ...prev, reviewVerificationRequired: e.target.checked }))}
+                      className="h-4 w-4 text-indigo-600 border-gray-300 rounded"
+                    />
+                    <span className="ml-2 text-gray-700">Require verified parent accounts</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      name="reviewAnonymityOption"
+                      checked={formData.reviewAnonymityOption}
+                      onChange={(e) => setFormData(prev => ({ ...prev, reviewAnonymityOption: e.target.checked }))}
+                      className="h-4 w-4 text-indigo-600 border-gray-300 rounded"
+                    />
+                    <span className="ml-2 text-gray-700">Allow anonymous reviews</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      name="reviewMediaUpload"
+                      checked={formData.reviewMediaUpload}
+                      onChange={(e) => setFormData(prev => ({ ...prev, reviewMediaUpload: e.target.checked }))}
+                      className="h-4 w-4 text-indigo-600 border-gray-300 rounded"
+                    />
+                    <span className="ml-2 text-gray-700">Allow media uploads with reviews</span>
+                  </label>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Review Moderation</label>
+                <select
+                  name="reviewModeration"
+                  value={formData.reviewModeration}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                  <option value="ai">AI Moderation</option>
+                  <option value="admin">Admin Moderation</option>
+                  <option value="none">No Moderation</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Rating Summary */}
+          <div className="mb-6">
+            <h3 className="text-lg font-medium text-gray-700 mb-4">Rating Summary</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-white border rounded-lg p-6">
+                <div className="text-center">
+                  <div className="text-4xl font-bold text-gray-900 mb-2">
+                    ⭐ {formData.averageRating.toFixed(1)}/5
+                  </div>
+                  <div className="text-sm text-gray-600 mb-4">
+                    Based on {formData.totalReviews} reviews
+                  </div>
+                  <div className="space-y-2">
+                    {[5, 4, 3, 2, 1].map(rating => (
+                      <div key={rating} className="flex items-center gap-3">
+                        <span className="text-sm text-gray-600 w-8">{rating}★</span>
+                        <div className="flex-1 bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="bg-yellow-400 h-2 rounded-full" 
+                            style={{ 
+                              width: `${formData.totalReviews > 0 ? (formData.ratingBreakdown[rating] / formData.totalReviews) * 100 : 0}%` 
+                            }}
+                          ></div>
+                        </div>
+                        <span className="text-sm text-gray-600 w-8">
+                          {formData.totalReviews > 0 ? Math.round((formData.ratingBreakdown[rating] / formData.totalReviews) * 100) : 0}%
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Average Rating</label>
+                  <input
+                    type="number"
+                    name="averageRating"
+                    value={formData.averageRating}
+                    onChange={handleInputChange}
+                    min="0"
+                    max="5"
+                    step="0.1"
+                    placeholder="e.g., 4.3"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Total Reviews</label>
+                  <input
+                    type="number"
+                    name="totalReviews"
+                    value={formData.totalReviews}
+                    onChange={handleInputChange}
+                    min="0"
+                    placeholder="e.g., 127"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Rating Breakdown */}
+          <div className="mb-6">
+            <h3 className="text-lg font-medium text-gray-700 mb-4">Rating Breakdown</h3>
+            <div className="grid grid-cols-5 gap-4">
+              {[5, 4, 3, 2, 1].map(rating => (
+                <div key={rating} className="text-center">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{rating}★</label>
+                  <input
+                    type="number"
+                    name={`ratingBreakdown_${rating}`}
+                    value={formData.ratingBreakdown[rating]}
+                    onChange={(e) => {
+                      const newBreakdown = { ...formData.ratingBreakdown };
+                      newBreakdown[rating] = Number(e.target.value);
+                      setFormData(prev => ({ ...prev, ratingBreakdown: newBreakdown }));
+                    }}
+                    min="0"
+                    placeholder="0"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Sample Reviews Management */}
+          <div className="mb-6">
+            <h3 className="text-lg font-medium text-gray-700 mb-4">Sample Reviews</h3>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-md font-medium text-gray-600">Highlighted Reviews</h4>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newReview = {
+                      id: Date.now(),
+                      rating: 5,
+                      comment: '',
+                      parentName: '',
+                      grade: '',
+                      verified: true,
+                      helpful: 0,
+                      date: new Date().toISOString().split('T')[0]
+                    };
+                    setFormData(prev => ({ 
+                      ...prev, 
+                      highlightedReviews: [...prev.highlightedReviews, newReview] 
+                    }));
+                  }}
+                  className="flex items-center text-sm text-indigo-600 hover:text-indigo-800"
+                >
+                  <PlusCircle size={16} className="mr-1" /> Add Highlighted Review
+                </button>
+              </div>
+              
+              <div className="space-y-3">
+                {(formData.highlightedReviews || []).map((review, index) => (
+                  <div key={review.id} className="bg-gray-50 p-4 rounded-lg border">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Rating</label>
+                        <select
+                          value={review.rating}
+                          onChange={(e) => {
+                            const newReviews = [...(formData.highlightedReviews || [])];
+                            newReviews[index] = { ...newReviews[index], rating: Number(e.target.value) };
+                            setFormData(prev => ({ ...prev, highlightedReviews: newReviews }));
+                          }}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500"
+                        >
+                          <option value={5}>5★ Excellent</option>
+                          <option value={4}>4★ Very Good</option>
+                          <option value={3}>3★ Good</option>
+                          <option value={2}>2★ Fair</option>
+                          <option value={1}>1★ Poor</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Parent Name</label>
+                        <input
+                          type="text"
+                          value={review.parentName}
+                          onChange={(e) => {
+                            const newReviews = [...(formData.highlightedReviews || [])];
+                            newReviews[index] = { ...newReviews[index], parentName: e.target.value };
+                            setFormData(prev => ({ ...prev, highlightedReviews: newReviews }));
+                          }}
+                          placeholder="e.g., Parent of Grade 5 Student"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Review Comment</label>
+                        <textarea
+                          value={review.comment}
+                          onChange={(e) => {
+                            const newReviews = [...(formData.highlightedReviews || [])];
+                            newReviews[index] = { ...newReviews[index], comment: e.target.value };
+                            setFormData(prev => ({ ...prev, highlightedReviews: newReviews }));
+                          }}
+                          placeholder="Share your experience with the school..."
+                          rows="3"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center mt-3">
+                      <div className="flex items-center gap-4">
+                        <label className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={review.verified}
+                            onChange={(e) => {
+                              const newReviews = [...(formData.highlightedReviews || [])];
+                              newReviews[index] = { ...newReviews[index], verified: e.target.checked };
+                              setFormData(prev => ({ ...prev, highlightedReviews: newReviews }));
+                            }}
+                            className="h-4 w-4 text-indigo-600 border-gray-300 rounded"
+                          />
+                          <span className="ml-2 text-sm text-gray-700">Verified Parent</span>
+                        </label>
+                        <span className="text-sm text-gray-500">
+                          {review.helpful} helpful votes
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newReviews = (formData.highlightedReviews || []).filter((_, i) => i !== index);
+                          setFormData(prev => ({ ...prev, highlightedReviews: newReviews }));
+                        }}
+                        className="text-red-500 hover:text-red-700 text-sm"
+                      >
+                        <Trash2 size={16} className="inline mr-1" /> Remove
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Reviews Visualization */}
+          <div className="mt-6">
+            <h4 className="text-sm font-medium text-gray-700 mb-3">Visualization: Review Overview</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-white border rounded-lg p-4 text-center">
+                <div className="text-gray-500 text-sm">Average Rating</div>
+                <div className="text-2xl font-semibold text-gray-900">⭐ {formData.averageRating.toFixed(1)}</div>
+              </div>
+              <div className="bg-white border rounded-lg p-4 text-center">
+                <div className="text-gray-500 text-sm">Total Reviews</div>
+                <div className="text-2xl font-semibold text-gray-900">{formData.totalReviews}</div>
+              </div>
+              <div className="bg-white border rounded-lg p-4 text-center">
+                <div className="text-gray-500 text-sm">Verification</div>
+                <div className="text-2xl font-semibold text-gray-900">
+                  {formData.reviewVerificationRequired ? '✅ Required' : '❌ Optional'}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+          <div className="border-t pt-6">
+            <h2 className="text-xl font-semibold text-gray-700 mb-6">
+              Amenities & Activities
+            </h2>
+            <div className="space-y-6">
+              <FormField
+                label="Amenities"
+                name="predefinedAmenities"
+                type="checkboxGroup"
+                options={amenitiesOptions}
+                value={formData.predefinedAmenities}
+                onChange={handleCheckboxChange}
+              />
+              <DynamicAmenitiesField
+                label="Other Amenities"
+                value={customAmenities}
+                onChange={setCustomAmenities}
+              />
+              <FormField
+                label="Activities"
+                name="activities"
+                type="checkboxGroup"
+                options={activitiesOptions}
+                value={formData.activities}
+                onChange={handleCheckboxChange}
+              />
+              <DynamicActivitiesField
+                label="Other Activities"
+                value={customActivities}
+                onChange={setCustomActivities}
+              />
+            </div>
+          </div>
+
+          <div className="border-t pt-6">
+            <h2 className="text-xl font-semibold text-gray-700 mb-6">
+              Alumni Information
+            </h2>
+            <div className="space-y-8">
+              <DynamicListField
+                label="Famous Alumni (Name & Profession)"
+                fields={[
+                  { name: "name", label: "Alumni Name" },
+                  { name: "profession", label: "Profession" },
+                ]}
+                value={famousAlumnies}
+                onChange={setFamousAlumnies}
+                type="famous"
+              />
+              
+              <DynamicListField
+                label="Top Alumni (Name & Percentage)"
+                fields={[
+                  { name: "name", label: "Alumni Name" },
+                  { name: "percentage", label: "Percentage" },
+                ]}
+                value={topAlumnies}
+                onChange={setTopAlumnies}
+                type="top"
+              />
+              
+              <DynamicListField
+                label="Other Alumni (Name & Percentage)"
+                fields={[
+                  { name: "name", label: "Alumni Name" },
+                  { name: "percentage", label: "Percentage" },
+                ]}
+                value={otherAlumnies}
+                onChange={setOtherAlumnies}
+                type="other"
+              />
+            </div>
+          </div>
+
+          <div className="border-t pt-6">
+            <h2 className="text-xl font-semibold text-gray-700 mb-6">
+              School Media
+            </h2>
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  School Photos (Max 4 photos, 5MB each)
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handlePhotoChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                />
+                {selectedPhotos.length > 0 && (
+                  <p className="text-sm text-gray-600 mt-1">
+                    {selectedPhotos.length} photo(s) selected
+                  </p>
+                )}
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  School Video (Max 20MB)
+                </label>
+                <input
+                  type="file"
+                  accept="video/*"
+                  onChange={handleVideoChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                />
+                {selectedVideo && (
+                  <p className="text-sm text-gray-600 mt-1">
+                    Video selected: {selectedVideo.name}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Technology Adoption Section */}
+          <div className="border-t pt-6">
+            <h2 className="text-xl font-semibold text-gray-700 mb-6">
+              Technology Adoption
+            </h2>
+            <div className="space-y-6">
+              {/* Smart Classrooms Percentage */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Smart Classrooms Percentage
+                </label>
+                <input
+                  type="number"
+                  name="smartClassroomsPercentage"
+                  value={formData.smartClassroomsPercentage}
+                  onChange={handleInputChange}
+                  min="0"
+                  max="100"
+                  placeholder="e.g., 75"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                />
+                <p className="text-sm text-gray-500 mt-1">
+                  Percentage of classrooms equipped with smart boards/projectors/interactive tech
+                </p>
+              </div>
+
+              {/* E-learning Platforms */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-4">
+                  E-learning Platforms
+                </label>
+                <div className="space-y-4">
+                  {formData.elearningPlatforms.map((platform, index) => (
+                    <div key={index} className="bg-gray-50 p-4 rounded-lg border">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Platform Name
+                          </label>
+                          <input
+                            type="text"
+                            value={platform.platform}
+                            onChange={(e) => {
+                              const newPlatforms = [...formData.elearningPlatforms];
+                              newPlatforms[index].platform = e.target.value;
+                              setFormData(prev => ({ ...prev, elearningPlatforms: newPlatforms }));
+                            }}
+                            placeholder="e.g., Google Classroom, MS Teams"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Usage Percentage
+                          </label>
+                          <input
+                            type="number"
+                            value={platform.usagePercentage}
+                            onChange={(e) => {
+                              const newPlatforms = [...formData.elearningPlatforms];
+                              newPlatforms[index].usagePercentage = e.target.value;
+                              setFormData(prev => ({ ...prev, elearningPlatforms: newPlatforms }));
+                            }}
+                            min="0"
+                            max="100"
+                            placeholder="e.g., 85"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Frequency
+                          </label>
+                          <select
+                            value={platform.frequency}
+                            onChange={(e) => {
+                              const newPlatforms = [...formData.elearningPlatforms];
+                              newPlatforms[index].frequency = e.target.value;
+                              setFormData(prev => ({ ...prev, elearningPlatforms: newPlatforms }));
+                            }}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                          >
+                            <option value="">Select Frequency</option>
+                            <option value="Daily">Daily</option>
+                            <option value="Weekly">Weekly</option>
+                            <option value="Occasionally">Occasionally</option>
+                          </select>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newPlatforms = formData.elearningPlatforms.filter((_, i) => i !== index);
+                          setFormData(prev => ({ ...prev, elearningPlatforms: newPlatforms }));
+                        }}
+                        className="mt-2 text-red-500 hover:text-red-700 text-sm"
+                      >
+                        <Trash2 size={16} className="inline mr-1" /> Remove Platform
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData(prev => ({
+                        ...prev,
+                        elearningPlatforms: [...prev.elearningPlatforms, { platform: '', usagePercentage: '', frequency: '' }]
+                      }));
+                    }}
+                    className="flex items-center text-sm text-indigo-600 hover:text-indigo-800"
+                  >
+                    <PlusCircle size={16} className="mr-1" /> Add E-learning Platform
+                  </button>
+                </div>
+              </div>
+
+              {/* Technology Timeline */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-4">
+                  Technology Timeline
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Technology Adoption Year
+                    </label>
+                    <input
+                      type="number"
+                      name="techAdoptionYear"
+                      value={formData.techAdoptionYear}
+                      onChange={handleInputChange}
+                      min="1990"
+                      max="2024"
+                      placeholder="e.g., 2020"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                    />
+                    <p className="text-sm text-gray-500 mt-1">
+                      Year when technology adoption started
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Last Major Upgrade
+                    </label>
+                    <input
+                      type="number"
+                      name="lastTechUpgrade"
+                      value={formData.lastTechUpgrade}
+                      onChange={handleInputChange}
+                      min="1990"
+                      max="2024"
+                      placeholder="e.g., 2023"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                    />
+                    <p className="text-sm text-gray-500 mt-1">
+                      Year of last major technology upgrade
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Digital Adoption Index Visualization */}
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h4 className="text-sm font-medium text-gray-700 mb-3">Digital Adoption Index</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-white p-4 rounded-lg border">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-gray-700">📽️ Smart Classrooms</span>
+                      <span className="text-lg font-bold text-blue-600">
+                        {formData.smartClassroomsPercentage || 0}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${formData.smartClassroomsPercentage || 0}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                  <div className="bg-white p-4 rounded-lg border">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-gray-700">💻 E-learning Usage</span>
+                      <span className="text-lg font-bold text-green-600">
+                        {formData.elearningPlatforms.length > 0 
+                          ? Math.round(formData.elearningPlatforms.reduce((sum, p) => sum + (parseInt(p.usagePercentage) || 0), 0) / formData.elearningPlatforms.length)
+                          : 0}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                        style={{ 
+                          width: `${formData.elearningPlatforms.length > 0 
+                            ? Math.round(formData.elearningPlatforms.reduce((sum, p) => sum + (parseInt(p.usagePercentage) || 0), 0) / formData.elearningPlatforms.length)
+                            : 0}%` 
+                        }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4 text-center">
+                  <div className="text-sm text-gray-600 mb-1">Combined Digital Adoption Score</div>
+                  <div className="text-2xl font-bold text-indigo-600">
+                    {Math.round(((parseInt(formData.smartClassroomsPercentage) || 0) + 
+                      (formData.elearningPlatforms.length > 0 
+                        ? Math.round(formData.elearningPlatforms.reduce((sum, p) => sum + (parseInt(p.usagePercentage) || 0), 0) / formData.elearningPlatforms.length)
+                        : 0)) / 2)}%
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full px-4 py-3 font-semibold text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50"
-          >
-            {isSubmitting ? "Submitting..." : "Submit for Approval"}
-          </button>
-        </form>
-      </div>
-    </div>
-  );
+            type=" submit\
+ disabled={isSubmitting}
+ className=\w-full px-4 py-3 font-semibold text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50\
+ >
+ {isSubmitting ? \Submitting...\ : \Submit for Approval\}
+ </button>
+ </form>
+ </div>
+ </div>
+ );
 };
 
 export default RegistrationPage;

@@ -20,6 +20,11 @@ import PredictorPage from "./pages/PredictorPage";
 import ChatbotPage from "./pages/ChatbotPage";
 import SearchPage from "./pages/SearchPage";
 import CreateProfilePage from "./pages/CreateProfilePage";
+import AdminLoginPage from "./pages/AdminLoginPage";
+import AdminSignupPage from "./pages/AdminSignupPage";
+import AdminDashboardPage from "./pages/AdminDashboardPage";
+import AdminProtectedRoute from "./components/AdminProtectedRoute";
+import BlogPage from "./pages/BlogPage";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useAuth } from "./context/AuthContext";
@@ -185,6 +190,8 @@ useEffect(() => {
          <Route path="/" element={<LandingPage />} />
          <Route path="/login" element={<LoginPage />} />
          <Route path="/signup" element={<SignUpPage />} />
+         <Route path="/admin/login" element={<AdminLoginPage />} />
+         <Route path="/admin/signup" element={<AdminSignupPage />} />
           <Route path="/create-profile" element={<CreateProfilePage shortlist={shortlist}/>} />
           <Route
             path="/signup-school"
@@ -207,6 +214,7 @@ useEffect(() => {
           <Route path="/search-schools" element={<SearchPage />} />
           <Route path="/predictor" element={<PredictorPage />} />
           <Route path="/chatbot" element={<ChatbotPage />} />
+          <Route path="/blog" element={<BlogPage />} />
           <Route
             path="/school/:id"
             element={
@@ -257,6 +265,14 @@ useEffect(() => {
             <Route
               path="/apply/:schoolId"
               element={<StudentApplicationPage />}
+            />
+            <Route
+              path="/admin/dashboard"
+              element={
+                <AdminProtectedRoute>
+                  <AdminDashboardPage />
+                </AdminProtectedRoute>
+              }
             />
           </Route>
         </Routes>
