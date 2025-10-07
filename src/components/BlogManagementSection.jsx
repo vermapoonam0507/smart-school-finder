@@ -20,7 +20,8 @@ const BlogManagementSection = () => {
     try {
       setIsLoading(true);
       const response = await getAllBlogs();
-      setBlogs(response.data);
+      const payload = response?.data?.data ?? response?.data ?? [];
+      setBlogs(Array.isArray(payload) ? payload : []);
     } catch (error) {
       console.error('Failed to load blogs:', error);
       toast.error('Failed to load blogs');
@@ -81,7 +82,7 @@ const BlogManagementSection = () => {
   const filteredBlogs = blogs.filter(blog =>
     blog.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     blog.highlight.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    blog.contributor.some(contributor => 
+    (Array.isArray(blog.contributor) ? blog.contributor : [blog.contributor]).some(contributor => 
       contributor.toLowerCase().includes(searchTerm.toLowerCase())
     )
   );
@@ -149,7 +150,7 @@ const BlogManagementSection = () => {
                   <div className="flex items-center text-sm text-gray-500 space-x-4">
                     <div className="flex items-center">
                       <User className="h-4 w-4 mr-1" />
-                      <span>{blog.contributor.join(', ')}</span>
+                      <span>{Array.isArray(blog.contributor) ? blog.contributor.join(', ') : blog.contributor}</span>
                     </div>
                     <div className="flex items-center">
                       <Calendar className="h-4 w-4 mr-1" />

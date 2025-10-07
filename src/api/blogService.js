@@ -23,14 +23,14 @@ export const getBlogById = (blogId) => {
 
 /**
  * Create a new blog
- * @param {object} blogData - Blog data
+ * @param {object} blogData - Blog data (title, highlight, description, contributor)
  */
 export const createBlog = (blogData) => {
   return apiClient.post('/admin/blogs', blogData);
 };
 
 /**
- * Update a blog
+ * Update a blog (not implemented in backend yet)
  * @param {string} blogId - Blog ID
  * @param {object} blogData - Updated blog data
  */
@@ -47,17 +47,21 @@ export const deleteBlog = (blogId) => {
 };
 
 /**
- * Like a blog
+ * Like a blog (not implemented in backend yet - using local state for now)
  * @param {string} blogId - Blog ID
  */
 export const likeBlog = (blogId) => {
-  return apiClient.post(`/admin/blogs/${blogId}/like`);
+  // For now, just return a promise that resolves immediately
+  // In the future, this should call the backend API
+  return Promise.resolve({ data: { success: true } });
 };
 
 /**
- * Unlike a blog
+ * Unlike a blog (not implemented in backend yet - using local state for now)
  * @param {string} blogId - Blog ID
  */
 export const unlikeBlog = (blogId) => {
-  return apiClient.post(`/admin/blogs/${blogId}/unlike`);
+  // For now, just return a promise that resolves immediately
+  // In the future, this should call the backend API
+  return Promise.resolve({ data: { success: true } });
 };

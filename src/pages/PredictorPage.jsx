@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { searchSchools, getSchoolById } from '../api/searchService';
-import { chatbotFilter } from '../api/chatbotService';
+import { predictSchools } from '../api/predictorService';
 import SchoolCard from '../components/SchoolCard';
 
 const feeRanges = [
@@ -29,19 +28,49 @@ const schoolModes = ['convent', 'private', 'government'];
 
 const genderTypes = ['boy', 'girl', 'co-ed'];
 
+const activitiesOptions = [
+  'Focusing on Academics',
+  'Focuses on Practical Learning',
+  'Focuses on Theoretical Learning',
+  'Empowering in Sports',
+  'Empowering in Arts',
+  'Special Focus on Mathematics',
+  'Special Focus on Science',
+  'Special Focus on Physical Education',
+  'Leadership Development',
+  'STEM Activities',
+  'Cultural Education',
+  'Technology Integration',
+  'Environmental Awareness'
+];
+
+const shiftOptions = ['morning', 'afternoon', 'night school'];
+
 const PredictorPage = () => {
   const navigate = useNavigate();
   const [selectedFeeRange, setSelectedFeeRange] = useState('');
   const [selectedBoard, setSelectedBoard] = useState('');
   const [selectedSchoolMode, setSelectedSchoolMode] = useState('');
   const [selectedGenderType, setSelectedGenderType] = useState('');
+  const [selectedState, setSelectedState] = useState('');
+  const [selectedCity, setSelectedCity] = useState('');
+  const [selectedShifts, setSelectedShifts] = useState([]); // array
+  const [selectedUpto, setSelectedUpto] = useState('');
+  const [specialistText, setSpecialistText] = useState(''); // comma-separated -> array
+  const [languageMediumText, setLanguageMediumText] = useState(''); // comma-separated -> array
+  const [transportAvailable, setTransportAvailable] = useState(''); // 'yes' | 'no'
+  const [selectedActivities, setSelectedActivities] = useState([]); // array
   const [searchResults, setSearchResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
 
   const handleGetSchools = async () => {
     // Check if at least one field is selected
-    if (!selectedFeeRange && !selectedBoard && !selectedSchoolMode && !selectedGenderType) {
+    if (
+      !selectedFeeRange && !selectedBoard && !selectedSchoolMode && !selectedGenderType &&
+      !selectedState && !selectedCity && selectedShifts.length === 0 && !selectedUpto &&
+      !specialistText && !languageMediumText && !transportAvailable && selectedActivities.length === 0
+    ) {
       alert('Please select at least one preference to get school predictions.');
       return;
     }
@@ -50,50 +79,24 @@ const PredictorPage = () => {
     setHasSearched(true);
 
     try {
-      // Build chatbot filter payload (strings, not arrays)
+      // Build backend filters per service contract
       const payload = {};
       if (selectedFeeRange) payload.feeRange = selectedFeeRange;
       if (selectedBoard) payload.board = selectedBoard;
       if (selectedSchoolMode) payload.schoolMode = selectedSchoolMode;
       if (selectedGenderType) payload.genderType = selectedGenderType;
+      if (selectedState) payload.state = selectedState;
+      if (selectedCity) payload.city = selectedCity;
+      if (selectedShifts.length > 0) payload.shifts = selectedShifts;
+      if (selectedUpto) payload.upto = selectedUpto;
+      if (specialistText.trim()) payload.specialist = specialistText.split(',').map(s => s.trim()).filter(Boolean);
+      if (languageMediumText.trim()) payload.languageMedium = languageMediumText.split(',').map(s => s.trim()).filter(Boolean);
+      if (transportAvailable) payload.transportAvailable = transportAvailable;
+      if (selectedActivities.length > 0) payload.activities = selectedActivities;
 
-      // Prefer DB filter to get schoolIds for exact matches
-      let fetched = [];
-      try {
-        const dbResp = await chatbotFilter(payload, { useAI: false });
-        const ids = Array.isArray(dbResp?.schoolIds) ? dbResp.schoolIds : [];
-        for (const id of ids) {
-          try {
-            const s = await getSchoolById(id);
-            if (s?.data) fetched.push(s.data);
-          } catch (_) {}
-        }
-      } catch (_) {}
-
-      // Fallback to AI names if DB returns nothing
-      if (fetched.length === 0) {
-        const aiResp = await chatbotFilter(payload, { useAI: true });
-        const names = Array.isArray(aiResp?.recommendedSchools) ? aiResp.recommendedSchools : [];
-        for (const name of names) {
-          try {
-            const res = await searchSchools({ search: name, boards: selectedBoard ? [selectedBoard] : [], page: 1, limit: 5 });
-            if (Array.isArray(res?.data)) fetched.push(...res.data);
-          } catch (_) {}
-        }
-      }
-
-      // Deduplicate by id
-      const uniqueById = [];
-      const seen = new Set();
-      for (const s of fetched) {
-        const id = s._id || s.id;
-        if (id && !seen.has(id)) {
-          seen.add(id);
-          uniqueById.push(s);
-        }
-      }
-
-      setSearchResults(uniqueById);
+      const resp = await predictSchools(payload);
+      const list = Array.isArray(resp?.data) ? resp.data : Array.isArray(resp) ? resp : [];
+      setSearchResults(list);
     } catch (error) {
       console.error('Prediction error:', error);
       setSearchResults([]);
@@ -107,6 +110,14 @@ const PredictorPage = () => {
     setSelectedBoard('');
     setSelectedSchoolMode('');
     setSelectedGenderType('');
+    setSelectedState('');
+    setSelectedCity('');
+    setSelectedShifts([]);
+    setSelectedUpto('');
+    setSpecialistText('');
+    setLanguageMediumText('');
+    setTransportAvailable('');
+    setSelectedActivities([]);
     setSearchResults([]);
     setHasSearched(false);
   };
@@ -178,6 +189,30 @@ const PredictorPage = () => {
               placeholder="Select board"
             />
 
+            {/* Location filters */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">State</label>
+                <input
+                  type="text"
+                  value={selectedState}
+                  onChange={(e) => setSelectedState(e.target.value)}
+                  placeholder="Enter state"
+                  className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
+                <input
+                  type="text"
+                  value={selectedCity}
+                  onChange={(e) => setSelectedCity(e.target.value)}
+                  placeholder="Enter city"
+                  className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+
             <Dropdown
               label="Select your Preferred SchoolMode"
               value={selectedSchoolMode}
@@ -193,6 +228,104 @@ const PredictorPage = () => {
               options={genderTypes}
               placeholder="Select Gender"
             />
+
+            {/* Shifts */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Shifts</label>
+              <div className="grid grid-cols-2 gap-3">
+                {shiftOptions.map((opt) => (
+                  <label key={opt} className="flex items-center">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+                      checked={selectedShifts.includes(opt)}
+                      onChange={(e) => {
+                        const next = e.target.checked
+                          ? [...selectedShifts, opt]
+                          : selectedShifts.filter((s) => s !== opt);
+                        setSelectedShifts(next);
+                      }}
+                    />
+                    <span className="ml-2 text-gray-700">{opt}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Upto class */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Class Upto</label>
+              <input
+                type="text"
+                value={selectedUpto}
+                onChange={(e) => setSelectedUpto(e.target.value)}
+                placeholder="e.g., 10th, 12th"
+                className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            {/* Specialist and Language Medium (comma separated) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Specialist Tags</label>
+                <input
+                  type="text"
+                  value={specialistText}
+                  onChange={(e) => setSpecialistText(e.target.value)}
+                  placeholder="Comma separated (e.g., Sports, Music)"
+                  className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Language Medium</label>
+                <input
+                  type="text"
+                  value={languageMediumText}
+                  onChange={(e) => setLanguageMediumText(e.target.value)}
+                  placeholder="Comma separated (e.g., English, Hindi)"
+                  className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+
+            {/* Transport */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Transport Available</label>
+                <select
+                  value={transportAvailable}
+                  onChange={(e) => setTransportAvailable(e.target.value)}
+                  className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">Any</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Activities */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Activities</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {activitiesOptions.map((opt) => (
+                  <label key={opt} className="flex items-center">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+                      checked={selectedActivities.includes(opt)}
+                      onChange={(e) => {
+                        const next = e.target.checked
+                          ? [...selectedActivities, opt]
+                          : selectedActivities.filter((a) => a !== opt);
+                        setSelectedActivities(next);
+                      }}
+                    />
+                    <span className="ml-2 text-gray-700">{opt}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
           </div>
 
           {/* Action Buttons */}

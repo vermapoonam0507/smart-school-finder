@@ -37,6 +37,62 @@ export const getAdminStats = () => {
 };
 
 /**
+ * Create a new school profile (registration)
+ * @param {object} data - School registration data
+ */
+export const addSchool = (data) => {
+  return apiClient.post('/admin/schools/', data);
+};
+
+/**
+ * Add amenities for a school
+ * @param {object} data - Amenities data
+ */
+export const addAmenities = (data) => {
+  return apiClient.post('/admin/schools/amenities/', data);
+};
+
+/**
+ * Add activities for a school
+ * @param {object} data - Activities data
+ */
+export const addActivities = (data) => {
+  return apiClient.post('/admin/schools/activities/', data);
+};
+
+/**
+ * Add alumni for a school
+ * @param {object} data - Alumni data
+ */
+export const addAlumni = (data) => {
+  return apiClient.post('/admin/alumnus', data);
+};
+
+/**
+ * Add infrastructure for a school
+ * @param {object} data - Infrastructure data
+ */
+export const addInfrastructure = (data) => {
+  return apiClient.post('/admin/schools/infrastructure/', data);
+};
+
+/**
+ * Add other details for a school
+ * @param {object} data - Other details data
+ */
+export const addOtherDetails = (data) => {
+  return apiClient.post('/admin/schools/other-details/', data);
+};
+
+/**
+ * Add fees and scholarships for a school
+ * @param {object} data - Fees and scholarships data
+ */
+export const addFeesAndScholarships = (data) => {
+  return apiClient.post('/admin/schools/fees-scholarships/', data);
+};
+
+/**
  * Get all users (for admin management)
  */
 export const getAllUsers = () => {
@@ -82,6 +138,15 @@ export const updateUserStatus = (userId, statusData) => {
  */
 export const updateSchoolStatus = (schoolId, statusData) => {
   return apiClient.put(`/admin/schools/${schoolId}`, statusData);
+};
+
+/**
+ * Update school info (profile edit)
+ * @param {string} schoolId - School ID
+ * @param {object} data - School data to update
+ */
+export const updateSchoolInfo = (schoolId, data) => {
+  return apiClient.put(`/admin/schools/${encodeURIComponent(schoolId)}`, data);
 };
 
 /** Media APIs for School (photos/videos) */
