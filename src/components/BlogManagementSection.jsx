@@ -20,7 +20,9 @@ const BlogManagementSection = () => {
     try {
       setIsLoading(true);
       const response = await getAllBlogs();
-      setBlogs(response.data);
+      const raw = response?.data;
+      const normalized = Array.isArray(raw?.data) ? raw.data : (Array.isArray(raw) ? raw : []);
+      setBlogs(normalized);
     } catch (error) {
       console.error('Failed to load blogs:', error);
       toast.error('Failed to load blogs');
@@ -78,13 +80,16 @@ const BlogManagementSection = () => {
     setEditingBlog(null);
   };
 
-  const filteredBlogs = blogs.filter(blog =>
-    blog.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    blog.highlight.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    blog.contributor.some(contributor => 
-      contributor.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  );
+  const safeString = (val) => (typeof val === 'string' ? val : '').toLowerCase();
+  const safeContributors = (val) => Array.isArray(val) ? val : (typeof val === 'string' ? [val] : []);
+
+  const filteredBlogs = Array.isArray(blogs) ? blogs.filter((blog) => {
+    const title = safeString(blog?.title);
+    const highlight = safeString(blog?.highlight);
+    const contributors = safeContributors(blog?.contributor).map(safeString);
+    const q = searchTerm.toLowerCase();
+    return title.includes(q) || highlight.includes(q) || contributors.some((c) => c.includes(q));
+  }) : [];
 
   if (isLoading) {
     return (

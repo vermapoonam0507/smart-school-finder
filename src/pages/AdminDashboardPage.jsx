@@ -15,6 +15,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { toast } from "react-toastify";
 import PendingSchoolsSection from "../components/PendingSchoolsSection";
+import PendingReviewsSection from "../components/PendingReviewsSection";
 import BlogManagementSection from "../components/BlogManagementSection";
 import DebugAPI from "../components/DebugAPI";
 
@@ -165,6 +166,11 @@ const AdminDashboardPage = () => {
         {/* Pending Schools Section */}
         <div className="mb-8">
           <PendingSchoolsSection />
+        </div>
+
+        {/* Pending Reviews Section */}
+        <div className="mb-8">
+          <PendingReviewsSection />
         </div>
 
         {/* Blog Management Section */}

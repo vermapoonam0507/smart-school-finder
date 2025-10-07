@@ -77,16 +77,9 @@ export const createStudentProfile = async (profileData) => {
 
 // Update student profile by authId
 export const updateUserProfile = async (authId, profileData) => {
-  console.log('Attempting to update profile with data:', {
-    authId,
-    profileData,
-    baseURL: axiosInstance.defaults.baseURL
-  });
-
   try {
     // Try with the standard endpoint first
     const response = await axiosInstance.put(`/users/${authId}`, profileData);
-    console.log('Profile update successful:', response.data);
     return response.data;
   } catch (error) {
     console.error("Error updating profile (standard endpoint):", {
@@ -103,9 +96,7 @@ export const updateUserProfile = async (authId, profileData) => {
     
     // Try with the update endpoint
     try {
-      console.log("Trying update endpoint...");
       const response = await axiosInstance.put(`/users/update/${authId}`, profileData);
-      console.log('Profile update successful (update endpoint):', response.data);
       return response.data;
     } catch (updateError) {
       console.error("Error with update endpoint:", {
@@ -122,9 +113,7 @@ export const updateUserProfile = async (authId, profileData) => {
       
       // As a last resort, try with the full path
       try {
-        console.log("Trying full path endpoint...");
         const response = await axiosInstance.put(`/api/users/${authId}`, profileData);
-        console.log('Profile update successful (full path):', response.data);
         return response.data;
       } catch (finalError) {
         console.error("All update attempts failed:", {

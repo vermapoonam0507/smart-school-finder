@@ -27,7 +27,7 @@ const ProtectedRoute = () => {
   // If the user object is missing this field, their profile is incomplete.
   const isProfileComplete = user && user.hasOwnProperty('contactNo');
 
-  if (user.userType !== 'school' && !isProfileComplete) {
+  if (user.userType !== 'school' && user.userType !== 'admin' && !isProfileComplete) {
     // If the user is a student/parent and their profile is incomplete,
     // force them to the create-profile page.
     return <Navigate to="/create-profile" replace />;

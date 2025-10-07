@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle, Clock, MapPin, Phone, Mail, Calendar, User } from 'lucide-react';
+import { CheckCircle, Clock, MapPin, Phone, Mail, Calendar, User, XCircle } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { getSchoolsByStatus, updateSchoolStatus } from '../api/adminService';
 
@@ -7,6 +7,7 @@ const PendingSchoolsSection = () => {
   const [pendingSchools, setPendingSchools] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [acceptingId, setAcceptingId] = useState(null);
+  const [rejectingId, setRejectingId] = useState(null);
 
   useEffect(() => {
     loadPendingSchools();
@@ -16,7 +17,13 @@ const PendingSchoolsSection = () => {
     try {
       setIsLoading(true);
       const response = await getSchoolsByStatus('pending');
-      setPendingSchools(response.data);
+      const raw = response?.data;
+      const normalized = Array.isArray(raw?.data)
+        ? raw.data
+        : (Array.isArray(raw)
+            ? raw
+            : (Array.isArray(raw?.schools) ? raw.schools : []));
+      setPendingSchools(normalized);
     } catch (error) {
       console.error('Failed to load pending schools:', error);
       toast.error('Failed to load pending schools');
@@ -29,15 +36,29 @@ const PendingSchoolsSection = () => {
     try {
       setAcceptingId(schoolId);
       await updateSchoolStatus(schoolId, { status: 'accepted' });
-      
-      // Update local state
-      setPendingSchools(prev => prev.filter(school => school._id !== schoolId));
+
+      // Refresh pending list from server to reflect accurate state
+      await loadPendingSchools();
       toast.success('School accepted successfully!');
     } catch (error) {
       console.error('Failed to accept school:', error);
       toast.error('Failed to accept school');
     } finally {
       setAcceptingId(null);
+    }
+  };
+
+  const handleRejectSchool = async (schoolId) => {
+    try {
+      setRejectingId(schoolId);
+      await updateSchoolStatus(schoolId, { status: 'rejected' });
+      await loadPendingSchools();
+      toast.success('School rejected successfully!');
+    } catch (error) {
+      console.error('Failed to reject school:', error);
+      toast.error('Failed to reject school');
+    } finally {
+      setRejectingId(null);
     }
   };
 
@@ -165,6 +186,23 @@ const PendingSchoolsSection = () => {
                     <>
                       <CheckCircle className="h-4 w-4 mr-2" />
                       Accept School
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => handleRejectSchool(school._id)}
+                  disabled={rejectingId === school._id}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {rejectingId === school._id ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Rejecting...
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="h-4 w-4 mr-2" />
+                      Reject School
                     </>
                   )}
                 </button>

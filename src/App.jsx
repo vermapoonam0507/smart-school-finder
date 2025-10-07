@@ -67,8 +67,8 @@ useEffect(() => {
         return;
       }
 
-      // Skip shortlist/profile fetch for school users
-      if (currentUser.userType === 'school') {
+      // Skip shortlist/profile fetch for school and admin users
+      if (currentUser.userType === 'school' || currentUser.userType === 'admin') {
         setShortlist([]);
         return;
       }
@@ -266,15 +266,16 @@ useEffect(() => {
               path="/apply/:schoolId"
               element={<StudentApplicationPage />}
             />
-            <Route
-              path="/admin/dashboard"
-              element={
-                <AdminProtectedRoute>
-                  <AdminDashboardPage />
-                </AdminProtectedRoute>
-              }
-            />
           </Route>
+          {/* Admin routes guarded separately so they aren't blocked by user onboarding */}
+          <Route
+            path="/admin/dashboard"
+            element={
+              <AdminProtectedRoute>
+                <AdminDashboardPage />
+              </AdminProtectedRoute>
+            }
+          />
         </Routes>
       </main>
       <ChatbotFab />

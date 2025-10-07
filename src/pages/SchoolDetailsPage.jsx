@@ -15,6 +15,7 @@ import {
   Sun,
   CheckCircle,
 } from "lucide-react";
+import ReviewSection from "../components/ReviewSection";
 
 const InfoBox = ({ icon, label, value }) => (
   <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
@@ -43,12 +44,11 @@ const SchoolDetailsPage = ({ shortlist, onShortlistToggle }) => {
       try {
         setLoading(true);
         const response = await getSchoolById(schoolId);
-
-        
-        if (response.data.data) {
-          setSchool(response.data.data);
+        const raw = response?.data;
+        const schoolData = raw?.data || raw; // support {data: {...}} or direct {...}
+        if (schoolData) {
+          setSchool(schoolData);
         } else {
-          
           console.warn(`No school data returned for ID: ${schoolId}`);
         }
       } catch (error) {
@@ -105,6 +105,14 @@ const SchoolDetailsPage = ({ shortlist, onShortlistToggle }) => {
     <div className="bg-gray-100">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="bg-white shadow-lg rounded-lg p-6 mb-8 relative">
+          <div className="mb-4">
+            <button
+              onClick={() => navigate(-1)}
+              className="inline-flex items-center text-sm text-gray-700 hover:text-indigo-600"
+            >
+              ← Back
+            </button>
+          </div>
           {currentUser &&
             (currentUser.userType === "parent" ||
               currentUser.userType === "student") && (
@@ -529,6 +537,9 @@ const SchoolDetailsPage = ({ shortlist, onShortlistToggle }) => {
             </div>
           </div>
         </div>
+
+        {/* Reviews Section */}
+        <ReviewSection schoolId={school._id} />
       </div>
     </div>
   );

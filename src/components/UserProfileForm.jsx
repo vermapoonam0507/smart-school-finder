@@ -5,10 +5,6 @@ import { getUserProfile } from "../api/userService";
 
 
 const UserProfileForm = ({ currentUser, onProfileUpdate }) => {
-
-
-  // --- ADD THIS LINE ---
-  console.log("UserProfileForm received this currentUser prop:", currentUser);
   const {
     register,
     handleSubmit,
@@ -33,7 +29,6 @@ useEffect(() => {
         try {
             const res = await getUserProfile(currentUser.authId || currentUser._id);
             const data = res.data;
-            console.log("Fetched profile data:", data);
             
             // Form ko fetched data se bhar do
             reset({
@@ -70,7 +65,26 @@ useEffect(() => {
 }, [currentUser, reset]);
 
   const onSubmit = async (data) => {
-    await onProfileUpdate(data);
+    // Structure the data to include preferences
+    const profileData = {
+      name: data.name,
+      email: data.email,
+      contactNo: data.contactNo,
+      dateOfBirth: data.dateOfBirth,
+      gender: data.gender,
+      state: data.state,
+      city: data.city,
+      userType: data.userType,
+      preferences: {
+        boards: data.boards,
+        preferredStandard: data.preferredStandard,
+        interests: data.interests,
+        schoolType: data.schoolType,
+        shift: data.shift
+      }
+    };
+    
+    await onProfileUpdate(profileData);
   };
 
   return (

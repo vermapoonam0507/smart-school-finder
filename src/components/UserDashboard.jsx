@@ -89,21 +89,21 @@ const UserDashboard = ({ shortlist, comparisonList, onCompareToggle, onShortlist
   }, [applications, schoolNameById]);
 
   // Handle profile update
-  const handleProfileUpdate = async (profileData, preferenceData) => {
+  const handleProfileUpdate = async (profileData) => {
     try {
       const authId = currentUser.authId || currentUser._id;
       if (!authId) throw new Error('User ID not found. Cannot update profile.');
 
       const updatedProfile = await updateUserProfile(authId, profileData);
 
-      if (currentUser.studentId && preferenceData) {
-        await saveUserPreferences(currentUser.studentId, preferenceData);
-      }
+      // Fetch the updated profile from the server to ensure we have the latest data
+      const freshProfile = await getUserProfile(authId);
+      const freshData = freshProfile?.data?.data || freshProfile?.data;
 
+      // Update the context with the fresh data from the server
       updateUserContext({
         ...currentUser,
-        ...profileData,
-        preferences: preferenceData ? preferenceData : currentUser.preferences
+        ...freshData
       });
 
       toast.success('Profile updated successfully!');

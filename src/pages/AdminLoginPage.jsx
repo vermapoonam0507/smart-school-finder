@@ -1,3 +1,5 @@
+// src/pages/AdminLoginPage.jsx
+
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -29,6 +31,7 @@ const AdminLoginPage = () => {
     resolver: zodResolver(adminLoginSchema),
   });
 
+  // Load saved "remember me" credentials
   useEffect(() => {
     const savedCreds = localStorage.getItem("admin-rememberMe");
     if (savedCreds) {
@@ -44,15 +47,17 @@ const AdminLoginPage = () => {
     setServerError("");
 
     try {
-      // Backend expects only email & password
-      await login({ email: data.email, password: data.password });
+      // Call the new AuthContext login with userType='admin'
+      await login({ email: data.email, password: data.password }, 'admin');
 
+      // Remember me
       if (rememberMe) {
         localStorage.setItem("admin-rememberMe", JSON.stringify(data));
       } else {
         localStorage.removeItem("admin-rememberMe");
       }
 
+      // Redirect to admin dashboard
       const redirectPath = localStorage.getItem("adminRedirectPath");
       if (redirectPath) {
         localStorage.removeItem("adminRedirectPath");
@@ -60,11 +65,11 @@ const AdminLoginPage = () => {
       } else {
         navigate("/admin/dashboard");
       }
+
     } catch (error) {
       console.error("Admin login failed:", error);
       const errorMessage =
-        error.response?.data?.message ||
-        "Invalid admin credentials. Please try again.";
+        error.response?.data?.message || "Invalid admin credentials. Please try again.";
       setServerError(errorMessage);
     } finally {
       setIsLoading(false);
@@ -81,23 +86,18 @@ const AdminLoginPage = () => {
             </div>
           </div>
           <h2 className="text-2xl font-bold text-gray-900">Admin Portal</h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Sign in to access the admin dashboard
-          </p>
+          <p className="mt-2 text-sm text-gray-600">Sign in to access the admin dashboard</p>
         </div>
-        
+
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {serverError && (
             <p className="text-sm text-red-600 bg-red-100 p-3 rounded-md text-center">
               {serverError}
             </p>
           )}
-          
+
           <div>
-            <label
-              htmlFor="email"
-              className="text-sm font-medium text-gray-700"
-            >
+            <label htmlFor="email" className="text-sm font-medium text-gray-700">
               Admin Email
             </label>
             <input
@@ -110,18 +110,11 @@ const AdminLoginPage = () => {
               placeholder="admin@example.com"
               disabled={isLoading}
             />
-            {errors.email && (
-              <p className="mt-1 text-xs text-red-500">
-                {errors.email.message}
-              </p>
-            )}
+            {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>}
           </div>
-          
+
           <div>
-            <label
-              htmlFor="password"
-              className="text-sm font-medium text-gray-700"
-            >
+            <label htmlFor="password" className="text-sm font-medium text-gray-700">
               Password
             </label>
             <div className="relative">
@@ -143,13 +136,9 @@ const AdminLoginPage = () => {
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
-            {errors.password && (
-              <p className="mt-1 text-xs text-red-500">
-                {errors.password.message}
-              </p>
-            )}
+            {errors.password && <p className="mt-1 text-xs text-red-500">{errors.password.message}</p>}
           </div>
-          
+
           <div className="flex items-center justify-between">
             <label className="flex items-center text-sm">
               <input
@@ -161,7 +150,7 @@ const AdminLoginPage = () => {
               <span className="ml-2 text-gray-700">Remember Me</span>
             </label>
           </div>
-          
+
           <div>
             <button
               type="submit"
@@ -171,22 +160,16 @@ const AdminLoginPage = () => {
               {isLoading ? "Signing In..." : "Sign In as Admin"}
             </button>
           </div>
-          
+
           <div className="text-center">
             <p className="text-sm text-gray-600">
               Need admin access?{" "}
-              <Link
-                to="/admin/signup"
-                className="font-medium text-blue-600 hover:underline"
-              >
+              <Link to="/admin/signup" className="font-medium text-blue-600 hover:underline">
                 Request Admin Account
               </Link>
             </p>
             <p className="text-sm text-gray-500 mt-2">
-              <Link
-                to="/login"
-                className="text-gray-500 hover:text-gray-700"
-              >
+              <Link to="/login" className="text-gray-500 hover:text-gray-700">
                 ← Back to User Login
               </Link>
             </p>
@@ -198,4 +181,3 @@ const AdminLoginPage = () => {
 };
 
 export default AdminLoginPage;
-

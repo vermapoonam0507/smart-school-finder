@@ -11,22 +11,46 @@ import apiClient from './axios';
  * Register a new admin user
  * @param {object} adminData - Admin registration data
  */
-export const registerAdmin = (adminData) => {
-  return apiClient.post('/auth/register', {
-    ...adminData,
-    userType: 'admin'
-  });
+export const registerAdmin = async (adminData) => {
+  try {
+    return await apiClient.post('/admin/auth/register', {
+      ...adminData,
+      userType: 'admin'
+    });
+  } catch (error) {
+    // Fallback: some backends expose a shared /auth/register with userType flag
+    if (error?.response?.status === 404) {
+      console.warn('Admin register endpoint /admin/auth/register not found, falling back to /auth/register');
+      return apiClient.post('/auth/register', {
+        ...adminData,
+        userType: 'admin'
+      });
+    }
+    throw error;
+  }
 };
 
 /**
  * Login admin user
  * @param {object} credentials - Admin login credentials
  */
-export const loginAdmin = (credentials) => {
-  return apiClient.post('/auth/login', {
-    ...credentials,
-    userType: 'admin'
-  });
+export const loginAdmin = async (credentials) => {
+  try {
+    return await apiClient.post('/admin/auth/login', {
+      ...credentials,
+      userType: 'admin'
+    });
+  } catch (error) {
+    // Fallback: some backends expose a shared /auth/login with userType flag
+    if (error?.response?.status === 404) {
+      console.warn('Admin login endpoint /admin/auth/login not found, falling back to /auth/login');
+      return apiClient.post('/auth/login', {
+        ...credentials,
+        userType: 'admin'
+      });
+    }
+    throw error;
+  }
 };
 
 /**
@@ -54,8 +78,27 @@ export const getAllSchools = () => {
  * Get schools by status (for admin management)
  * @param {string} status - School status (pending, accepted, rejected)
  */
-export const getSchoolsByStatus = (status) => {
-  return apiClient.get(`/admin/schools/status/${status}`);
+export const getSchoolsByStatus = async (status) => {
+  const envBase = (import.meta?.env?.VITE_ADMIN_SCHOOLS_PATH || '').trim().replace(/\/$/, '');
+  const candidates = [
+    envBase && envBase.startsWith('/') ? `${envBase}/status/${status}` : null,
+    envBase && envBase.startsWith('/') ? `${envBase}/${status}` : null,
+    `/admin/schools/status/${status}`,
+    `/admin/schools/${status}`,
+    `/schools/status/${status}`,
+    `/schools/${status}`,
+  ].filter(Boolean);
+
+  let lastError;
+  for (const path of candidates) {
+    try {
+      return await apiClient.get(path);
+    } catch (error) {
+      if (error?.response?.status !== 404) throw error;
+      lastError = error;
+    }
+  }
+  throw lastError;
 };
 
 /**
@@ -63,7 +106,8 @@ export const getSchoolsByStatus = (status) => {
  * @param {string} schoolId
  */
 export const getSchoolById = (schoolId) => {
-  return apiClient.get(`/admin/schools/${encodeURIComponent(schoolId)}`);
+  // Public school details endpoint
+  return apiClient.get(`/schools/${encodeURIComponent(schoolId)}`);
 };
 
 /**
@@ -80,8 +124,9 @@ export const updateUserStatus = (userId, statusData) => {
  * @param {string} schoolId - School ID
  * @param {object} statusData - Status update data
  */
-export const updateSchoolStatus = (schoolId, statusData) => {
-  return apiClient.put(`/admin/schools/${schoolId}`, statusData);
+export const updateSchoolStatus = async (schoolId, statusData) => {
+  // Backend contract: PATCH /api/schools/:id/status with body { status }
+  return apiClient.patch(`/schools/${encodeURIComponent(schoolId)}/status`, statusData);
 };
 
 /** Media APIs for School (photos/videos) */

@@ -6,8 +6,6 @@ const Header = ({ isMobileMenuOpen, setMobileMenuOpen, compareCount, shortlistCo
   const location = useLocation();
   const navigate = useNavigate();
   const authPages = ['/login', '/signup', '/signup-school', '/forgot-password', '/admin/login', '/admin/signup'];
-
-  console.log(currentUser)
   if (authPages.includes(location.pathname) || location.pathname.startsWith('/school-portal') || location.pathname.startsWith('/admin/dashboard')) {
     return null;
   }

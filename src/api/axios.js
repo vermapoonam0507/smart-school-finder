@@ -2,8 +2,11 @@
 
 import axios from 'axios';
 
-// Hardcode API base to avoid relative/localhost issues in dev
-const apiBaseURL = 'http://localhost:8080/api';
+// Prefer env var, fallback to localhost
+const rawBase = import.meta?.env?.VITE_API_URL || 'http://localhost:8080/api';
+
+// Normalize: remove trailing slashes
+const apiBaseURL = rawBase.replace(/\/$/, '');
 
 const apiClient = axios.create({
 	baseURL: apiBaseURL,
@@ -13,10 +16,7 @@ const apiClient = axios.create({
 
 apiClient.interceptors.request.use(
   (config) => {
-   
     const token = localStorage.getItem('authToken');
-
- 
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
@@ -24,14 +24,19 @@ apiClient.interceptors.request.use(
     return config; 
   },
   (error) => {
-   
     return Promise.reject(error);
   }
 );
 
-// Final safety: ensure absolute base URL
-if (!apiClient.defaults.baseURL || apiClient.defaults.baseURL.startsWith('/')) {
-  apiClient.defaults.baseURL = apiBaseURL;
-}
+// Response interceptor to surface consistent errors
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Attach a normalized message
+    const message = error?.response?.data?.message || error.message || 'Request failed';
+    error.normalizedMessage = message;
+    return Promise.reject(error);
+  }
+);
 
 export default apiClient;
