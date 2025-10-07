@@ -57,7 +57,7 @@ const BlogPage = () => {
   const filteredBlogs = list.filter(blog =>
     blog.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     blog.highlight.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    blog.contributor.some(contributor => 
+    (Array.isArray(blog.contributor) ? blog.contributor : [blog.contributor]).some(contributor => 
       contributor.toLowerCase().includes(searchTerm.toLowerCase())
     )
   );
@@ -138,7 +138,7 @@ const BlogPage = () => {
                         <div className="flex items-center space-x-6 text-sm text-gray-500">
                           <div className="flex items-center">
                             <User className="h-4 w-4 mr-2" />
-                            <span>{blog.contributor.join(', ')}</span>
+                            <span>{Array.isArray(blog.contributor) ? blog.contributor.join(', ') : blog.contributor}</span>
                           </div>
                           <div className="flex items-center">
                             <Calendar className="h-4 w-4 mr-2" />

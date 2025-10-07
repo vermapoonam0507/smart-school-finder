@@ -15,6 +15,7 @@ const SchoolsPage = ({
 }) => {
   const [schools, setSchools] = useState([]);
   const [loading, setLoading] = useState(true);
+  
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
 
@@ -38,6 +39,8 @@ const SchoolsPage = ({
     };
     loadSchools();
   }, []);
+
+  
 
   const handleCardClick = (school) => {
     navigate(`/school/${school._id || school.schoolId}`);
@@ -68,9 +71,7 @@ const SchoolsPage = ({
   return (
     <div className="bg-gray-100 min-h-screen">
       <div className="container mx-auto px-6 py-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">
-          Explore Schools
-        </h1>
+        <h1 className="text-3xl font-bold text-gray-800 mb-6">Explore Schools</h1>
 
         {Array.isArray(schools) && schools.length > 0 ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -80,7 +81,7 @@ const SchoolsPage = ({
                 // Get the unique ID from the school object, whether it's schoolId or _id
                 const schoolId = school.schoolId || school._id;
                 const isCompared = comparisonList.some(item => (item.schoolId || item._id) === schoolId);
-                        const isShortlisted = shortlist.some(item => (item.schoolId || item._id) === schoolId);
+                const isShortlisted = shortlist.some(item => (item.schoolId || item._id) === schoolId);
                 return (
                   <SchoolCard
                     key={schoolId}

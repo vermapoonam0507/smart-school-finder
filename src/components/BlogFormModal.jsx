@@ -63,11 +63,11 @@ const BlogFormModal = ({ blog, onClose, onSuccess }) => {
       if (blog) {
         // Update existing blog
         const response = await updateBlog(blog._id, data);
-        onSuccess(response.data);
+        onSuccess(response.data?.data || response.data);
       } else {
         // Create new blog
         const response = await createBlog(data);
-        onSuccess(response.data);
+        onSuccess(response.data?.data || response.data);
       }
     } catch (error) {
       console.error('Failed to save blog:', error);

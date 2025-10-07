@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import Header from "./components/Header";
 import LandingPage from "./pages/LandingPage";
+import HomePage from "./pages/HomePage";
 import SchoolsPage from "./pages/SchoolsPage";
 import SchoolDetailsPage from "./pages/SchoolDetailsPage";
 import LoginPage from "./pages/LoginPage";
@@ -187,7 +188,8 @@ useEffect(() => {
       <main>
         <Routes>
          {/* Public Routes */}
-         <Route path="/" element={<LandingPage />} />
+         <Route path="/" element={<HomePage />} />
+         <Route path="/landing" element={<LandingPage />} />
          <Route path="/login" element={<LoginPage />} />
          <Route path="/signup" element={<SignUpPage />} />
          <Route path="/admin/login" element={<AdminLoginPage />} />

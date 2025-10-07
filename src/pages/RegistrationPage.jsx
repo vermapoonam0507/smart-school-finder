@@ -5,6 +5,15 @@ import { useAuth } from "../context/AuthContext";
 import { PlusCircle, Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
 import apiClient from "../api/axios";
+import { 
+  addSchool, 
+  addAmenities, 
+  addActivities, 
+  addAlumni, 
+  addInfrastructure, 
+  addOtherDetails, 
+  addFeesAndScholarships 
+} from "../api/adminService";
 
 
 const FormField = ({
@@ -238,6 +247,66 @@ const DynamicAmenitiesField = ({ label, value, onChange }) => {
   );
 };
 
+const DynamicElearningField = ({ label, value, onChange }) => {
+  const platforms = Array.isArray(value) ? value : [];
+
+  const handleAdd = () => onChange([...
+    platforms,
+    { platform: '', usagePercentage: '', frequency: '' }
+  ]);
+
+  const handleRemove = (index) => onChange(platforms.filter((_, i) => i !== index));
+
+  const handleChange = (index, field, fieldValue) => {
+    const next = platforms.map((item, i) => i === index ? { ...item, [field]: fieldValue } : item);
+    onChange(next);
+  };
+
+  return (
+    <div>
+      <label className="text-lg font-semibold text-gray-700">{label}</label>
+      {platforms.map((item, index) => (
+        <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end bg-gray-50 p-4 rounded-md my-2">
+          <FormField
+            label="Platform"
+            name={`elearn-platform-${index}`}
+            value={item.platform}
+            onChange={(e) => handleChange(index, 'platform', e.target.value)}
+          />
+          <FormField
+            label="Usage %"
+            name={`elearn-usage-${index}`}
+            type="number"
+            value={item.usagePercentage}
+            onChange={(e) => handleChange(index, 'usagePercentage', e.target.value)}
+          />
+          <FormField
+            label="Frequency"
+            name={`elearn-frequency-${index}`}
+            value={item.frequency}
+            onChange={(e) => handleChange(index, 'frequency', e.target.value)}
+          />
+          <button
+            type="button"
+            onClick={() => handleRemove(index)}
+            className="text-red-500 hover:text-red-700 mb-2"
+            aria-label={`Remove e-learning row ${index + 1}`}
+          >
+            <Trash2 size={18} />
+          </button>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={handleAdd}
+        className="mt-2 flex items-center text-sm text-indigo-600 hover:text-indigo-800"
+      >
+        <PlusCircle size={16} className="mr-1" /> Add Platform
+      </button>
+    </div>
+  );
+};
+
 const RegistrationPage = () => {
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
@@ -329,6 +398,13 @@ const RegistrationPage = () => {
   const [facultyQuality, setFacultyQuality] = useState([
     { name: '', qualification: '', awards: '', experience: '' }
   ]);
+  // Academics (frontend-only; backend fields not present yet)
+  const [academicResults, setAcademicResults] = useState([
+    { year: new Date().getFullYear() - 2, passPercent: '', averageMarksPercent: '' },
+    { year: new Date().getFullYear() - 1, passPercent: '', averageMarksPercent: '' },
+    { year: new Date().getFullYear(), passPercent: '', averageMarksPercent: '' },
+  ]);
+  const [examQualifiers, setExamQualifiers] = useState([]); // { year, exam, participation }
 
   // Faculty Quality array: each entry will contain { name, qualification, awards, experience }
 
@@ -401,8 +477,8 @@ const RegistrationPage = () => {
 
   const handlePhotoChange = (e) => {
     const files = Array.from(e.target.files);
-    if (files.length > 4) {
-      toast.error("Maximum 4 photos allowed");
+    if (files.length > 5) {
+      toast.error("Maximum 5 photos allowed");
       return;
     }
     setSelectedPhotos(files);
@@ -508,9 +584,12 @@ const RegistrationPage = () => {
             }
           }
           const studNum = stud ? Number(stud) : undefined;
+          const ratioStr = studNum ? `1:${studNum}` : undefined;
           return {
             studentsPerTeacher: studNum,
-            teacherStudentRatio: studNum ? `1:${studNum}` : undefined,
+            teacherStudentRatio: ratioStr,
+            // Backend expects capitalized field name
+            TeacherToStudentRatio: ratioStr,
           };
         })(),
         // merge customAmenities into predefinedAmenities array
@@ -651,6 +730,128 @@ const RegistrationPage = () => {
       // Create school first
       const schoolResponse = await addSchool(payload);
       const schoolId = schoolResponse.data.data._id;
+      try { localStorage.setItem('lastCreatedSchoolId', String(schoolId)); } catch (_) {}
+
+      // Create related data in parallel
+      const promises = [];
+
+      // Add amenities if any
+      if (payload.predefinedAmenities && payload.predefinedAmenities.length > 0) {
+        promises.push(addAmenities({
+          schoolId,
+          amenities: payload.predefinedAmenities
+        }));
+      }
+
+      // Add activities if any
+      if (payload.activities && payload.activities.length > 0) {
+        promises.push(addActivities({
+          schoolId,
+          activities: payload.activities
+        }));
+      }
+
+      // Add alumni if any
+      if (famousAlumnies.length > 0 || topAlumnies.length > 0 || otherAlumnies.length > 0) {
+        promises.push(addAlumni({
+          schoolId,
+          famousAlumnies,
+          topAlumnies,
+          otherAlumnies
+        }));
+      }
+
+      // Add infrastructure if any
+      if (payload.infraLabTypes?.length > 0 || payload.infraLibraryBooks || payload.infraSportsTypes?.length > 0 || payload.infraSmartClassrooms) {
+        promises.push(addInfrastructure({
+          schoolId,
+          labTypes: payload.infraLabTypes,
+          libraryBooks: payload.infraLibraryBooks,
+          sportsTypes: payload.infraSportsTypes,
+          smartClassrooms: payload.infraSmartClassrooms
+        }));
+      }
+
+      // Add fees and scholarships if any (normalize to backend schema)
+      if (payload.classWiseFees?.length > 0 || payload.scholarships?.length > 0) {
+        // Map classWiseFees -> classFees expected by backend
+        const classFees = (payload.classWiseFees || [])
+          .map((f) => ({
+            className: String(f.class || f.className || '').trim(),
+            tuition: Number(f.tuition || 0),
+            activity: Number(f.activity || 0),
+            transport: Number(f.transport || 0),
+            hostel: Number(f.hostel || 0),
+            misc: Number(f.misc || 0)
+          }))
+          .filter((f) => f.className && !Number.isNaN(f.tuition));
+
+        // Allowed scholarship types per backend enum
+        const allowedScholarshipTypes = new Map([
+          ['merit','Merit'],
+          ['merit based','Merit'],
+          ['merit-based','Merit'],
+          ['merit based scholarship','Merit'],
+          ['socio-economic','Socio-economic'],
+          ['socio economic','Socio-economic'],
+          ['cultural','Cultural'],
+          ['sports','Sports'],
+          ['community','Community'],
+          ['academic excellence','Academic Excellence'],
+          ['academic','Academic Excellence']
+        ]);
+
+        const normalizeType = (val) => {
+          const key = String(val || '').trim().toLowerCase();
+          return allowedScholarshipTypes.get(key) || null;
+        };
+
+        const scholarships = (payload.scholarships || [])
+          .map((s) => ({
+            name: String(s.name || '').trim(),
+            amount: Number(s.amount || s.value || 0),
+            type: normalizeType(s.type),
+            documentsRequired: Array.isArray(s.documentsRequired) ? s.documentsRequired : []
+          }))
+          .filter((s) => s.name && !Number.isNaN(s.amount) && s.type);
+
+        if (classFees.length > 0 || scholarships.length > 0) {
+          promises.push(addFeesAndScholarships({
+            schoolId,
+            classFees,
+            scholarships
+          }));
+        }
+      }
+
+      // Add other details (safety, faculty, etc.)
+      if (payload.safetyCCTV || payload.safetyDoctorAvailability || payload.facultyQuality?.length > 0 || 
+          payload.genderRatioMale || payload.genderRatioFemale || payload.genderRatioOthers ||
+          payload.scholarshipDiversityTypes?.length > 0 || payload.specialNeedsStaff) {
+        promises.push(addOtherDetails({
+          schoolId,
+          // Required gender ratio fields
+          genderRatio: {
+            male: payload.genderRatioMale || 0,
+            female: payload.genderRatioFemale || 0,
+            others: payload.genderRatioOthers || 0
+          },
+          // Scholarship diversity
+          scholarshipDiversity: {
+            types: payload.scholarshipDiversityTypes || [],
+            studentsCoveredPercentage: payload.scholarshipDiversityCoverage || 0
+          },
+          // Special needs support
+          specialNeedsSupport: {
+            dedicatedStaff: payload.specialNeedsStaff || false,
+            studentsSupportedPercentage: payload.specialNeedsSupportPercentage || 0,
+            facilitiesAvailable: payload.specialNeedsFacilities || []
+          }
+        }));
+      }
+
+      // Wait for all related data to be created
+      await Promise.all(promises);
 
       // Upload photos if selected
       if (selectedPhotos.length > 0) {
@@ -673,7 +874,7 @@ const RegistrationPage = () => {
       toast.success(
         "School Registration Successful! Your profile is pending approval."
       );
-      navigate("/school-portal");
+      navigate("/school-portal/profile-view");
     } catch (error) {
       toast.error(error.response?.data?.message || "Registration failed.");
     } finally {
@@ -863,6 +1064,74 @@ const RegistrationPage = () => {
               </div>
             </div>
           </div>
+
+          {/* Amenities & Activities */}
+          <div className="border-t pt-6">
+            <h2 className="text-xl font-semibold text-gray-700 mb-6">Amenities & Activities</h2>
+            <div className="grid grid-cols-1 gap-6">
+              <div>
+                <FormField
+                  label="Amenities"
+                  name="predefinedAmenities"
+                  type="checkboxGroup"
+                  options={amenitiesOptions}
+                  value={formData.predefinedAmenities}
+                  onChange={handleCheckboxChange}
+                />
+              </div>
+              <div>
+                <DynamicAmenitiesField
+                  label="Other Amenities"
+                  value={customAmenities}
+                  onChange={setCustomAmenities}
+                />
+              </div>
+              <div>
+                <FormField
+                  label="Activities"
+                  name="activities"
+                  type="checkboxGroup"
+                  options={activitiesOptions}
+                  value={formData.activities}
+                  onChange={handleCheckboxChange}
+                />
+              </div>
+              <div>
+                <DynamicActivitiesField
+                  label="Other Activities"
+                  value={customActivities}
+                  onChange={setCustomActivities}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Alumni Information */}
+          <div className="border-t pt-6">
+            <h2 className="text-xl font-semibold text-gray-700 mb-6">Alumni Information</h2>
+            <div className="space-y-8">
+              <DynamicListField
+                label="Famous Alumni (Name & Profession)"
+                value={famousAlumnies}
+                onChange={setFamousAlumnies}
+                type="famous"
+              />
+              <DynamicListField
+                label="Top Alumni (Name & Percentage)"
+                value={topAlumnies}
+                onChange={setTopAlumnies}
+                type="top"
+              />
+              <DynamicListField
+                label="Other Alumni (Name & Percentage)"
+                value={otherAlumnies}
+                onChange={setOtherAlumnies}
+                type="other"
+              />
+            </div>
+          </div>
+
+          
 
         <div className="border-t pt-6">
           <h2 className="text-xl font-semibold text-gray-700 mb-6">
@@ -1468,7 +1737,520 @@ const RegistrationPage = () => {
           </div>
         </div>
 
-       
+        {/* Technology Adoption */}
+        <div className="border-t pt-6">
+          <h2 className="text-xl font-semibold text-gray-700 mb-6">Technology Adoption</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <FormField
+              label="Smart Classrooms (%)"
+              name="smartClassroomsPercentage"
+              type="number"
+              value={formData.smartClassroomsPercentage}
+              onChange={handleInputChange}
+            />
+          </div>
+          <div className="mt-6">
+            <DynamicElearningField
+              label="E-learning Platform Usage"
+              value={formData.elearningPlatforms}
+              onChange={(list) => setFormData(prev => ({ ...prev, elearningPlatforms: list }))}
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+            <div className="bg-white border rounded-lg p-4 text-center">
+              <div className="text-gray-500 text-sm">Smart Classrooms</div>
+              <div className="text-lg font-semibold text-gray-900">{formData.smartClassroomsPercentage || '—'}%</div>
+            </div>
+            <div className="bg-white border rounded-lg p-4 text-center">
+              <div className="text-gray-500 text-sm">E-learning Platforms</div>
+              <div className="text-lg font-semibold text-gray-900">{Array.isArray(formData.elearningPlatforms) ? formData.elearningPlatforms.length : 0}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Academics (Frontend-only) */}
+        <div className="border-t pt-6">
+          <h2 className="text-xl font-semibold text-gray-700 mb-6">Academics</h2>
+
+          {/* Board Results */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-gray-700">Board Results (Pass % and Average %)</h3>
+              <button
+                type="button"
+                onClick={() => setAcademicResults([...academicResults, { year: '', passPercent: '', averageMarksPercent: '' }])}
+                className="flex items-center text-sm text-indigo-600 hover:text-indigo-800"
+              >
+                <PlusCircle size={16} className="mr-1" /> Add Year
+              </button>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-white border border-gray-200 rounded-lg">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Year</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pass %</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Average Marks %</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {academicResults.map((row, index) => (
+                    <tr key={index} className="hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        <input
+                          type="number"
+                          value={row.year}
+                          onChange={(e) => {
+                            const next = academicResults.slice();
+                            next[index] = { ...next[index], year: e.target.value };
+                            setAcademicResults(next);
+                          }}
+                          placeholder="YYYY"
+                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-indigo-500 focus:border-indigo-500"
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <input
+                          type="number"
+                          value={row.passPercent}
+                          onChange={(e) => {
+                            const next = academicResults.slice();
+                            next[index] = { ...next[index], passPercent: e.target.value };
+                            setAcademicResults(next);
+                          }}
+                          placeholder="0"
+                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-indigo-500 focus:border-indigo-500"
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <input
+                          type="number"
+                          value={row.averageMarksPercent}
+                          onChange={(e) => {
+                            const next = academicResults.slice();
+                            next[index] = { ...next[index], averageMarksPercent: e.target.value };
+                            setAcademicResults(next);
+                          }}
+                          placeholder="0"
+                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-indigo-500 focus:border-indigo-500"
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          type="button"
+                          onClick={() => setAcademicResults(academicResults.filter((_, i) => i !== index))}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Exam & Qualifier Info */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-gray-700">Exam & Qualifier / Participation</h3>
+              <button
+                type="button"
+                onClick={() => setExamQualifiers([...examQualifiers, { year: '', exam: '', participation: '' }])}
+                className="flex items-center text-sm text-indigo-600 hover:text-indigo-800"
+              >
+                <PlusCircle size={16} className="mr-1" /> Add Entry
+              </button>
+            </div>
+            <div className="space-y-3">
+              {examQualifiers.map((item, index) => (
+                <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end bg-gray-50 p-4 rounded-md">
+                  <FormField
+                    label="Year"
+                    name={`exam-year-${index}`}
+                    type="number"
+                    value={item.year}
+                    onChange={(e) => {
+                      const next = examQualifiers.slice();
+                      next[index] = { ...next[index], year: e.target.value };
+                      setExamQualifiers(next);
+                    }}
+                  />
+                  <FormField
+                    label="Exam"
+                    name={`exam-name-${index}`}
+                    type="select"
+                    options={[
+                      'NEET','IIT-JEE','Olympiads','School-level competitions','International education prep','English proficiency exams','Global entrance guidance','Other'
+                    ]}
+                    value={item.exam}
+                    onChange={(e) => {
+                      const next = examQualifiers.slice();
+                      next[index] = { ...next[index], exam: e.target.value };
+                      setExamQualifiers(next);
+                    }}
+                  />
+                  <FormField
+                    label="Qualifier/Participation"
+                    name={`exam-part-${index}`}
+                    value={item.participation}
+                    onChange={(e) => {
+                      const next = examQualifiers.slice();
+                      next[index] = { ...next[index], participation: e.target.value };
+                      setExamQualifiers(next);
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setExamQualifiers(examQualifiers.filter((_, i) => i !== index))}
+                    className="text-red-500 hover:text-red-700 mb-2"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Visualization: Line Chart (inline SVG) */}
+          <div className="mt-6">
+            <h4 className="text-sm font-medium text-gray-700 mb-3">Visualization: Trends (Pass % vs Average %)</h4>
+            <div className="bg-white border rounded-lg p-4 overflow-x-auto">
+              {(() => {
+                const rows = academicResults
+                  .filter(r => r.year && (r.passPercent !== '' || r.averageMarksPercent !== ''))
+                  .sort((a,b) => Number(a.year) - Number(b.year));
+                if (rows.length === 0) {
+                  return <div className="text-sm text-gray-500">Add data to see the chart.</div>;
+                }
+                const width = 520; const height = 220; const padding = 32;
+                const years = rows.map(r => Number(r.year));
+                const minYear = Math.min(...years); const maxYear = Math.max(...years);
+                const xScale = (y) => padding + ((Number(y) - minYear) / Math.max(1, maxYear - minYear)) * (width - padding * 2);
+                const yScale = (v) => height - padding - (Number(v) / 100) * (height - padding * 2);
+                const toPath = (arr, key) => arr.map((r, i) => `${i === 0 ? 'M' : 'L'} ${xScale(r.year)} ${yScale(r[key] || 0)}`).join(' ');
+                const passPath = toPath(rows, 'passPercent');
+                const avgPath = toPath(rows, 'averageMarksPercent');
+                return (
+                  <svg width={width} height={height} className="min-w-[520px]">
+                    <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="#e5e7eb" />
+                    <line x1={padding} y1={padding} x2={padding} y2={height - padding} stroke="#e5e7eb" />
+                    <path d={passPath} fill="none" stroke="#4f46e5" strokeWidth="2" />
+                    <path d={avgPath} fill="none" stroke="#16a34a" strokeWidth="2" />
+                    {rows.map((r, i) => (
+                      <g key={i}>
+                        <circle cx={xScale(r.year)} cy={yScale(r.passPercent || 0)} r="3" fill="#4f46e5" />
+                        <circle cx={xScale(r.year)} cy={yScale(r.averageMarksPercent || 0)} r="3" fill="#16a34a" />
+                        <text x={xScale(r.year)} y={height - padding + 14} textAnchor="middle" fontSize="10" fill="#6b7280">{r.year}</text>
+                      </g>
+                    ))}
+                    <text x={width - padding} y={padding - 8} textAnchor="end" fontSize="10" fill="#6b7280">%</text>
+                    <g>
+                      <rect x={width - padding - 150} y={padding - 20} width="150" height="16" fill="white" />
+                      <circle cx={width - padding - 140} cy={padding - 12} r="3" fill="#4f46e5" />
+                      <text x={width - padding - 132} y={padding - 8} fontSize="10" fill="#374151">Pass %</text>
+                      <circle cx={width - padding - 80} cy={padding - 12} r="3" fill="#16a34a" />
+                      <text x={width - padding - 72} y={padding - 8} fontSize="10" fill="#374151">Average %</text>
+                    </g>
+                  </svg>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+
+        {/* International Exposure */}
+        <div className="border-t pt-6">
+          <h2 className="text-xl font-semibold text-gray-700 mb-6">International Exposure</h2>
+
+          {/* Exchange Programs */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-gray-700">Exchange Programs</h3>
+              <button
+                type="button"
+                onClick={() => setFormData(prev => ({
+                  ...prev,
+                  exchangePrograms: [...(prev.exchangePrograms || []), { partnerSchool: '', country: '', type: '', duration: '', studentsParticipated: '', activeSince: '' }]
+                }))}
+                className="flex items-center text-sm text-indigo-600 hover:text-indigo-800"
+              >
+                <PlusCircle size={16} className="mr-1" /> Add Program
+              </button>
+            </div>
+            <div className="space-y-3">
+              {(formData.exchangePrograms || []).map((prog, index) => (
+                <div key={index} className="grid grid-cols-1 md:grid-cols-6 gap-4 bg-gray-50 p-4 rounded-md">
+                  <FormField
+                    label="Partner School"
+                    name={`ex-partner-${index}`}
+                    value={prog.partnerSchool}
+                    onChange={(e) => {
+                      const list = [...(formData.exchangePrograms || [])];
+                      list[index] = { ...list[index], partnerSchool: e.target.value };
+                      setFormData(prev => ({ ...prev, exchangePrograms: list }));
+                    }}
+                  />
+                  <FormField
+                    label="Country"
+                    name={`ex-country-${index}`}
+                    value={prog.country}
+                    onChange={(e) => {
+                      const list = [...(formData.exchangePrograms || [])];
+                      list[index] = { ...list[index], country: e.target.value };
+                      setFormData(prev => ({ ...prev, exchangePrograms: list }));
+                    }}
+                  />
+                  <FormField
+                    label="Type"
+                    name={`ex-type-${index}`}
+                    value={prog.type}
+                    onChange={(e) => {
+                      const list = [...(formData.exchangePrograms || [])];
+                      list[index] = { ...list[index], type: e.target.value };
+                      setFormData(prev => ({ ...prev, exchangePrograms: list }));
+                    }}
+                  />
+                  <FormField
+                    label="Duration"
+                    name={`ex-duration-${index}`}
+                    value={prog.duration}
+                    onChange={(e) => {
+                      const list = [...(formData.exchangePrograms || [])];
+                      list[index] = { ...list[index], duration: e.target.value };
+                      setFormData(prev => ({ ...prev, exchangePrograms: list }));
+                    }}
+                  />
+                  <FormField
+                    label="Students"
+                    name={`ex-students-${index}`}
+                    type="number"
+                    value={prog.studentsParticipated}
+                    onChange={(e) => {
+                      const list = [...(formData.exchangePrograms || [])];
+                      list[index] = { ...list[index], studentsParticipated: e.target.value };
+                      setFormData(prev => ({ ...prev, exchangePrograms: list }));
+                    }}
+                  />
+                  <div className="flex items-end gap-2">
+                    <FormField
+                      label="Active Since"
+                      name={`ex-active-${index}`}
+                      value={prog.activeSince}
+                      onChange={(e) => {
+                        const list = [...(formData.exchangePrograms || [])];
+                        list[index] = { ...list[index], activeSince: e.target.value };
+                        setFormData(prev => ({ ...prev, exchangePrograms: list }));
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, exchangePrograms: (prev.exchangePrograms || []).filter((_, i) => i !== index) }))}
+                      className="text-red-500 hover:text-red-700 mb-2"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Global Tie-ups */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-gray-700">Global Tie-ups</h3>
+              <button
+                type="button"
+                onClick={() => setFormData(prev => ({
+                  ...prev,
+                  globalTieups: [...(prev.globalTieups || []), { partnerName: '', nature: '', activeSince: '', description: '' }]
+                }))}
+                className="flex items-center text-sm text-indigo-600 hover:text-indigo-800"
+              >
+                <PlusCircle size={16} className="mr-1" /> Add Tie-up
+              </button>
+            </div>
+            <div className="space-y-3">
+              {(formData.globalTieups || []).map((tie, index) => (
+                <div key={index} className="grid grid-cols-1 md:grid-cols-5 gap-4 bg-gray-50 p-4 rounded-md">
+                  <FormField
+                    label="Partner Name"
+                    name={`gt-name-${index}`}
+                    value={tie.partnerName}
+                    onChange={(e) => {
+                      const list = [...(formData.globalTieups || [])];
+                      list[index] = { ...list[index], partnerName: e.target.value };
+                      setFormData(prev => ({ ...prev, globalTieups: list }));
+                    }}
+                  />
+                  <FormField
+                    label="Nature"
+                    name={`gt-nature-${index}`}
+                    value={tie.nature}
+                    onChange={(e) => {
+                      const list = [...(formData.globalTieups || [])];
+                      list[index] = { ...list[index], nature: e.target.value };
+                      setFormData(prev => ({ ...prev, globalTieups: list }));
+                    }}
+                  />
+                  <FormField
+                    label="Active Since"
+                    name={`gt-active-${index}`}
+                    value={tie.activeSince}
+                    onChange={(e) => {
+                      const list = [...(formData.globalTieups || [])];
+                      list[index] = { ...list[index], activeSince: e.target.value };
+                      setFormData(prev => ({ ...prev, globalTieups: list }));
+                    }}
+                  />
+                  <div className="md:col-span-2 grid grid-cols-1 items-end gap-2">
+                    <FormField
+                      label="Description"
+                      name={`gt-desc-${index}`}
+                      value={tie.description}
+                      onChange={(e) => {
+                        const list = [...(formData.globalTieups || [])];
+                        list[index] = { ...list[index], description: e.target.value };
+                        setFormData(prev => ({ ...prev, globalTieups: list }));
+                      }}
+                    />
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, globalTieups: (prev.globalTieups || []).filter((_, i) => i !== index) }))}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Diversity & Inclusivity Section */}
+        <div className="border-t pt-6">
+          <h2 className="text-xl font-semibold text-gray-700 mb-6">Diversity & Inclusivity</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <FormField
+              label="Gender Ratio - Male (%)"
+              name="genderRatioMale"
+              type="number"
+              value={formData.genderRatioMale}
+              onChange={handleInputChange}
+            />
+            <FormField
+              label="Gender Ratio - Female (%)"
+              name="genderRatioFemale"
+              type="number"
+              value={formData.genderRatioFemale}
+              onChange={handleInputChange}
+            />
+            <FormField
+              label="Gender Ratio - Others (%)"
+              name="genderRatioOthers"
+              type="number"
+              value={formData.genderRatioOthers}
+              onChange={handleInputChange}
+            />
+          </div>
+
+          <div className="mt-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Scholarship Diversity Types</label>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {['Merit', 'Socio-economic', 'Cultural', 'Sports', 'Community', 'Academic Excellence'].map(opt => (
+                <label key={opt} className="flex items-center">
+                  <input
+                    type="checkbox"
+                    name="scholarshipDiversityTypes"
+                    value={opt}
+                    checked={(formData.scholarshipDiversityTypes || []).includes(opt)}
+                    onChange={handleCheckboxChange}
+                    className="h-4 w-4 text-indigo-600 border-gray-300 rounded"
+                  />
+                  <span className="ml-2 text-gray-700">{opt}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            <FormField
+              label="Scholarship Coverage (%)"
+              name="scholarshipDiversityCoverage"
+              type="number"
+              value={formData.scholarshipDiversityCoverage}
+              onChange={handleInputChange}
+            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Special Needs Support</label>
+              <div className="space-y-3">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    name="specialNeedsStaff"
+                    checked={formData.specialNeedsStaff}
+                    onChange={(e) => setFormData(prev => ({ ...prev, specialNeedsStaff: e.target.checked }))}
+                    className="h-4 w-4 text-indigo-600 border-gray-300 rounded"
+                  />
+                  <span className="ml-2 text-gray-700">Dedicated Staff Available</span>
+                </label>
+                <FormField
+                  label="Students Supported (%)"
+                  name="specialNeedsSupportPercentage"
+                  type="number"
+                  value={formData.specialNeedsSupportPercentage}
+                  onChange={handleInputChange}
+                />
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Facilities Available</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {['Ramps', 'Wheelchair access', 'Special educators', 'Learning support', 'Resource room', 'Assistive devices'].map(opt => (
+                      <label key={opt} className="flex items-center">
+                        <input
+                          type="checkbox"
+                          name="specialNeedsFacilities"
+                          value={opt}
+                          checked={(formData.specialNeedsFacilities || []).includes(opt)}
+                          onChange={handleCheckboxChange}
+                          className="h-4 w-4 text-indigo-600 border-gray-300 rounded"
+                        />
+                        <span className="ml-2 text-gray-700">{opt}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Media (Photos & Video) */}
+        <div className="border-t pt-6">
+          <h2 className="text-xl font-semibold text-gray-700 mb-6">Media</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Upload Photos (4–5 recommended, max 5)</label>
+              <input type="file" accept="image/*" multiple onChange={handlePhotoChange} className="mt-2" />
+              {selectedPhotos?.length > 0 && (
+                <div className="mt-2 text-sm text-gray-600">{selectedPhotos.length} selected</div>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Upload Video (max 20MB)</label>
+              <input type="file" accept="video/*" onChange={handleVideoChange} className="mt-2" />
+              {selectedVideo && (
+                <div className="mt-2 text-sm text-gray-600">{selectedVideo.name}</div>
+              )}
+            </div>
+          </div>
+        </div>
 
         
           <button

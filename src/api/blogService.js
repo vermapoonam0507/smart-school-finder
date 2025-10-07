@@ -60,14 +60,14 @@ export const getBlogById = async (blogId) => {
 
 /**
  * Create a new blog
- * @param {object} blogData - Blog data
+ * @param {object} blogData - Blog data (title, highlight, description, contributor)
  */
 export const createBlog = async (blogData) => {
   return apiClient.post('/admin/blogs', blogData);
 };
 
 /**
- * Update a blog
+ * Update a blog (not implemented in backend yet)
  * @param {string} blogId - Blog ID
  * @param {object} blogData - Updated blog data
  */
@@ -84,17 +84,17 @@ export const deleteBlog = async (blogId) => {
 };
 
 /**
- * Like a blog
+ * Like a blog (not implemented in backend yet - using local state for now)
  * @param {string} blogId - Blog ID
  */
-export const likeBlog = async (blogId) => {
+export const likeBlog = (blogId) => {
   return apiClient.post(`/admin/blogs/${blogId}/like`);
 };
 
 /**
- * Unlike a blog
+ * Unlike a blog (not implemented in backend yet - using local state for now)
  * @param {string} blogId - Blog ID
  */
-export const unlikeBlog = async (blogId) => {
+export const unlikeBlog = (blogId) => {
   return apiClient.post(`/admin/blogs/${blogId}/unlike`);
 };

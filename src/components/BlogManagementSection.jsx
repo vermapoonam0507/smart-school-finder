@@ -20,9 +20,14 @@ const BlogManagementSection = () => {
     try {
       setIsLoading(true);
       const response = await getAllBlogs();
+<<<<<<< HEAD
       const raw = response?.data;
       const normalized = Array.isArray(raw?.data) ? raw.data : (Array.isArray(raw) ? raw : []);
       setBlogs(normalized);
+=======
+      const payload = response?.data?.data ?? response?.data ?? [];
+      setBlogs(Array.isArray(payload) ? payload : []);
+>>>>>>> daaef50fddd436d1bc4a51d49f610aec2759cf5d
     } catch (error) {
       console.error('Failed to load blogs:', error);
       toast.error('Failed to load blogs');
@@ -80,6 +85,7 @@ const BlogManagementSection = () => {
     setEditingBlog(null);
   };
 
+<<<<<<< HEAD
   const safeString = (val) => (typeof val === 'string' ? val : '').toLowerCase();
   const safeContributors = (val) => Array.isArray(val) ? val : (typeof val === 'string' ? [val] : []);
 
@@ -90,6 +96,15 @@ const BlogManagementSection = () => {
     const q = searchTerm.toLowerCase();
     return title.includes(q) || highlight.includes(q) || contributors.some((c) => c.includes(q));
   }) : [];
+=======
+  const filteredBlogs = blogs.filter(blog =>
+    blog.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    blog.highlight.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (Array.isArray(blog.contributor) ? blog.contributor : [blog.contributor]).some(contributor => 
+      contributor.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  );
+>>>>>>> daaef50fddd436d1bc4a51d49f610aec2759cf5d
 
   if (isLoading) {
     return (
@@ -154,7 +169,7 @@ const BlogManagementSection = () => {
                   <div className="flex items-center text-sm text-gray-500 space-x-4">
                     <div className="flex items-center">
                       <User className="h-4 w-4 mr-1" />
-                      <span>{blog.contributor.join(', ')}</span>
+                      <span>{Array.isArray(blog.contributor) ? blog.contributor.join(', ') : blog.contributor}</span>
                     </div>
                     <div className="flex items-center">
                       <Calendar className="h-4 w-4 mr-1" />
