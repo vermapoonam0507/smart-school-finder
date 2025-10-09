@@ -162,8 +162,8 @@ export const getSchoolsByStatus = async (status) => {
  * @param {string} schoolId
  */
 export const getSchoolById = (schoolId) => {
-  // Public school details endpoint
-  return apiClient.get(`/schools/${encodeURIComponent(schoolId)}`);
+  // Use the correct backend endpoint
+  return apiClient.get(`/admin/schools/${encodeURIComponent(schoolId)}`);
 };
 
 /**
@@ -272,4 +272,20 @@ export const updateAdminProfile = (profileData) => {
  */
 export const changeAdminPassword = (passwordData) => {
   return apiClient.patch('/admin/change-password', passwordData);
+};
+
+/**
+ * Get amenities by school ID
+ * @param {string} schoolId - School ID
+ */
+export const getAmenitiesById = (schoolId) => {
+  return apiClient.get(`/admin/schools/amenities/${encodeURIComponent(schoolId)}`);
+};
+
+/**
+ * Get activities by school ID
+ * @param {string} schoolId - School ID
+ */
+export const getActivitiesById = (schoolId) => {
+  return apiClient.get(`/admin/schools/activities/${encodeURIComponent(schoolId)}`);
 };

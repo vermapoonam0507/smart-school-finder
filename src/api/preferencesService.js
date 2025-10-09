@@ -3,7 +3,7 @@ import apiClient from './axios';
 
 export const getUserPreferences = async () => {
   try {
-    const { data } = await apiClient.get('/users/preferences');
+   const { data } = await apiClient.get(`/preferences/${studId}`);
     return data;
   } catch (error) {
     console.log('No user preferences found, using defaults');
@@ -13,7 +13,7 @@ export const getUserPreferences = async () => {
 
 export const saveUserPreferences = async (preferences) => {
   try {
-    const { data } = await apiClient.post('/users/preferences', preferences);
+    const { data } = await apiClient.get(`/preferences/${studId}`);
     return data;
   } catch (error) {
     console.error('Error saving preferences:', error);

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { getSchoolById } from "../api/adminService";
+import { getSchoolById, getAmenitiesById, getActivitiesById } from "../api/adminService";
 import { toast } from "react-toastify";
 import {
   MapPin,
@@ -36,6 +36,8 @@ const SchoolDetailsPage = ({ shortlist, onShortlistToggle }) => {
 
   const [school, setSchool] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [amenities, setAmenities] = useState([]);
+  const [activities, setActivities] = useState([]);
 
   useEffect(() => {
     if (!schoolId) return;
@@ -60,7 +62,22 @@ const SchoolDetailsPage = ({ shortlist, onShortlistToggle }) => {
       }
     };
 
+    const fetchAmenitiesAndActivities = async () => {
+      try {
+        const [amenitiesRes, activitiesRes] = await Promise.all([
+          getAmenitiesById(schoolId),
+          getActivitiesById(schoolId),
+        ]);
+        setAmenities(amenitiesRes?.data?.amenities || []);
+        setActivities(activitiesRes?.data?.activities || []);
+      } catch (e) {
+        setAmenities([]);
+        setActivities([]);
+      }
+    };
+
     fetchSchoolDetails();
+    fetchAmenitiesAndActivities();
   }, [schoolId, navigate]);
 
   const handleApplyNow = () => {
@@ -516,7 +533,7 @@ const SchoolDetailsPage = ({ shortlist, onShortlistToggle }) => {
               Amenities & Activities
             </h2>
             <div className="flex flex-wrap gap-2">
-              {school.predefinedAmenities?.map((amenity) => (
+              {amenities.map((amenity) => (
                 <span
                   key={amenity}
                   className="bg-purple-100 text-purple-800 text-sm font-medium px-3 py-1 rounded-full flex items-center"
@@ -525,7 +542,7 @@ const SchoolDetailsPage = ({ shortlist, onShortlistToggle }) => {
                   {amenity}
                 </span>
               ))}
-              {school.activities?.map((activity) => (
+              {activities.map((activity) => (
                 <span
                   key={activity}
                   className="bg-teal-100 text-teal-800 text-sm font-medium px-3 py-1 rounded-full flex items-center"

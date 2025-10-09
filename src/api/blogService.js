@@ -65,36 +65,3 @@ export const getBlogById = async (blogId) => {
 export const createBlog = async (blogData) => {
   return apiClient.post('/admin/blogs', blogData);
 };
-
-/**
- * Update a blog (not implemented in backend yet)
- * @param {string} blogId - Blog ID
- * @param {object} blogData - Updated blog data
- */
-export const updateBlog = async (blogId, blogData) => {
-  return apiClient.put(`/admin/blogs/${blogId}`, blogData);
-};
-
-/**
- * Delete a blog
- * @param {string} blogId - Blog ID
- */
-export const deleteBlog = async (blogId) => {
-  return apiClient.delete(`/admin/blogs/${blogId}`);
-};
-
-/**
- * Like a blog (not implemented in backend yet - using local state for now)
- * @param {string} blogId - Blog ID
- */
-export const likeBlog = (blogId) => {
-  return apiClient.post(`/admin/blogs/${blogId}/like`);
-};
-
-/**
- * Unlike a blog (not implemented in backend yet - using local state for now)
- * @param {string} blogId - Blog ID
- */
-export const unlikeBlog = (blogId) => {
-  return apiClient.post(`/admin/blogs/${blogId}/unlike`);
-};

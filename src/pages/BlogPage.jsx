@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Heart, Calendar, User, Search, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { getAllBlogs, likeBlog, unlikeBlog } from '../api/blogService';
+import { getAllBlogs } from '../api/blogService';
 import { toast } from 'react-toastify';
 
 const BlogPage = () => {
   const [blogs, setBlogs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [likedBlogs, setLikedBlogs] = useState(new Set());
+
 
   useEffect(() => {
     loadBlogs();
@@ -28,30 +28,7 @@ const BlogPage = () => {
     }
   };
 
-  const handleLike = async (blogId) => {
-    try {
-      if (likedBlogs.has(blogId)) {
-        await unlikeBlog(blogId);
-        setLikedBlogs(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(blogId);
-          return newSet;
-        });
-        setBlogs(prev => prev.map(blog => 
-          blog._id === blogId ? { ...blog, likes: Math.max(0, blog.likes - 1) } : blog
-        ));
-      } else {
-        await likeBlog(blogId);
-        setLikedBlogs(prev => new Set([...prev, blogId]));
-        setBlogs(prev => prev.map(blog => 
-          blog._id === blogId ? { ...blog, likes: blog.likes + 1 } : blog
-        ));
-      }
-    } catch (error) {
-      console.error('Failed to toggle like:', error);
-      toast.error('Failed to update like');
-    }
-  };
+
 
   const list = Array.isArray(blogs) ? blogs : [];
   const filteredBlogs = list.filter(blog =>
@@ -146,17 +123,7 @@ const BlogPage = () => {
                           </div>
                         </div>
                         
-                        <button
-                          onClick={() => handleLike(blog._id)}
-                          className={`flex items-center px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                            likedBlogs.has(blog._id)
-                              ? 'bg-red-100 text-red-600 hover:bg-red-200'
-                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                          }`}
-                        >
-                          <Heart className={`h-4 w-4 mr-2 ${likedBlogs.has(blog._id) ? 'fill-current' : ''}`} />
-                          {blog.likes} {blog.likes === 1 ? 'like' : 'likes'}
-                        </button>
+
                       </div>
                     </div>
                   </div>

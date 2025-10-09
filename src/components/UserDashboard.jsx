@@ -9,7 +9,8 @@ import {
   updateUserProfile,
   createStudentProfile,
   getUserProfile,
-  saveUserPreferences
+  updateUserPreferences,
+  createUserPreferences
 } from '../api/userService';
 import { getSchoolById } from '../api/adminService';
 import { Download } from 'lucide-react';
@@ -94,7 +95,31 @@ const UserDashboard = ({ shortlist, comparisonList, onCompareToggle, onShortlist
       const authId = currentUser.authId || currentUser._id;
       if (!authId) throw new Error('User ID not found. Cannot update profile.');
 
+      // Update main profile fields
       const updatedProfile = await updateUserProfile(authId, profileData);
+
+      // Update preferences separately if present
+      if (profileData.preferences) {
+        try {
+          await updateUserPreferences(authId, {
+            studentId: authId,
+            ...profileData.preferences
+          });
+        } catch (err) {
+          // If update fails with 'Preference not found', create instead
+          if (
+            err?.message?.includes('Preference not found') ||
+            err?.response?.data?.message?.includes('Preference not found')
+          ) {
+            await createUserPreferences({
+              studentId: authId,
+              ...profileData.preferences
+            });
+          } else {
+            throw err;
+          }
+        }
+      }
 
       // Fetch the updated profile from the server to ensure we have the latest data
       const freshProfile = await getUserProfile(authId);
