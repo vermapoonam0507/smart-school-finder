@@ -35,11 +35,10 @@ const PendingSchoolsSection = () => {
   const handleAcceptSchool = async (schoolId) => {
     try {
       setAcceptingId(schoolId);
-      await updateSchoolStatus(schoolId, { status: 'accepted' });
+      await updateSchoolStatus(schoolId, 'accepted');
 
       // Refresh pending list from server to reflect accurate state
       await loadPendingSchools();
-      toast.success('School accepted successfully!');
     } catch (error) {
       console.error('Failed to accept school:', error);
       toast.error('Failed to accept school');
@@ -51,7 +50,7 @@ const PendingSchoolsSection = () => {
   const handleRejectSchool = async (schoolId) => {
     try {
       setRejectingId(schoolId);
-      await updateSchoolStatus(schoolId, { status: 'rejected' });
+      await updateSchoolStatus(schoolId, 'rejected');
       await loadPendingSchools();
       toast.success('School rejected successfully!');
     } catch (error) {
@@ -72,6 +71,7 @@ const PendingSchoolsSection = () => {
       </div>
     );
   }
+  
 
   if (pendingSchools.length === 0) {
     return (

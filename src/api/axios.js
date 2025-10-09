@@ -1,38 +1,34 @@
-// src/api/axios.js
-
 import axios from 'axios';
 
-// Prefer env var, fallback to localhost
-const rawBase = import.meta?.env?.VITE_API_URL || 'http://localhost:8080/api';
+// Remove /api from base URL, backend already has proper route prefixes
+const apiBaseURL = import.meta.env.VITE_API_BASE_URL || 'https://backend-tc-sa-v2.onrender.com';
 
-// Normalize: remove trailing slashes
-const apiBaseURL = rawBase.replace(/\/$/, '');
+console.log('🔧 Axios Base URL:', apiBaseURL);
 
 const apiClient = axios.create({
-	baseURL: apiBaseURL,
+  baseURL: apiBaseURL,
 });
 
-
-
+// Add auth token if present
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('authToken');
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
-
-    return config; 
+    console.log('📤 API Request:', config.method?.toUpperCase(), config.url);
+    return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Response interceptor to surface consistent errors
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('✅ API Response:', response.config.url, response.status);
+    return response;
+  },
   (error) => {
-    // Attach a normalized message
+    console.error('❌ API Error:', error.config?.url, error.response?.status);
     const message = error?.response?.data?.message || error.message || 'Request failed';
     error.normalizedMessage = message;
     return Promise.reject(error);
