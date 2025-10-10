@@ -5,13 +5,21 @@ export const registerAdmin = async (adminData) => {
   return apiClient.post('/admin/auth/register', adminData);
 };
 
-// export const loginAdmin = async (credentials) => {
-//   return apiClient.post('/admin/auth/login', credentials);
-// };
 export const loginAdmin = async (credentials) => {
-  return apiClient.post('/admin-login', credentials); // ✅ matches backend
+  try {
+    // Ensure consistent URL format
+    const response = await apiClient.post('/admin/admin-login', credentials);
+    console.log('Admin login response:', response.data);
+    return response;
+  } catch (error) {
+    console.error('Admin login error:', {
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message
+    });
+    throw error;
+  }
 };
-
 
 export const getAdminStats = () => {
   return apiClient.get('/admin/stats');
@@ -73,12 +81,6 @@ export const getSchoolsByStatus = async (status) => {
   return apiClient.get(`/schools/status/${encodeURIComponent(status)}`);
 };
 
-// export const getSchoolById = (schoolId) => {
-//   // Use the correct backend endpoint
-//   return apiClient.get(`/admin/schools/${encodeURIComponent(schoolId)}`);
-
-// };
-
 export const getSchoolById = (schoolId) => {
   return apiClient.get(`/schools/${encodeURIComponent(schoolId)}`);
 };
@@ -87,13 +89,6 @@ export const updateUserStatus = (userId, statusData) => {
   return apiClient.patch(`/admin/users/${userId}/status`, statusData);
   res.status(200).json({ message: 'Route reached successfully' });
 };
-
-// export const updateSchoolStatus = async (schoolId, statusData) => {
-//   return apiClient.patch(`/schools/${encodeURIComponent(schoolId)}/status`, statusData);
-// };
-// export const updateSchoolStatus = async (schoolId, status) => {
-//   return apiClient.patch(`/schools/${schoolId}/status`, { status });
-// };
 
 export const updateSchoolStatus = async (schoolId, newStatus) => {
   return apiClient.patch(`/schools/admin/${encodeURIComponent(schoolId)}/status`, { status: newStatus });
@@ -164,9 +159,6 @@ export const changeAdminPassword = (passwordData) => {
  * Get amenities by school ID
  * @param {string} schoolId - School ID
  */
-// export const getAmenitiesById = (schoolId) => {
-//   return apiClient.get(`/admin/schools/amenities/${encodeURIComponent(schoolId)}`);
-// };
 export const getAmenitiesById = (schoolId) => {
   return apiClient.get(`/schools/amenities/${encodeURIComponent(schoolId)}`);
 };
@@ -174,10 +166,6 @@ export const getAmenitiesById = (schoolId) => {
  * Get activities by school ID
  * @param {string} schoolId - School ID
  */
-// export const getActivitiesById = (schoolId) => {
-//   return apiClient.get(`/admin/schools/activities/${encodeURIComponent(schoolId)}`);
-// };
-
 export const getActivitiesById = (schoolId) => {
   return apiClient.get(`/schools/activities/${encodeURIComponent(schoolId)}`);
 };

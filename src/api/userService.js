@@ -11,7 +11,7 @@ import apiClient from './axios';
 
 export const getShortlist = async (authId) => {
   try {
-    const response = await apiClient.get(`/api/users/shortlist/${authId}`);
+    const response = await apiClient.get(`users/shortlist/${authId}`);
     return response.data;
   } catch (error) {
     console.error("Error fetching shortlist:", error.response?.data || error.message);
@@ -138,33 +138,34 @@ export const updateUserProfile = async (authId, profileData) => {
 // USER PREFERENCES FUNCTIONS
 // =============================================================================
 
+// USER PREFERENCES FUNCTIONS
 export const getUserPreferences = async (studentId) => {
   try {
-    const response = await apiClient.get(`/api/users/preferences/${studentId}`);
+    const response = await apiClient.get(`/preferences/${studentId}`);
     return response.data;
   } catch (error) {
-    console.error("Error fetching user preferences:", error.response?.data || error.message);
-    throw error.response?.data || error;
+    console.error("Error fetching user preferences:", error);
+    throw error;
   }
 };
 
 export const createUserPreferences = async (preferenceData) => {
   try {
-    const response = await apiClient.post('/api/users/preferences/', preferenceData);
+    const response = await apiClient.post(`/preferences`, preferenceData);
     return response.data;
   } catch (error) {
-    console.error("Error creating user preferences:", error.response?.data || error.message);
-    throw error.response?.data || error;
+    console.error("Error creating user preferences:", error);
+    throw error;
   }
 };
 
 export const updateUserPreferences = async (studentId, preferenceData) => {
   try {
-    const response = await apiClient.put(`/api/users/preferences/${studentId}`, preferenceData);
+    const response = await apiClient.put(`/preferences/${studentId}`, preferenceData);
     return response.data;
   } catch (error) {
-    console.error("Error updating user preferences:", error.response?.data || error.message);
-    throw error.response?.data || error;
+    console.error("Error updating user preferences:", error);
+    throw error;
   }
 };
 
