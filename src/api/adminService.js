@@ -69,10 +69,14 @@ export const getSchoolsByStatus = async (status) => {
   return apiClient.get(`/schools/status/${encodeURIComponent(status)}`);
 };
 
-export const getSchoolById = (schoolId) => {
-  // Use the correct backend endpoint
-  return apiClient.get(`/admin/schools/${encodeURIComponent(schoolId)}`);
+// export const getSchoolById = (schoolId) => {
+//   // Use the correct backend endpoint
+//   return apiClient.get(`/admin/schools/${encodeURIComponent(schoolId)}`);
 
+// };
+
+export const getSchoolById = (schoolId) => {
+  return apiClient.get(`/schools/${encodeURIComponent(schoolId)}`);
 };
 
 export const updateUserStatus = (userId, statusData) => {
@@ -156,14 +160,20 @@ export const changeAdminPassword = (passwordData) => {
  * Get amenities by school ID
  * @param {string} schoolId - School ID
  */
+// export const getAmenitiesById = (schoolId) => {
+//   return apiClient.get(`/admin/schools/amenities/${encodeURIComponent(schoolId)}`);
+// };
 export const getAmenitiesById = (schoolId) => {
-  return apiClient.get(`/admin/schools/amenities/${encodeURIComponent(schoolId)}`);
+  return apiClient.get(`/schools/amenities/${encodeURIComponent(schoolId)}`);
 };
-
 /**
  * Get activities by school ID
  * @param {string} schoolId - School ID
  */
+// export const getActivitiesById = (schoolId) => {
+//   return apiClient.get(`/admin/schools/activities/${encodeURIComponent(schoolId)}`);
+// };
+
 export const getActivitiesById = (schoolId) => {
-  return apiClient.get(`/admin/schools/activities/${encodeURIComponent(schoolId)}`);
+  return apiClient.get(`/schools/activities/${encodeURIComponent(schoolId)}`);
 };
