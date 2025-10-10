@@ -5,9 +5,13 @@ export const registerAdmin = async (adminData) => {
   return apiClient.post('/admin/auth/register', adminData);
 };
 
+// export const loginAdmin = async (credentials) => {
+//   return apiClient.post('/admin/auth/login', credentials);
+// };
 export const loginAdmin = async (credentials) => {
-  return apiClient.post('/admin/auth/login', credentials);
+  return apiClient.post('/admin-login', credentials); // ✅ matches backend
 };
+
 
 export const getAdminStats = () => {
   return apiClient.get('/admin/stats');
