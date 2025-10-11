@@ -1,8 +1,12 @@
 // src/api/reviewService.js
-
 import apiClient from './axios';
 
-// Fetch all accepted reviews for a school
+/* ----------------- Student Reviews ----------------- */
+
+/**
+ * Fetch all accepted reviews for a school
+ * @param {string} schoolId
+ */
 export const getSchoolReviews = async (schoolId) => {
   try {
     const response = await apiClient.get(`/reviews/admin/${schoolId}`);
@@ -12,7 +16,10 @@ export const getSchoolReviews = async (schoolId) => {
   }
 };
 
-// Submit a new review
+/**
+ * Submit a new review
+ * @param {object} reviewData
+ */
 export const submitReview = async (reviewData) => {
   try {
     // Transform frontend data to match backend schema
@@ -33,7 +40,11 @@ export const submitReview = async (reviewData) => {
   }
 };
 
-// Like a review
+/**
+ * Like a review
+ * @param {string} studentId
+ * @param {string} reviewId
+ */
 export const likeReview = async (studentId, reviewId) => {
   try {
     const response = await apiClient.patch(`/reviews/like/${studentId}/${reviewId}`);
@@ -43,7 +54,10 @@ export const likeReview = async (studentId, reviewId) => {
   }
 };
 
-// Get reviews by student (for student dashboard)
+/**
+ * Get reviews by student (for student dashboard)
+ * @param {string} studentId
+ */
 export const getStudentReviews = async (studentId) => {
   try {
     const response = await apiClient.get(`/reviews/users/${studentId}`);
@@ -53,7 +67,10 @@ export const getStudentReviews = async (studentId) => {
   }
 };
 
-// Delete a review (for student)
+/**
+ * Delete a review
+ * @param {string} reviewId
+ */
 export const deleteReview = async (reviewId) => {
   try {
     const response = await apiClient.delete(`/reviews/${reviewId}`);
@@ -63,9 +80,11 @@ export const deleteReview = async (reviewId) => {
   }
 };
 
-// Admin functions for managing reviews
+/* ----------------- Admin Pending Reviews ----------------- */
 
-// Get all pending reviews for admin
+/**
+ * Get all pending reviews for admin
+ */
 export const getPendingReviews = async () => {
   try {
     const response = await apiClient.get('/reviews/admin/pending/all');
@@ -75,7 +94,10 @@ export const getPendingReviews = async () => {
   }
 };
 
-// Accept a pending review
+/**
+ * Accept a pending review
+ * @param {string} reviewId
+ */
 export const acceptReview = async (reviewId) => {
   try {
     const response = await apiClient.patch(`/reviews/admin/accept/${reviewId}`);
@@ -85,7 +107,10 @@ export const acceptReview = async (reviewId) => {
   }
 };
 
-// Reject a pending review
+/**
+ * Reject a pending review
+ * @param {string} reviewId
+ */
 export const rejectReview = async (reviewId) => {
   try {
     const response = await apiClient.delete(`/reviews/admin/reject/${reviewId}`);
@@ -95,7 +120,10 @@ export const rejectReview = async (reviewId) => {
   }
 };
 
-// Get school name by ID (for displaying in pending reviews)
+/**
+ * Get school name by ID (for displaying in pending reviews)
+ * @param {string} schoolId
+ */
 export const getSchoolName = async (schoolId) => {
   try {
     const response = await apiClient.get(`/schools/${schoolId}`);

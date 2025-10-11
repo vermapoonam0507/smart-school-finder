@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
-import { PlusCircle, Trash2 } from "lucide-react";
+import { PlusCircle, Trash2, Info, Building2, Users2, ShieldCheck, HeartHandshake, Heart, Globe2, Sparkles, Image, Award, DollarSign, Cpu, GraduationCap, CalendarDays, Upload, ToggleRight } from "lucide-react";
 import { toast } from "react-toastify";
 import apiClient from "../api/axios";
 import { 
@@ -12,7 +12,13 @@ import {
   addAlumni, 
   addInfrastructure, 
   addOtherDetails, 
-  addFeesAndScholarships 
+  addFeesAndScholarships,
+  addFaculty,
+  addAdmissionTimeline,
+  addTechnologyAdoption,
+  addSafetyAndSecurity,
+  addInternationalExposure,
+  addAcademics
 } from "../api/adminService";
 
 
@@ -32,7 +38,7 @@ const FormField = ({
     required,
     onChange,
     className:
-      "w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500",
+      "w-full px-4 py-3 mt-2 border-2 border-gray-200 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-300 hover:border-gray-300 hover:shadow-md bg-white/80 backdrop-blur-sm",
   };
 
   const renderInput = () => {
@@ -74,12 +80,15 @@ const FormField = ({
   };
 
   return (
-    <div>
-      <label htmlFor={name} className="block text-sm font-medium text-gray-700">
+    <div className="group">
+      <label htmlFor={name} className="block text-sm font-semibold text-gray-700 mb-2 group-hover:text-indigo-600 transition-colors duration-300">
         {label}
-        {required && <span className="text-red-500">*</span>}
+        {required && <span className="text-red-500 ml-1">*</span>}
       </label>
-      {renderInput()}
+      <div className="relative">
+        {renderInput()}
+        <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-indigo-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+      </div>
     </div>
   );
 };
@@ -314,9 +323,11 @@ const RegistrationPage = () => {
 
   // State with all the fields required by the backend schema
   const [formData, setFormData] = useState({
+    // Core School Fields (matching backend School model)
     name: "",
     description: "",
     address: "",
+    area: "", // Added: matches backend field
     city: "",
     state: "",
     pincode: "",
@@ -327,65 +338,80 @@ const RegistrationPage = () => {
     website: "",
     phoneNo: "",
     genderType: "co-ed",
-    schoolMode: "day",
-    shifts: "morning",
-    languageMedium: "english",
-    predefinedAmenities: [],
-    activities: [],
+    schoolMode: "convent", // Updated: matches backend enum ['convent', 'private', 'government']
+    shifts: ["morning"], // Updated: array to match backend
+    languageMedium: ["English"], // Updated: array to match backend
     transportAvailable: "no",
     latitude: "",
     longitude: "",
-    studentsPerTeacher: "", // numeric derived from ratio
-    teacherStudentRatio: "", // string input e.g., 1:20
-    // Infrastructure fields
-    infraLabTypes: [],
-    infraLibraryBooks: "",
-    infraSportsTypes: [],
-    infraSmartClassrooms: "",
-    // Safety & Security fields
-    safetyCCTV: "",
-    safetyDoctorAvailability: "",
-    safetyNurseAvailable: false,
-    safetyNurseTimings: "",
-    safetyTransportRoutes: [], // [{ route: string, attendant: boolean }]
-    safetyGPSTracking: false,
-    safetyDriverVerification: false,
-    // Fees & Affordability fields
-    feesTransparency: "partial", // "full", "partial", "low"
-    classWiseFees: [], // [{ class: string, tuition: number, activity: number, transport: number, hostel: number, misc: number }]
-    scholarships: [], // [{ type: string, eligibility: string, reduction: string, description: string }]
-    // Diversity & Inclusivity fields
-    genderRatioMale: "",
-    genderRatioFemale: "",
-    genderRatioOthers: "",
-    scholarshipDiversityTypes: [], // ["Merit", "Sports", "Socio-economic", "Community", etc.]
-    scholarshipDiversityCoverage: "", // percentage
-    specialNeedsStaff: false,
-    specialNeedsFacilities: [], // ["Ramps", "Special educators", "Resource room", "Assistive devices"]
-    specialNeedsSupportPercentage: "",
-    // Parent Reviews fields
-    reviewsEnabled: true,
-    reviewModeration: "ai", // "ai", "admin", "none"
-    reviewVerificationRequired: true,
-    reviewAnonymityOption: true,
-    reviewMediaUpload: false,
-    averageRating: 0,
-    totalReviews: 0,
-    ratingBreakdown: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
-    highlightedReviews: [], // [{ id, rating, comment, parentName, grade, verified, helpful, date }]
-    recentReviews: [], // [{ id, rating, comment, parentName, grade, verified, helpful, date }]
-    // Technology Adoption fields
-    smartClassroomsPercentage: "", // Percentage of classrooms equipped with smart tech
-    elearningPlatforms: [], // [{ platform: string, usagePercentage: string, frequency: string }]
-    digitalAdoptionIndex: 0, // Calculated score
-    techAdoptionYear: "", // Year when technology adoption started
-    lastTechUpgrade: "", // Year of last major technology upgrade
-    // International Exposure fields
-    exchangePrograms: [], // [{ partnerSchool: string, country: string, type: string, duration: string, studentsParticipated: string, activeSince: string }]
-    globalTieups: [], // [{ partnerName: string, nature: string, activeSince: string, description: string }]
-    successStories: [], // [{ title: string, description: string, year: string, studentsBenefited: string }]
-    internationalPhotos: [], // Array of photo URLs from exchange visits
-    studentsBenefitingPercentage: "", // Percentage of students benefiting from international exposure
+    TeacherToStudentRatio: "", // Updated: matches backend field name
+    rank: "", // Added: matches backend field
+    specialist: [], // Added: matches backend field
+    tags: [], // Added: matches backend field
+    
+    // Amenities Fields (matching backend Amenities model)
+    predefinedAmenities: [], // Matches backend enum
+    customAmenities: [], // Added: matches backend field
+    
+    // Activities Fields (matching backend Activities model)
+    activities: [], // Matches backend enum
+    customActivities: [], // Added: matches backend field
+    
+    // Infrastructure Fields (matching backend Infrastructure model)
+    labs: [], // Updated: matches backend enum ['Physics', 'Chemistry', 'Biology', 'Computer', 'Robotics', 'Language']
+    sportsGrounds: [], // Updated: matches backend enum ['Football', 'Cricket', 'Basketball', 'Tennis', 'Athletics', 'Badminton']
+    libraryBooks: "", // Updated: matches backend field
+    smartClassrooms: "", // Updated: matches backend field
+    
+    // Safety & Security Fields (matching backend SafetyAndSecurity model)
+    cctvCoveragePercentage: "", // Updated: matches backend field
+    medicalFacility: {
+      doctorAvailability: "", // Matches backend enum ['Full-time', 'Part-time', 'On-call', 'Not Available']
+      medkitAvailable: false, // Matches backend field
+      ambulanceAvailable: false // Matches backend field
+    },
+    transportSafety: {
+      gpsTrackerAvailable: false, // Matches backend field
+      driversVerified: false // Matches backend field
+    },
+    fireSafetyMeasures: [], // Updated: matches backend enum ['Extinguishers', 'Alarms', 'Sprinklers', 'Evacuation Drills']
+    visitorManagementSystem: false, // Added: matches backend field
+    
+    // Fees & Scholarships Fields (matching backend FeesAndScholarships model)
+    feesTransparency: "", // Updated: matches backend field
+    classFees: [], // Updated: matches backend ClassFeeSchema structure
+    scholarships: [], // Updated: matches backend ScholarshipSchema structure
+    
+    // Technology Adoption Fields (matching backend TechnologyAdoption model)
+    smartClassroomsPercentage: "", // Matches backend field
+    eLearningPlatforms: [], // Updated: matches backend field
+    
+    // International Exposure Fields (matching backend InternationalExposure model)
+    exchangePrograms: [], // Updated: matches backend ExchangeProgramSchema structure
+    globalTieUps: [], // Updated: matches backend GlobalTieUpSchema structure
+    
+    // Other Details Fields (matching backend OtherDetails model)
+    genderRatio: {
+      male: "", // Matches backend field
+      female: "", // Matches backend field
+      others: "" // Matches backend field
+    },
+    scholarshipDiversity: {
+      types: [], // Matches backend enum ['Merit', 'Socio-economic', 'Cultural', 'Sports', 'Community', 'Academic Excellence']
+      studentsCoveredPercentage: "" // Matches backend field
+    },
+    specialNeedsSupport: {
+      dedicatedStaff: false, // Matches backend field
+      studentsSupportedPercentage: "", // Matches backend field
+      facilitiesAvailable: [] // Matches backend enum ['Ramps', 'Wheelchair access', 'Special educators', 'Learning support', 'Resource room', 'Assistive devices']
+    },
+    
+    // Academics Fields (matching backend Academics model)
+    averageClass10Result: "",
+    averageClass12Result: "",
+    averageSchoolMarks: "",
+    specialExamsTraining: [], // Matches backend enum ['NEET', 'IIT-JEE', 'Olympiads', 'UPSC', 'CLAT', 'SAT/ACT', 'NTSE', 'KVPY']
+    extraCurricularActivities: [] // Matches backend field
   });
 
   const [famousAlumnies, setFamousAlumnies] = useState([]);
@@ -395,6 +421,15 @@ const RegistrationPage = () => {
   const [customAmenities, setCustomAmenities] = useState([]);
   const [selectedPhotos, setSelectedPhotos] = useState([]);
   const [selectedVideo, setSelectedVideo] = useState(null);
+  // UI-only additions: logo + social links (not sent to backend)
+  const [logoFile, setLogoFile] = useState(null);
+  const [logoPreview, setLogoPreview] = useState("");
+  const [socialLinks, setSocialLinks] = useState({
+    facebook: "",
+    twitter: "",
+    instagram: "",
+    linkedin: "",
+  });
   const [facultyQuality, setFacultyQuality] = useState([
     { name: '', qualification: '', awards: '', experience: '' }
   ]);
@@ -405,6 +440,7 @@ const RegistrationPage = () => {
     { year: new Date().getFullYear(), passPercent: '', averageMarksPercent: '' },
   ]);
   const [examQualifiers, setExamQualifiers] = useState([]); // { year, exam, participation }
+  const [admissionSteps, setAdmissionSteps] = useState([]); // { title, type, deadline, amount, file, toggle }
 
   // Faculty Quality array: each entry will contain { name, qualification, awards, experience }
 
@@ -493,6 +529,24 @@ const RegistrationPage = () => {
     setSelectedVideo(file);
   };
 
+  const handleLogoChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!/\.(png|jpg|jpeg)$/i.test(file.name)) {
+      toast.error("Upload PNG, JPG or JPEG only");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Max size 5MB");
+      return;
+    }
+    setLogoFile(file);
+    try {
+      const url = URL.createObjectURL(file);
+      setLogoPreview(url);
+    } catch {}
+  };
+
   // Safety transport routes helpers
   const addTransportRoute = () => {
     const routes = Array.isArray(formData.safetyTransportRoutes) ? formData.safetyTransportRoutes.slice() : [];
@@ -553,59 +607,35 @@ const RegistrationPage = () => {
       }
 
       const payload = {
-        ...formData,
+        // Core School Fields (matching backend School model)
+        name: formData.name,
+        description: formData.description,
+        address: formData.address,
+        area: formData.area,
+        city: formData.city,
+        state: formData.state,
+        pinCode: formData.pincode ? Number(formData.pincode) : undefined,
+        board: formData.board,
+        feeRange: normalizedFeeRange,
+        upto: formData.upto,
+        email: formData.email,
+        website: formData.website,
+        mobileNo: formData.phoneNo,
         schoolMode: normalizedSchoolMode,
         genderType: normalizedGender,
-        feeRange: normalizedFeeRange,
         shifts: Array.isArray(formData.shifts) ? formData.shifts : [formData.shifts].filter(Boolean),
         languageMedium: Array.isArray(formData.languageMedium) ? formData.languageMedium : [formData.languageMedium].filter(Boolean),
-        mobileNo: formData.phoneNo,
-        pinCode: formData.pincode ? Number(formData.pincode) : undefined,
+        transportAvailable: formData.transportAvailable,
+        latitude: formData.latitude ? Number(formData.latitude) : undefined,
+        longitude: formData.longitude ? Number(formData.longitude) : undefined,
+        TeacherToStudentRatio: formData.TeacherToStudentRatio,
+        rank: formData.rank,
+        specialist: Array.isArray(formData.specialist) ? formData.specialist : [],
+        tags: Array.isArray(formData.tags) ? formData.tags : [],
+        authId: currentUser._id,
         famousAlumnies,
         topAlumnies,
         otherAlumnies,
-        authId: currentUser._id,
-        latitude: formData.latitude ? Number(formData.latitude) : undefined,
-        longitude: formData.longitude ? Number(formData.longitude) : undefined,
-        // normalize ratio -> always store as 1:NN and numeric
-        ...(function() {
-          const raw = (formData.teacherStudentRatio || '').trim();
-          let stud = formData.studentsPerTeacher;
-          if (raw) {
-            const parts = raw.split(':').map(p => p.trim());
-            if (parts.length === 2) {
-              const t = Number(parts[0]);
-              const s = Number(parts[1]);
-              if (!Number.isNaN(t) && t > 0 && !Number.isNaN(s) && s > 0) {
-                stud = String(s);
-              }
-            } else if (/^\d+$/.test(raw)) {
-              stud = raw;
-            }
-          }
-          const studNum = stud ? Number(stud) : undefined;
-          const ratioStr = studNum ? `1:${studNum}` : undefined;
-          return {
-            studentsPerTeacher: studNum,
-            teacherStudentRatio: ratioStr,
-            // Backend expects capitalized field name
-            TeacherToStudentRatio: ratioStr,
-          };
-        })(),
-        // merge customAmenities into predefinedAmenities array
-        ...(function() {
-          const customAmens = customAmenities.filter(Boolean);
-          const baseAmens = Array.isArray(formData.predefinedAmenities) ? formData.predefinedAmenities : [];
-          const merged = [...baseAmens, ...customAmens];
-          return { predefinedAmenities: merged };
-        })(),
-        // merge customActivities into activities array
-        ...(function() {
-          const customActs = customActivities.filter(Boolean);
-          const baseActs = Array.isArray(formData.activities) ? formData.activities : [];
-          const merged = [...baseActs, ...customActs];
-          return { activities: merged };
-        })(),
         // ensure numeric faculty fields
         ...(function() {
           const avgTeachingExperience = formData.avgTeachingExperience !== "" ? Number(formData.avgTeachingExperience) : undefined;
@@ -683,6 +713,26 @@ const RegistrationPage = () => {
             helpful: Number(review.helpful || 0),
             date: (review.date || '').trim(),
           })).filter(review => review.comment || review.parentName);
+          
+          // Technology Adoption fields
+          const elearningPlatforms = (Array.isArray(formData.elearningPlatforms) ? formData.elearningPlatforms : []).map(platform => ({
+            platform: (platform?.platform || '').trim(),
+            usagePercentage: platform?.usagePercentage ? Number(platform.usagePercentage) : undefined,
+            frequency: (platform?.frequency || '').trim(),
+          })).filter(platform => platform.platform);
+          const technologyIntegration = (formData.technologyIntegration || '').trim() || undefined;
+          const digitalLearningTools = Array.isArray(formData.digitalLearningTools) ? formData.digitalLearningTools : [];
+          
+          // International Exposure fields
+          const exchangePrograms = Array.isArray(formData.exchangePrograms) ? formData.exchangePrograms : [];
+          const globalTieUps = Array.isArray(formData.globalTieUps) ? formData.globalTieUps : [];
+          
+          // Academics fields
+          const averageClass10Result = formData.averageClass10Result !== '' ? Number(formData.averageClass10Result) : undefined;
+          const averageClass12Result = formData.averageClass12Result !== '' ? Number(formData.averageClass12Result) : undefined;
+          const averageSchoolMarks = formData.averageSchoolMarks !== '' ? Number(formData.averageSchoolMarks) : undefined;
+          const specialExamsTraining = Array.isArray(formData.specialExamsTraining) ? formData.specialExamsTraining : [];
+          const extraCurricularActivities = Array.isArray(formData.extraCurricularActivities) ? formData.extraCurricularActivities : [];
           return {
             avgTeachingExperience,
             mastersPercent,
@@ -721,6 +771,19 @@ const RegistrationPage = () => {
             ratingBreakdown,
             highlightedReviews,
             recentReviews,
+            // Technology Adoption
+            elearningPlatforms,
+            technologyIntegration,
+            digitalLearningTools,
+            // International Exposure
+            exchangePrograms,
+            globalTieUps,
+            // Academics
+            averageClass10Result,
+            averageClass12Result,
+            averageSchoolMarks,
+            specialExamsTraining,
+            extraCurricularActivities,
           };
         })(),
       };
@@ -735,19 +798,21 @@ const RegistrationPage = () => {
       // Create related data in parallel
       const promises = [];
 
-      // Add amenities if any
-      if (payload.predefinedAmenities && payload.predefinedAmenities.length > 0) {
+      // Add amenities if any (matching backend Amenities model)
+      if (formData.predefinedAmenities?.length > 0 || customAmenities?.length > 0) {
         promises.push(addAmenities({
           schoolId,
-          amenities: payload.predefinedAmenities
+          predefinedAmenities: formData.predefinedAmenities || [],
+          customAmenities: customAmenities || []
         }));
       }
 
-      // Add activities if any
-      if (payload.activities && payload.activities.length > 0) {
+      // Add activities if any (matching backend Activities model)
+      if (formData.activities?.length > 0 || customActivities?.length > 0) {
         promises.push(addActivities({
           schoolId,
-          activities: payload.activities
+          activities: formData.activities || [],
+          customActivities: customActivities || []
         }));
       }
 
@@ -761,91 +826,249 @@ const RegistrationPage = () => {
         }));
       }
 
-      // Add infrastructure if any
-      if (payload.infraLabTypes?.length > 0 || payload.infraLibraryBooks || payload.infraSportsTypes?.length > 0 || payload.infraSmartClassrooms) {
+      // Add infrastructure if any (matching backend Infrastructure model)
+      if (formData.labs?.length > 0 || formData.sportsGrounds?.length > 0 || formData.libraryBooks || formData.smartClassrooms) {
         promises.push(addInfrastructure({
           schoolId,
-          labTypes: payload.infraLabTypes,
-          libraryBooks: payload.infraLibraryBooks,
-          sportsTypes: payload.infraSportsTypes,
-          smartClassrooms: payload.infraSmartClassrooms
+          labs: formData.labs || [],
+          sportsGrounds: formData.sportsGrounds || [],
+          libraryBooks: formData.libraryBooks ? Number(formData.libraryBooks) : undefined,
+          smartClassrooms: formData.smartClassrooms ? Number(formData.smartClassrooms) : undefined
         }));
       }
 
-      // Add fees and scholarships if any (normalize to backend schema)
-      if (payload.classWiseFees?.length > 0 || payload.scholarships?.length > 0) {
-        // Map classWiseFees -> classFees expected by backend
-        const classFees = (payload.classWiseFees || [])
-          .map((f) => ({
-            className: String(f.class || f.className || '').trim(),
-            tuition: Number(f.tuition || 0),
-            activity: Number(f.activity || 0),
-            transport: Number(f.transport || 0),
-            hostel: Number(f.hostel || 0),
-            misc: Number(f.misc || 0)
-          }))
-          .filter((f) => f.className && !Number.isNaN(f.tuition));
+      // Add fees and scholarships if any (matching backend FeesAndScholarships model)
+      if (formData.classFees?.length > 0 || formData.scholarships?.length > 0 || formData.feesTransparency) {
+        // Validate and clean classFees
+        const validClassFees = (formData.classFees || []).filter(fee => 
+          fee.className && fee.tuition !== undefined && fee.tuition >= 0
+        ).map(fee => ({
+          className: fee.className,
+          tuition: Number(fee.tuition) || 0,
+          activity: Number(fee.activity) || 0,
+          transport: Number(fee.transport) || 0,
+          hostel: Number(fee.hostel) || 0,
+          misc: Number(fee.misc) || 0
+        }));
 
-        // Allowed scholarship types per backend enum
-        const allowedScholarshipTypes = new Map([
-          ['merit','Merit'],
-          ['merit based','Merit'],
-          ['merit-based','Merit'],
-          ['merit based scholarship','Merit'],
-          ['socio-economic','Socio-economic'],
-          ['socio economic','Socio-economic'],
-          ['cultural','Cultural'],
-          ['sports','Sports'],
-          ['community','Community'],
-          ['academic excellence','Academic Excellence'],
-          ['academic','Academic Excellence']
-        ]);
+        // Validate and clean scholarships
+        const validScholarships = (formData.scholarships || []).filter(sch => 
+          sch.name && sch.amount !== undefined && sch.amount >= 0 && sch.type
+        ).map(sch => ({
+          name: sch.name,
+          amount: Number(sch.amount) || 0,
+          type: sch.type,
+          documentsRequired: Array.isArray(sch.documentsRequired) ? sch.documentsRequired : []
+        }));
 
-        const normalizeType = (val) => {
-          const key = String(val || '').trim().toLowerCase();
-          return allowedScholarshipTypes.get(key) || null;
-        };
-
-        const scholarships = (payload.scholarships || [])
-          .map((s) => ({
-            name: String(s.name || '').trim(),
-            amount: Number(s.amount || s.value || 0),
-            type: normalizeType(s.type),
-            documentsRequired: Array.isArray(s.documentsRequired) ? s.documentsRequired : []
-          }))
-          .filter((s) => s.name && !Number.isNaN(s.amount) && s.type);
-
-        if (classFees.length > 0 || scholarships.length > 0) {
+        if (validClassFees.length > 0 || validScholarships.length > 0 || formData.feesTransparency) {
           promises.push(addFeesAndScholarships({
             schoolId,
-            classFees,
-            scholarships
+            feesTransparency: formData.feesTransparency ? Number(formData.feesTransparency) : undefined,
+            classFees: validClassFees,
+            scholarships: validScholarships
           }));
         }
       }
 
-      // Add other details (safety, faculty, etc.)
-      if (payload.safetyCCTV || payload.safetyDoctorAvailability || payload.facultyQuality?.length > 0 || 
-          payload.genderRatioMale || payload.genderRatioFemale || payload.genderRatioOthers ||
-          payload.scholarshipDiversityTypes?.length > 0 || payload.specialNeedsStaff) {
+      // Add Faculty Quality if any (matching backend Faculty model)
+      if (facultyQuality && facultyQuality.length > 0) {
+        const cleanFaculty = facultyQuality
+          .filter(f => f.name || f.qualification || f.awards || f.experience !== undefined)
+          .map(f => ({
+            name: f.name,
+            qualification: f.qualification,
+            awards: f.awards ? f.awards.split(',').map(a => a.trim()).filter(Boolean) : [],
+            experience: f.experience ? Number(f.experience) : undefined
+          }))
+          .filter(f => f.name && f.qualification && f.experience !== undefined);
+        
+        if (cleanFaculty.length > 0) {
+          promises.push(addFaculty({
+            schoolId,
+            facultyMembers: cleanFaculty
+          }));
+        }
+      }
+
+      // Add Admission Timeline if any (matching backend AdmissionTimeline model)
+      if (admissionSteps && admissionSteps.length > 0) {
+        const cleanTimelines = admissionSteps
+          .filter(step => step.title && step.type)
+          .map(step => {
+            // Map admission level to valid enum values
+            let admissionLevel = 'KGs'; // Default
+            const title = step.title.toLowerCase();
+            if (title.includes('kg') || title.includes('kindergarten')) {
+              admissionLevel = 'KGs';
+            } else if (title.includes('grade 1') || title.includes('grade 2') || title.includes('grade 3') || 
+                      title.includes('grade 4') || title.includes('grade 5') || title.includes('primary')) {
+              admissionLevel = 'Grade 1 - 5';
+            } else if (title.includes('grade 6') || title.includes('grade 7') || title.includes('grade 8') || 
+                      title.includes('grade 9') || title.includes('grade 10') || title.includes('secondary')) {
+              admissionLevel = 'Grade 6-10';
+            }
+
+            return {
+              admissionStartDate: step.deadline ? new Date(step.deadline) : new Date(),
+              admissionEndDate: step.deadline ? new Date(step.deadline) : new Date(),
+              status: 'Ongoing', // Default status
+              documentsRequired: [],
+              eligibility: {
+                admissionLevel: admissionLevel,
+                ageCriteria: '',
+                otherInfo: ''
+              }
+            };
+          });
+        
+        if (cleanTimelines.length > 0) {
+          promises.push(addAdmissionTimeline({
+            schoolId,
+            timelines: cleanTimelines
+          }));
+        }
+      }
+
+      // Add Technology Adoption if any (matching backend TechnologyAdoption model)
+      if (formData.smartClassroomsPercentage || formData.eLearningPlatforms?.length > 0) {
+        promises.push(addTechnologyAdoption({
+          schoolId,
+          smartClassroomsPercentage: formData.smartClassroomsPercentage ? Number(formData.smartClassroomsPercentage) : undefined,
+          eLearningPlatforms: formData.eLearningPlatforms || []
+        }));
+      }
+
+      // Add Safety & Security if any (matching backend SafetyAndSecurity model)
+      if (formData.cctvCoveragePercentage || formData.medicalFacility?.doctorAvailability || 
+          formData.medicalFacility?.medkitAvailable || formData.medicalFacility?.ambulanceAvailable ||
+          formData.transportSafety?.gpsTrackerAvailable || formData.transportSafety?.driversVerified ||
+          formData.fireSafetyMeasures?.length > 0 || formData.visitorManagementSystem) {
+        promises.push(addSafetyAndSecurity({
+          schoolId,
+          cctvCoveragePercentage: formData.cctvCoveragePercentage ? Number(formData.cctvCoveragePercentage) : undefined,
+          medicalFacility: {
+            doctorAvailability: formData.medicalFacility?.doctorAvailability || undefined,
+            medkitAvailable: formData.medicalFacility?.medkitAvailable || false,
+            ambulanceAvailable: formData.medicalFacility?.ambulanceAvailable || false
+          },
+          transportSafety: {
+            gpsTrackerAvailable: formData.transportSafety?.gpsTrackerAvailable || false,
+            driversVerified: formData.transportSafety?.driversVerified || false
+          },
+          fireSafetyMeasures: formData.fireSafetyMeasures || [],
+          visitorManagementSystem: formData.visitorManagementSystem || false
+        }));
+      }
+
+      // Add International Exposure if any (matching backend InternationalExposure model)
+      console.log('Checking international exposure data:', {
+        exchangePrograms: formData.exchangePrograms,
+        globalTieUps: formData.globalTieUps
+      });
+      
+      // Validate and clean exchange programs
+      const validProgramTypes = ['Student Exchange', 'Faculty Exchange', 'Summer Program', 'Joint Research', 'Cultural Exchange'];
+      const validDurations = ['2 Weeks', '1 Month', '3 Months', '6 Months', '1 Year'];
+      
+      const validExchangePrograms = (formData.exchangePrograms || []).filter(program => 
+        program.partnerSchool && program.partnerSchool.trim()
+      ).map(program => {
+        // Validate and set programType
+        let programType = 'Student Exchange'; // Default
+        if (program.type && validProgramTypes.includes(program.type)) {
+          programType = program.type;
+        } else if (program.programType && validProgramTypes.includes(program.programType)) {
+          programType = program.programType;
+        }
+        
+        // Validate and set duration
+        let duration = '1 Month'; // Default
+        if (program.duration && validDurations.includes(program.duration)) {
+          duration = program.duration;
+        }
+        
+        return {
+          partnerSchool: program.partnerSchool.trim(),
+          programType: programType,
+          duration: duration,
+          studentsParticipated: program.studentsParticipated ? Number(program.studentsParticipated) : 0,
+          activeSince: program.activeSince ? Number(program.activeSince) : new Date().getFullYear()
+        };
+      });
+
+      // Validate and clean global tie-ups
+      const validTieUpTypes = ['Memorandum of Understanding (MoU)', 'Research Collaboration', 'Curriculum Development', 'Faculty Training'];
+      
+      const validGlobalTieUps = (formData.globalTieUps || []).filter(tieup => 
+        tieup.partnerName && tieup.partnerName.trim()
+      ).map(tieup => {
+        // Validate and set natureOfTieUp
+        let natureOfTieUp = 'Memorandum of Understanding (MoU)'; // Default
+        if (tieup.nature && validTieUpTypes.includes(tieup.nature)) {
+          natureOfTieUp = tieup.nature;
+        } else if (tieup.natureOfTieUp && validTieUpTypes.includes(tieup.natureOfTieUp)) {
+          natureOfTieUp = tieup.natureOfTieUp;
+        }
+        
+        return {
+          partnerName: tieup.partnerName.trim(),
+          natureOfTieUp: natureOfTieUp,
+          activeSince: tieup.activeSince ? Number(tieup.activeSince) : new Date().getFullYear(),
+          description: tieup.description || ''
+        };
+      });
+
+      // Only proceed if we have valid data
+      if (validExchangePrograms.length > 0 || validGlobalTieUps.length > 0) {
+        console.log('Sending international exposure data:', {
+          schoolId,
+          exchangePrograms: validExchangePrograms,
+          globalTieUps: validGlobalTieUps
+        });
+        
+        promises.push(addInternationalExposure({
+          schoolId,
+          exchangePrograms: validExchangePrograms,
+          globalTieUps: validGlobalTieUps
+        }));
+      } else {
+        console.log('No valid international exposure data to send');
+      }
+
+      // Add Academics if any (matching backend Academics model)
+      if (formData.averageClass10Result || formData.averageClass12Result || formData.averageSchoolMarks || 
+          formData.specialExamsTraining?.length > 0 || formData.extraCurricularActivities?.length > 0) {
+        promises.push(addAcademics({
+          schoolId,
+          averageClass10Result: formData.averageClass10Result ? Number(formData.averageClass10Result) : undefined,
+          averageClass12Result: formData.averageClass12Result ? Number(formData.averageClass12Result) : undefined,
+          averageSchoolMarks: formData.averageSchoolMarks ? Number(formData.averageSchoolMarks) : 75, // Required field, default to 75
+          specialExamsTraining: formData.specialExamsTraining || [],
+          extraCurricularActivities: formData.extraCurricularActivities || []
+        }));
+      }
+
+      // Add other details (matching backend OtherDetails model)
+      if (formData.genderRatio?.male || formData.genderRatio?.female || formData.genderRatio?.others ||
+          formData.scholarshipDiversity?.types?.length > 0 || formData.scholarshipDiversity?.studentsCoveredPercentage ||
+          formData.specialNeedsSupport?.dedicatedStaff || formData.specialNeedsSupport?.studentsSupportedPercentage ||
+          formData.specialNeedsSupport?.facilitiesAvailable?.length > 0) {
         promises.push(addOtherDetails({
           schoolId,
-          // Required gender ratio fields
           genderRatio: {
-            male: payload.genderRatioMale || 0,
-            female: payload.genderRatioFemale || 0,
-            others: payload.genderRatioOthers || 0
+            male: formData.genderRatio?.male ? Number(formData.genderRatio.male) : 0,
+            female: formData.genderRatio?.female ? Number(formData.genderRatio.female) : 0,
+            others: formData.genderRatio?.others ? Number(formData.genderRatio.others) : 0
           },
-          // Scholarship diversity
           scholarshipDiversity: {
-            types: payload.scholarshipDiversityTypes || [],
-            studentsCoveredPercentage: payload.scholarshipDiversityCoverage || 0
+            types: formData.scholarshipDiversity?.types || [],
+            studentsCoveredPercentage: formData.scholarshipDiversity?.studentsCoveredPercentage ? Number(formData.scholarshipDiversity.studentsCoveredPercentage) : undefined
           },
-          // Special needs support
           specialNeedsSupport: {
-            dedicatedStaff: payload.specialNeedsStaff || false,
-            studentsSupportedPercentage: payload.specialNeedsSupportPercentage || 0,
-            facilitiesAvailable: payload.specialNeedsFacilities || []
+            dedicatedStaff: formData.specialNeedsSupport?.dedicatedStaff || false,
+            studentsSupportedPercentage: formData.specialNeedsSupport?.studentsSupportedPercentage ? Number(formData.specialNeedsSupport.studentsSupportedPercentage) : undefined,
+            facilitiesAvailable: formData.specialNeedsSupport?.facilitiesAvailable || []
           }
         }));
       }
@@ -918,21 +1141,267 @@ const RegistrationPage = () => {
     "More than 5 Lakh",
   ];
 
+  // UI-only: section navigation (does not change fields or backend)
+  const sections = [
+    { id: "basic", label: "Basic", Icon: Info },
+    { id: "amenities", label: "Amenities", Icon: Sparkles },
+    { id: "alumni", label: "Alumni", Icon: Award },
+    { id: "faculty", label: "Faculty", Icon: Users2 },
+    { id: "infrastructure", label: "Infrastructure", Icon: Building2 },
+    { id: "safety", label: "Safety", Icon: ShieldCheck },
+    { id: "fees", label: "Fees", Icon: DollarSign },
+    { id: "technology", label: "Technology", Icon: Cpu },
+    { id: "academics", label: "Academics", Icon: GraduationCap },
+    { id: "international", label: "International", Icon: Globe2 },
+    { id: "diversity", label: "Diversity", Icon: HeartHandshake },
+    { id: "admission", label: "Admission", Icon: CalendarDays },
+    { id: "media", label: "Media", Icon: Image },
+  ];
+
+  const [activeSection, setActiveSection] = useState("basic");
+  const [isManualNavigation, setIsManualNavigation] = useState(false);
+  const sectionIndex = (id) => sections.findIndex((s) => s.id === id);
+  const progressPercent = Math.round(((sectionIndex(activeSection) + 1) / sections.length) * 100);
+  const isFirst = sectionIndex(activeSection) === 0;
+  const isLast = sectionIndex(activeSection) === sections.length - 1;
+
+  const saveDraft = () => {
+    const draft = {
+      formData,
+      famousAlumnies,
+      topAlumnies,
+      otherAlumnies,
+      customActivities,
+      customAmenities,
+      facultyQuality,
+      academicResults,
+      examQualifiers,
+      activeSection,
+    };
+    try {
+      localStorage.setItem("schoolRegDraft", JSON.stringify(draft));
+      toast.success("Draft saved");
+    } catch {
+      toast.error("Could not save draft");
+    }
+  };
+
+  const goPrev = () => {
+    if (isFirst) return;
+    const idx = sectionIndex(activeSection);
+    setActiveSection(sections[idx - 1].id);
+  };
+  const goNext = () => {
+    const idx = sectionIndex(activeSection);
+    if (idx < sections.length - 1) setActiveSection(sections[idx + 1].id);
+  };
+
+  useEffect(() => {
+    console.log('Active section changed to:', activeSection); // Debug log
+  }, [activeSection]);
+
+  useEffect(() => {
+    const observers = sections.map((s) => {
+      const el = document.getElementById(s.id);
+      if (!el) return null;
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting && !isManualNavigation) {
+            console.log('Intersection observer triggered for:', s.id);
+            setActiveSection(s.id);
+          }
+        },
+        { root: null, rootMargin: "-40% 0px -55% 0px", threshold: 0 }
+      );
+      observer.observe(el);
+      return observer;
+    });
+    return () => observers.forEach((o) => o && o.disconnect());
+  }, [isManualNavigation]);
+
+  const scrollToSection = (id) => {
+    console.log('Scrolling to section:', id); // Debug log
+    setActiveSection(id);
+    // Smooth scroll to the section
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ 
+        behavior: "smooth", 
+        block: "start",
+        inline: "nearest"
+      });
+      // Add a subtle highlight effect to the section
+      setTimeout(() => {
+        el.classList.add('animate-pulse');
+        setTimeout(() => el.classList.remove('animate-pulse'), 1000);
+      }, 500);
+    }
+  };
+
   return (
-    <div className="bg-gray-100 min-h-screen py-12">
-      <div className="container mx-auto max-w-4xl px-4">
+    <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 min-h-screen py-8 relative overflow-hidden">
+        {/* Animated background elements */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-indigo-400/20 to-purple-400/20 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-pink-400/20 to-orange-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-br from-blue-400/10 to-cyan-400/10 rounded-full blur-3xl animate-pulse delay-2000"></div>
+        </div>
+      
+      <div className="container mx-auto max-w-7xl px-6 relative z-10">
         <form
           onSubmit={handleSubmit}
-          className="bg-white p-8 rounded-lg shadow-lg space-y-8"
+          className="bg-white/95 backdrop-blur-xl p-8 rounded-3xl shadow-2xl border border-white/20 transform transition-all duration-500 hover:shadow-3xl hover:scale-[1.01]"
         >
-          <h1 className="text-3xl font-bold text-gray-800 text-center">
-            School Registration
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent text-center mb-2 animate-fade-in">
+            🎓 School Registration Portal
           </h1>
+          <p className="text-center text-gray-600 mb-6 animate-fade-in-delay">
+            Complete your school profile with our interactive presentation
+          </p>
+          
+          {/* Slide Indicators */}
+          <div className="flex justify-center gap-2 mb-6">
+            {sections.map((section, index) => (
+              <button
+                key={section.id}
+                onClick={() => {
+                  console.log('Slide indicator clicked:', section.id); // Debug log
+                  scrollToSection(section.id);
+                }}
+                className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                  activeSection === section.id
+                    ? 'bg-gradient-to-r from-indigo-500 to-purple-500 scale-125'
+                    : 'bg-gray-300 hover:bg-gray-400'
+                }`}
+                title={`Go to ${section.label}`}
+              />
+            ))}
+          </div>
+          <div className="mt-2">
+            <div className="flex items-center justify-between text-xs text-gray-500">
+              <span>Step {sectionIndex(activeSection) + 1} of {sections.length}</span>
+              <span>{progressPercent}%</span>
+            </div>
+            <div className="mt-1 h-3 w-full bg-gray-200 rounded-full overflow-hidden shadow-inner">
+              <div 
+                className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 transition-all duration-1000 ease-out rounded-full relative"
+                style={{ width: `${progressPercent}%` }}
+              >
+                <div className="absolute inset-0 bg-white/30 rounded-full animate-pulse"></div>
+              </div>
+            </div>
+          </div>
 
-          <div className="border-t pt-6">
-            <h2 className="text-xl font-semibold text-gray-700 mb-6">
-              Basic Information
-            </h2>
+          {/* Interactive Stepper navigation */}
+          <div className="sticky top-0 z-20 -mx-6 px-6 py-6 bg-white/90 backdrop-blur-xl border-b border-gray-200/50 shadow-lg">
+            <div className="flex gap-4 overflow-x-auto pb-2">
+              {sections.map(({ id, label, Icon }, index) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => {
+                    console.log('Navigation clicked:', id); // Debug log
+                    scrollToSection(id);
+                  }}
+                  className={`group flex items-center gap-3 whitespace-nowrap rounded-2xl px-6 py-4 text-sm font-medium border-2 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 ${
+                    activeSection === id
+                      ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-transparent shadow-lg shadow-indigo-500/25"
+                      : "bg-white/80 text-gray-700 hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 border-gray-200 hover:border-indigo-300 shadow-md hover:shadow-lg"
+                  }`}
+                >
+                  <div className={`p-2 rounded-xl transition-all duration-300 ${
+                    activeSection === id 
+                      ? "bg-white/20" 
+                      : "bg-gray-100 group-hover:bg-indigo-100"
+                  }`}>
+                    {Icon ? <Icon size={20} className={activeSection === id ? "text-white" : "text-gray-600 group-hover:text-indigo-600"} /> : null}
+                  </div>
+                  <span className="font-semibold">{label}</span>
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+                    activeSection === id 
+                      ? "bg-white/20 text-white" 
+                      : "bg-gray-200 text-gray-600 group-hover:bg-indigo-200 group-hover:text-indigo-600"
+                  }`}>
+                    {index + 1}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Main content area - All sections visible */}
+          <div className="mt-8 space-y-12">
+            <div className="block" id="basic">
+              <div className="flex items-center gap-4 mb-8 p-6 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl border border-indigo-200/50 shadow-lg">
+                <div className="p-3 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-xl shadow-lg">
+                  <Info className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                    📋 Basic Information
+                  </h2>
+                  <p className="text-gray-600 mt-1">Essential details about your school</p>
+                </div>
+              </div>
+
+             {/* School Identity */}
+             <div className="mb-6 bg-white border rounded-lg p-4">
+               <div className="flex items-start gap-4">
+                 <div>
+                   <div className="text-sm font-medium text-gray-800 mb-1">School Identity</div>
+                   <div className="text-xs text-gray-500">Upload your school logo (PNG, JPG, JPEG). Max 5MB.</div>
+                 </div>
+               </div>
+               <div className="mt-4 flex items-center gap-4">
+                 <div className="w-24 h-24 border-2 border-dashed rounded-md flex items-center justify-center bg-gray-50 overflow-hidden">
+                   {logoPreview ? (
+                     <img src={logoPreview} alt="Logo preview" className="w-full h-full object-contain" />
+                   ) : (
+                     <span className="text-xs text-gray-400">Logo</span>
+                   )}
+                 </div>
+                 <div>
+                   <input id="logo-input" type="file" accept="image/png,image/jpeg" className="hidden" onChange={handleLogoChange} />
+                   <button type="button" onClick={() => document.getElementById("logo-input").click()} className="px-3 py-2 text-sm rounded-md border border-gray-300 bg-white hover:bg-gray-50">Upload Logo</button>
+                   {logoFile && <div className="text-xs text-gray-500 mt-1">{logoFile.name}</div>}
+                 </div>
+               </div>
+             </div>
+
+             {/* Social Media Links */}
+             <div className="mb-6 bg-white border rounded-lg p-4">
+               <div className="text-sm font-medium text-gray-800 mb-2">Social Media Links</div>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <input
+                   type="url"
+                   placeholder="https://facebook.com/yourschool"
+                   value={socialLinks.facebook}
+                   onChange={(e) => setSocialLinks((p) => ({ ...p, facebook: e.target.value }))}
+                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                 />
+                 <input
+                   type="url"
+                   placeholder="https://instagram.com/yourschool"
+                   value={socialLinks.instagram}
+                   onChange={(e) => setSocialLinks((p) => ({ ...p, instagram: e.target.value }))}
+                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                 />
+                 <input
+                   type="url"
+                   placeholder="https://twitter.com/yourschool"
+                   value={socialLinks.twitter}
+                   onChange={(e) => setSocialLinks((p) => ({ ...p, twitter: e.target.value }))}
+                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                 />
+                 <input
+                   type="url"
+                   placeholder="https://linkedin.com/company/yourschool"
+                   value={socialLinks.linkedin}
+                   onChange={(e) => setSocialLinks((p) => ({ ...p, linkedin: e.target.value }))}
+                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                 />
+               </div>
+             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField
                 label="School Name"
@@ -1063,11 +1532,19 @@ const RegistrationPage = () => {
                 />
               </div>
             </div>
-          </div>
 
-          {/* Amenities & Activities */}
-          <div className="border-t pt-6">
-            <h2 className="text-xl font-semibold text-gray-700 mb-6">Amenities & Activities</h2>
+            <div className="block" id="amenities">
+              <div className="flex items-center gap-4 mb-8 p-6 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl border border-emerald-200/50 shadow-lg">
+                <div className="p-3 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-xl shadow-lg">
+                  <Sparkles className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                    ✨ Amenities & Activities
+                  </h2>
+                  <p className="text-gray-600 mt-1">Facilities and programs offered</p>
+                </div>
+              </div>
             <div className="grid grid-cols-1 gap-6">
               <div>
                 <FormField
@@ -1104,11 +1581,19 @@ const RegistrationPage = () => {
                 />
               </div>
             </div>
-          </div>
 
-          {/* Alumni Information */}
-          <div className="border-t pt-6">
-            <h2 className="text-xl font-semibold text-gray-700 mb-6">Alumni Information</h2>
+            <div className="block" id="alumni">
+              <div className="flex items-center gap-4 mb-8 p-6 bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl border border-amber-200/50 shadow-lg">
+                <div className="p-3 bg-gradient-to-r from-amber-500 to-orange-500 rounded-xl shadow-lg">
+                  <Award className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+                    🏆 Alumni Information
+                  </h2>
+                  <p className="text-gray-600 mt-1">Notable graduates and achievements</p>
+                </div>
+              </div>
             <div className="space-y-8">
               <DynamicListField
                 label="Famous Alumni (Name & Profession)"
@@ -1129,14 +1614,19 @@ const RegistrationPage = () => {
                 type="other"
               />
             </div>
-          </div>
 
-          
-
-        <div className="border-t pt-6">
-          <h2 className="text-xl font-semibold text-gray-700 mb-6">
-            Faculty Quality
-          </h2>
+            <div className="block" id="faculty">
+              <div className="flex items-center gap-4 mb-8 p-6 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl border border-blue-200/50 shadow-lg">
+                <div className="p-3 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl shadow-lg">
+                  <Users2 className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+                    👥 Faculty Quality
+                  </h2>
+                  <p className="text-gray-600 mt-1">Teaching staff qualifications and experience</p>
+                </div>
+              </div>
           {/* Simplified Faculty Quality inputs handled per-entry below */}
 
           <div className="mt-6">
@@ -1201,10 +1691,20 @@ const RegistrationPage = () => {
               <PlusCircle size={16} className="mr-1" /> Add Faculty
             </button>
           </div>
-        </div>
+            </div>
 
-        <div className="border-t pt-6">
-          <h2 className="text-xl font-semibold text-gray-700 mb-6">Infrastructure</h2>
+            <div className="block" id="infrastructure">
+              <div className="flex items-center gap-4 mb-8 p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border border-green-200/50 shadow-lg">
+                <div className="p-3 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl shadow-lg">
+                  <Building2 className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                    🏢 Infrastructure
+                  </h2>
+                  <p className="text-gray-600 mt-1">Facilities, labs, and physical resources</p>
+                </div>
+              </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700">Labs - Type</label>
@@ -1286,11 +1786,20 @@ const RegistrationPage = () => {
               <div className="text-lg font-semibold text-gray-900">{formData.infraSmartClassrooms || '—'}</div>
             </div>
           </div>
-        </div>
+            </div>
 
-        {/* Safety & Security Section */}
-        <div className="border-t pt-6">
-          <h2 className="text-xl font-semibold text-gray-700 mb-6">Safety & Security</h2>
+            <div className="block" id="safety">
+              <div className="flex items-center gap-4 mb-8 p-6 bg-gradient-to-r from-red-50 to-pink-50 rounded-2xl border border-red-200/50 shadow-lg">
+                <div className="p-3 bg-gradient-to-r from-red-500 to-pink-500 rounded-xl shadow-lg">
+                  <ShieldCheck className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent">
+                    🛡️ Safety & Security
+                  </h2>
+                  <p className="text-gray-600 mt-1">Security measures and safety protocols</p>
+                </div>
+              </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
@@ -1437,11 +1946,20 @@ const RegistrationPage = () => {
               </div>
             </div>
           </div>
-        </div>
+            </div>
 
-        {/* Fees & Affordability Section */}
-        <div className="border-t pt-6">
-          <h2 className="text-xl font-semibold text-gray-700 mb-6">Fees / Affordability</h2>
+            <div className="block" id="fees">
+              <div className="flex items-center gap-4 mb-8 p-6 bg-gradient-to-r from-yellow-50 to-amber-50 rounded-2xl border border-yellow-200/50 shadow-lg">
+                <div className="p-3 bg-gradient-to-r from-yellow-500 to-amber-500 rounded-xl shadow-lg">
+                  <DollarSign className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold bg-gradient-to-r from-yellow-600 to-amber-600 bg-clip-text text-transparent">
+                    💰 Fees & Affordability
+                  </h2>
+                  <p className="text-gray-600 mt-1">Pricing structure and scholarship options</p>
+                </div>
+              </div>
           
           {/* Fee Transparency Indicator */}
           <div className="mb-6">
@@ -1735,11 +2253,20 @@ const RegistrationPage = () => {
               </div>
             </div>
           </div>
-        </div>
+            </div>
 
-        {/* Technology Adoption */}
-        <div className="border-t pt-6">
-          <h2 className="text-xl font-semibold text-gray-700 mb-6">Technology Adoption</h2>
+            <div className="block" id="technology">
+              <div className="flex items-center gap-4 mb-8 p-6 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-2xl border border-purple-200/50 shadow-lg">
+                <div className="p-3 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-xl shadow-lg">
+                  <Cpu className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                    💻 Technology Adoption
+                  </h2>
+                  <p className="text-gray-600 mt-1">Digital tools and e-learning platforms</p>
+                </div>
+              </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <FormField
               label="Smart Classrooms (%)"
@@ -1766,11 +2293,20 @@ const RegistrationPage = () => {
               <div className="text-lg font-semibold text-gray-900">{Array.isArray(formData.elearningPlatforms) ? formData.elearningPlatforms.length : 0}</div>
             </div>
           </div>
-        </div>
+            </div>
 
-        {/* Academics (Frontend-only) */}
-        <div className="border-t pt-6">
-          <h2 className="text-xl font-semibold text-gray-700 mb-6">Academics</h2>
+            <div className="block" id="academics">
+              <div className="flex items-center gap-4 mb-8 p-6 bg-gradient-to-r from-slate-50 to-gray-50 rounded-2xl border border-slate-200/50 shadow-lg">
+                <div className="p-3 bg-gradient-to-r from-slate-500 to-gray-500 rounded-xl shadow-lg">
+                  <GraduationCap className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold bg-gradient-to-r from-slate-600 to-gray-600 bg-clip-text text-transparent">
+                    🎓 Academics
+                  </h2>
+                  <p className="text-gray-600 mt-1">Academic performance and exam results</p>
+                </div>
+              </div>
 
           {/* Board Results */}
           <div className="mb-6">
@@ -1959,11 +2495,20 @@ const RegistrationPage = () => {
               })()}
             </div>
           </div>
-        </div>
+            </div>
 
-        {/* International Exposure */}
-        <div className="border-t pt-6">
-          <h2 className="text-xl font-semibold text-gray-700 mb-6">International Exposure</h2>
+            <div className="block" id="international">
+              <div className="flex items-center gap-4 mb-8 p-6 bg-gradient-to-r from-cyan-50 to-blue-50 rounded-2xl border border-cyan-200/50 shadow-lg">
+                <div className="p-3 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-xl shadow-lg">
+                  <Globe2 className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
+                    🌍 International Exposure
+                  </h2>
+                  <p className="text-gray-600 mt-1">Global programs and partnerships</p>
+                </div>
+              </div>
 
           {/* Exchange Programs */}
           <div className="mb-6">
@@ -2006,6 +2551,8 @@ const RegistrationPage = () => {
                   <FormField
                     label="Type"
                     name={`ex-type-${index}`}
+                    type="select"
+                    options={['Student Exchange', 'Faculty Exchange', 'Summer Program', 'Joint Research', 'Cultural Exchange']}
                     value={prog.type}
                     onChange={(e) => {
                       const list = [...(formData.exchangePrograms || [])];
@@ -2016,6 +2563,8 @@ const RegistrationPage = () => {
                   <FormField
                     label="Duration"
                     name={`ex-duration-${index}`}
+                    type="select"
+                    options={['2 Weeks', '1 Month', '3 Months', '6 Months', '1 Year']}
                     value={prog.duration}
                     onChange={(e) => {
                       const list = [...(formData.exchangePrograms || [])];
@@ -2066,7 +2615,7 @@ const RegistrationPage = () => {
                 type="button"
                 onClick={() => setFormData(prev => ({
                   ...prev,
-                  globalTieups: [...(prev.globalTieups || []), { partnerName: '', nature: '', activeSince: '', description: '' }]
+                  globalTieUps: [...(prev.globalTieUps || []), { partnerName: '', nature: '', activeSince: '', description: '' }]
                 }))}
                 className="flex items-center text-sm text-indigo-600 hover:text-indigo-800"
               >
@@ -2074,26 +2623,28 @@ const RegistrationPage = () => {
               </button>
             </div>
             <div className="space-y-3">
-              {(formData.globalTieups || []).map((tie, index) => (
+              {(formData.globalTieUps || []).map((tie, index) => (
                 <div key={index} className="grid grid-cols-1 md:grid-cols-5 gap-4 bg-gray-50 p-4 rounded-md">
                   <FormField
                     label="Partner Name"
                     name={`gt-name-${index}`}
                     value={tie.partnerName}
                     onChange={(e) => {
-                      const list = [...(formData.globalTieups || [])];
+                      const list = [...(formData.globalTieUps || [])];
                       list[index] = { ...list[index], partnerName: e.target.value };
-                      setFormData(prev => ({ ...prev, globalTieups: list }));
+                      setFormData(prev => ({ ...prev, globalTieUps: list }));
                     }}
                   />
                   <FormField
                     label="Nature"
                     name={`gt-nature-${index}`}
+                    type="select"
+                    options={['Memorandum of Understanding (MoU)', 'Research Collaboration', 'Curriculum Development', 'Faculty Training']}
                     value={tie.nature}
                     onChange={(e) => {
-                      const list = [...(formData.globalTieups || [])];
+                      const list = [...(formData.globalTieUps || [])];
                       list[index] = { ...list[index], nature: e.target.value };
-                      setFormData(prev => ({ ...prev, globalTieups: list }));
+                      setFormData(prev => ({ ...prev, globalTieUps: list }));
                     }}
                   />
                   <FormField
@@ -2101,9 +2652,9 @@ const RegistrationPage = () => {
                     name={`gt-active-${index}`}
                     value={tie.activeSince}
                     onChange={(e) => {
-                      const list = [...(formData.globalTieups || [])];
+                      const list = [...(formData.globalTieUps || [])];
                       list[index] = { ...list[index], activeSince: e.target.value };
-                      setFormData(prev => ({ ...prev, globalTieups: list }));
+                      setFormData(prev => ({ ...prev, globalTieUps: list }));
                     }}
                   />
                   <div className="md:col-span-2 grid grid-cols-1 items-end gap-2">
@@ -2112,15 +2663,15 @@ const RegistrationPage = () => {
                       name={`gt-desc-${index}`}
                       value={tie.description}
                       onChange={(e) => {
-                        const list = [...(formData.globalTieups || [])];
+                        const list = [...(formData.globalTieUps || [])];
                         list[index] = { ...list[index], description: e.target.value };
-                        setFormData(prev => ({ ...prev, globalTieups: list }));
+                        setFormData(prev => ({ ...prev, globalTieUps: list }));
                       }}
                     />
                     <div>
                       <button
                         type="button"
-                        onClick={() => setFormData(prev => ({ ...prev, globalTieups: (prev.globalTieups || []).filter((_, i) => i !== index) }))}
+                        onClick={() => setFormData(prev => ({ ...prev, globalTieUps: (prev.globalTieUps || []).filter((_, i) => i !== index) }))}
                         className="text-red-500 hover:text-red-700"
                       >
                         <Trash2 size={18} />
@@ -2131,11 +2682,20 @@ const RegistrationPage = () => {
               ))}
             </div>
           </div>
-        </div>
+            </div>
 
-        {/* Diversity & Inclusivity Section */}
-        <div className="border-t pt-6">
-          <h2 className="text-xl font-semibold text-gray-700 mb-6">Diversity & Inclusivity</h2>
+            <div className="block" id="diversity">
+              <div className="flex items-center gap-4 mb-8 p-6 bg-gradient-to-r from-rose-50 to-pink-50 rounded-2xl border border-rose-200/50 shadow-lg">
+                <div className="p-3 bg-gradient-to-r from-rose-500 to-pink-500 rounded-xl shadow-lg">
+                  <Heart className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold bg-gradient-to-r from-rose-600 to-pink-600 bg-clip-text text-transparent">
+                    ♡ Diversity & Inclusivity
+                  </h2>
+                  <p className="text-gray-600 mt-1">Inclusive policies and support systems</p>
+                </div>
+              </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <FormField
@@ -2161,79 +2721,229 @@ const RegistrationPage = () => {
             />
           </div>
 
-          <div className="mt-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Scholarship Diversity Types</label>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          <div className="mt-8">
+            <label className="block text-lg font-semibold text-gray-800 mb-4">Scholarship Diversity Types</label>
+            <div className="bg-gray-50 p-6 rounded-xl border border-gray-200">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {['Merit', 'Socio-economic', 'Cultural', 'Sports', 'Community', 'Academic Excellence'].map(opt => (
-                <label key={opt} className="flex items-center">
+                  <label key={opt} className="flex items-center p-3 hover:bg-white hover:shadow-sm rounded-lg transition-all duration-200 cursor-pointer">
                   <input
                     type="checkbox"
                     name="scholarshipDiversityTypes"
                     value={opt}
                     checked={(formData.scholarshipDiversityTypes || []).includes(opt)}
                     onChange={handleCheckboxChange}
-                    className="h-4 w-4 text-indigo-600 border-gray-300 rounded"
+                      className="h-5 w-5 text-rose-600 focus:ring-rose-500 border-gray-300 rounded"
                   />
-                  <span className="ml-2 text-gray-700">{opt}</span>
+                    <span className="ml-3 text-gray-700 font-medium">{opt}</span>
                 </label>
               ))}
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-            <FormField
-              label="Scholarship Coverage (%)"
-              name="scholarshipDiversityCoverage"
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
+            <div>
+              <label className="block text-lg font-semibold text-gray-800 mb-4">Scholarship Coverage (%)</label>
+              <input
               type="number"
+                name="scholarshipDiversityCoverage"
               value={formData.scholarshipDiversityCoverage}
               onChange={handleInputChange}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-rose-500 transition-colors"
+                placeholder="Enter coverage percentage"
             />
+            </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Special Needs Support</label>
-              <div className="space-y-3">
-                <label className="flex items-center">
+              <label className="block text-lg font-semibold text-gray-800 mb-4">Special Needs Support</label>
+              <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 space-y-4">
+                <label className="flex items-center p-3 hover:bg-white hover:shadow-sm rounded-lg transition-all duration-200 cursor-pointer">
                   <input
                     type="checkbox"
                     name="specialNeedsStaff"
                     checked={formData.specialNeedsStaff}
                     onChange={(e) => setFormData(prev => ({ ...prev, specialNeedsStaff: e.target.checked }))}
-                    className="h-4 w-4 text-indigo-600 border-gray-300 rounded"
+                    className="h-5 w-5 text-rose-600 focus:ring-rose-500 border-gray-300 rounded"
                   />
-                  <span className="ml-2 text-gray-700">Dedicated Staff Available</span>
+                  <span className="ml-3 text-gray-700 font-medium">Dedicated Staff Available</span>
                 </label>
-                <FormField
-                  label="Students Supported (%)"
-                  name="specialNeedsSupportPercentage"
+                <div className="flex items-center space-x-4">
+                  <label className="block text-sm font-medium text-gray-600">
+                    Students Supported (%)
+                  </label>
+                  <input
                   type="number"
+                    name="specialNeedsSupportPercentage"
                   value={formData.specialNeedsSupportPercentage}
                   onChange={handleInputChange}
-                />
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Facilities Available</label>
-                  <div className="grid grid-cols-2 gap-3">
+                    className="w-32 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-rose-500 transition-colors"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-8">
+            <label className="block text-lg font-semibold text-gray-800 mb-4">Facilities Available</label>
+            <div className="bg-gray-50 p-6 rounded-xl border border-gray-200">
+              <div className="grid grid-cols-2 gap-4">
                     {['Ramps', 'Wheelchair access', 'Special educators', 'Learning support', 'Resource room', 'Assistive devices'].map(opt => (
-                      <label key={opt} className="flex items-center">
+                  <label key={opt} className="flex items-center p-3 hover:bg-white hover:shadow-sm rounded-lg transition-all duration-200 cursor-pointer">
                         <input
                           type="checkbox"
                           name="specialNeedsFacilities"
                           value={opt}
                           checked={(formData.specialNeedsFacilities || []).includes(opt)}
                           onChange={handleCheckboxChange}
-                          className="h-4 w-4 text-indigo-600 border-gray-300 rounded"
+                      className="h-5 w-5 text-rose-600 focus:ring-rose-500 border-gray-300 rounded"
                         />
-                        <span className="ml-2 text-gray-700">{opt}</span>
+                    <span className="ml-3 text-gray-700 font-medium">{opt}</span>
                       </label>
                     ))}
-                  </div>
-                </div>
               </div>
             </div>
           </div>
-        </div>
+            </div>
 
-        {/* Media (Photos & Video) */}
-        <div className="border-t pt-6">
-          <h2 className="text-xl font-semibold text-gray-700 mb-6">Media</h2>
+            <div className="block" id="admission">
+              <div className="flex items-center gap-4 mb-8 p-6 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-2xl border border-indigo-200/50 shadow-lg">
+                <div className="p-3 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-xl shadow-lg">
+                  <CalendarDays className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent">
+                    📅 Admission Process Timeline
+                  </h2>
+                  <p className="text-gray-600 mt-1">Define steps, upload docs, and toggles</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                {admissionSteps.map((step, index) => (
+                  <div key={index} className="bg-gray-50 p-4 rounded-lg border grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
+                    <FormField
+                      label="Step Title"
+                      name={`adm-title-${index}`}
+                      value={step.title || ''}
+                      onChange={(e) => {
+                        const next = admissionSteps.slice();
+                        next[index] = { ...next[index], title: e.target.value };
+                        setAdmissionSteps(next);
+                      }}
+                      required
+                    />
+                    <FormField
+                      label="Type"
+                      name={`adm-type-${index}`}
+                      type="select"
+                      options={["deadline","payment","date","upload","toggle"]}
+                      value={step.type || ''}
+                      onChange={(e) => {
+                        const next = admissionSteps.slice();
+                        next[index] = { ...next[index], type: e.target.value };
+                        setAdmissionSteps(next);
+                      }}
+                    />
+                    {/* Deadline / Date (visible for deadline/date) */}
+                    {(step.type === 'deadline' || step.type === 'date') && (
+                      <FormField
+                        label={step.type === 'deadline' ? 'Deadline' : 'Date'}
+                        name={`adm-deadline-${index}`}
+                        type="text"
+                        value={step.deadline || step.date || ''}
+                        onChange={(e) => {
+                          const next = admissionSteps.slice();
+                          if (step.type === 'deadline') next[index] = { ...next[index], deadline: e.target.value };
+                          else next[index] = { ...next[index], date: e.target.value };
+                          setAdmissionSteps(next);
+                        }}
+                      />
+                    )}
+                    {/* Amount / Notes (visible for payment) */}
+                    {step.type === 'payment' && (
+                      <FormField
+                        label="Amount"
+                        name={`adm-amount-${index}`}
+                        type="text"
+                        value={step.amount || ''}
+                        onChange={(e) => {
+                          const next = admissionSteps.slice();
+                          next[index] = { ...next[index], amount: e.target.value };
+                          setAdmissionSteps(next);
+                        }}
+                      />
+                    )}
+                    {/* File Upload (visible for upload) */}
+                    {step.type === 'upload' && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Upload Document</label>
+                        <input
+                          type="file"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0] || null;
+                            const next = admissionSteps.slice();
+                            next[index] = { ...next[index], file };
+                            setAdmissionSteps(next);
+                          }}
+                          className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                        />
+                      </div>
+                    )}
+                    {/* Toggle (visible for toggle) */}
+                    {step.type === 'toggle' && (
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm font-medium text-gray-700">Installment Enabled</label>
+                        <input
+                          type="checkbox"
+                          checked={!!step.toggle}
+                          onChange={(e) => {
+                            const next = admissionSteps.slice();
+                            next[index] = { ...next[index], toggle: e.target.checked };
+                            setAdmissionSteps(next);
+                          }}
+                          className="h-4 w-4 text-indigo-600 border-gray-300 rounded"
+                        />
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = admissionSteps.filter((_, i) => i !== index);
+                          setAdmissionSteps(next);
+                        }}
+                        className="text-red-500 hover:text-red-700"
+                        aria-label={`Remove step ${index + 1}`}
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={() => setAdmissionSteps([...admissionSteps, { title: '', type: 'deadline', deadline: '', amount: '', file: null, toggle: false }])}
+                  className="mt-2 flex items-center text-sm text-indigo-600 hover:text-indigo-800"
+                >
+                  <PlusCircle size={16} className="mr-1" /> Add Step
+                </button>
+              </div>
+            </div>
+
+            <div className="block" id="media">
+              <div className="flex items-center gap-4 mb-8 p-6 bg-gradient-to-r from-violet-50 to-purple-50 rounded-2xl border border-violet-200/50 shadow-lg">
+                <div className="p-3 bg-gradient-to-r from-violet-500 to-purple-500 rounded-xl shadow-lg">
+                  <Image className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
+                    📸 Media
+                  </h2>
+                  <p className="text-gray-600 mt-1">Photos and videos showcasing your school</p>
+                </div>
+              </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700">Upload Photos (4–5 recommended, max 5)</label>
@@ -2250,16 +2960,59 @@ const RegistrationPage = () => {
               )}
             </div>
           </div>
-        </div>
+          </div>
+          </div>
 
-        
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full px-4 py-3 font-semibold text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50"
-          >
-            {isSubmitting ? "Submitting..." : "Submit for Approval"}
-          </button>
+          <div className="sticky bottom-0 -mx-6 px-6 py-6 bg-gradient-to-r from-white/95 to-white/90 backdrop-blur-xl border-t border-gray-200/50 shadow-2xl">
+            <div className="flex items-center gap-4">
+              <button 
+                type="button" 
+                onClick={saveDraft} 
+                className="px-6 py-3 rounded-xl border-2 border-gray-300 bg-white hover:bg-gray-50 hover:border-gray-400 transition-all duration-300 transform hover:scale-105 hover:shadow-lg font-semibold text-gray-700"
+              >
+                💾 Save Draft
+              </button>
+              <button 
+                type="button" 
+                disabled={isFirst} 
+                onClick={goPrev} 
+                className={`px-6 py-3 rounded-xl border-2 font-semibold transition-all duration-300 transform hover:scale-105 ${
+                  isFirst 
+                    ? 'opacity-50 cursor-not-allowed border-gray-200 text-gray-400' 
+                    : 'border-indigo-300 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 hover:border-indigo-400 hover:shadow-lg'
+                }`}
+              >
+                ← Previous Slide
+              </button>
+              {!isLast ? (
+                <button 
+                  type="button" 
+                  onClick={goNext} 
+                  className="flex-1 px-6 py-4 font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 hover:shadow-xl shadow-lg"
+                >
+                  Next Slide →
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="flex-1 px-6 py-4 font-bold text-white bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-105 hover:shadow-xl shadow-lg disabled:transform-none"
+                >
+                  {isSubmitting ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      Submitting...
+                    </span>
+                  ) : (
+                    "🚀 Submit for Approval"
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+          </div>
+          </div>
+          </div>
         </form>
       </div>
     </div>
