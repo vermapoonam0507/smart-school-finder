@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { getSchoolsByStatus, updateSchoolStatus } from "../api/adminService";
+import { getSchoolById, updateSchoolStatus } from "../api/adminService";
 import { toast } from "react-toastify";
 import {
   MapPin,
@@ -48,32 +48,17 @@ const AdminSchoolDetailsPage = () => {
         setLoading(true);
         console.log('🔍 Fetching admin school details for ID:', schoolId);
         
-        // Fetch pending schools and find the specific school
-        const response = await getSchoolsByStatus('pending');
+        // Fetch school directly by ID
+        const response = await getSchoolById(schoolId);
         const raw = response?.data;
-        const schools = Array.isArray(raw?.data)
-          ? raw.data
-          : (Array.isArray(raw)
-              ? raw
-              : (Array.isArray(raw?.schools) ? raw.schools : []));
+        const schoolData = raw?.data || raw; // support {data: {...}} or direct {...}
         
-        console.log('🔍 All pending schools:', schools);
+        console.log('🔍 School data:', schoolData);
         
-        // Find the specific school by ID
-        const foundSchool = schools.find(school => 
-          school._id === schoolId || 
-          school.schoolId === schoolId || 
-          school.id === schoolId ||
-          school.userId === schoolId ||
-          school.authId === schoolId
-        );
-        
-        console.log('🔍 Found school:', foundSchool);
-        
-        if (foundSchool) {
-          setSchool(foundSchool);
+        if (schoolData) {
+          setSchool(schoolData);
         } else {
-          console.warn(`No school found with ID: ${schoolId}`);
+          console.warn(`No school data returned for ID: ${schoolId}`);
           toast.error(`School with ID ${schoolId} not found`);
           navigate("/admin/dashboard");
         }
