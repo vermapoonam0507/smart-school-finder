@@ -105,7 +105,8 @@ export const deleteReview = async (reviewId) => {
 // Get all pending reviews
 export const getPendingReviews = async () => {
   try {
-    const response = await apiClient.get('/reviews/pending/all');
+    const response = await apiClient.get('/reviews/pending/all'); // correct
+
     return response.data;
   } catch (error) {
     console.error('Error fetching pending reviews:', error);
@@ -116,7 +117,7 @@ export const getPendingReviews = async () => {
 // Accept a review
 export const acceptReview = async (reviewId) => {
   try {
-    const response = await apiClient.patch(`/reviews/accept/${reviewId}`);
+    const response = await apiClient.patch(`/reviews/admin/accept/${reviewId}`);
     return response.data;
   } catch (error) {
     console.error('Error accepting review:', error);
@@ -127,7 +128,7 @@ export const acceptReview = async (reviewId) => {
 // Reject a review
 export const rejectReview = async (reviewId) => {
   try {
-    const response = await apiClient.delete(`/reviews/reject/${reviewId}`);
+    const response = await apiClient.delete(`/reviews/admin/reject/${reviewId}`);
     return response.data;
   } catch (error) {
     console.error('Error rejecting review:', error);
@@ -138,7 +139,7 @@ export const rejectReview = async (reviewId) => {
 // Get school name by ID
 export const getSchoolName = async (schoolId) => {
   try {
-    const response = await apiClient.get(`/admin/schools/${schoolId}`);
+    const response = await apiClient.get(`/schools/${schoolId}`);
     return response.data.name || 'Unknown School';
   } catch (error) {
     console.error('Error fetching school name:', error);

@@ -24,6 +24,7 @@ import CreateProfilePage from "./pages/CreateProfilePage";
 import AdminLoginPage from "./pages/AdminLoginPage";
 import AdminSignupPage from "./pages/AdminSignupPage";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
+import AdminSchoolDetailsPage from "./pages/AdminSchoolDetailsPage";
 import AdminProtectedRoute from "./components/AdminProtectedRoute";
 import BlogPage from "./pages/BlogPage";
 import { ToastContainer, toast } from "react-toastify";
@@ -275,6 +276,14 @@ useEffect(() => {
             element={
               <AdminProtectedRoute>
                 <AdminDashboardPage />
+              </AdminProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/school/:id"
+            element={
+              <AdminProtectedRoute>
+                <AdminSchoolDetailsPage />
               </AdminProtectedRoute>
             }
           />

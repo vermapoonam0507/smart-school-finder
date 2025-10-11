@@ -23,6 +23,22 @@ const PendingSchoolsSection = () => {
         : (Array.isArray(raw)
             ? raw
             : (Array.isArray(raw?.schools) ? raw.schools : []));
+      
+      // Debug: Log the complete response structure
+      console.log('🔍 Full API Response:', response);
+      console.log('🔍 Raw data:', raw);
+      console.log('🔍 Normalized schools:', normalized);
+      
+      if (normalized.length > 0) {
+        console.log('🔍 First school object:', normalized[0]);
+        console.log('🔍 Available ID fields:', {
+          _id: normalized[0]._id,
+          schoolId: normalized[0].schoolId,
+          id: normalized[0].id,
+          allKeys: Object.keys(normalized[0])
+        });
+      }
+      
       setPendingSchools(normalized);
     } catch (error) {
       console.error('Failed to load pending schools:', error);
@@ -33,6 +49,15 @@ const PendingSchoolsSection = () => {
   };
 
   const handleAcceptSchool = async (schoolId) => {
+    console.log('🔍 handleAcceptSchool called with schoolId:', schoolId);
+    console.log('🔍 schoolId type:', typeof schoolId);
+    console.log('🔍 schoolId value:', schoolId);
+    
+    if (!schoolId) {
+      console.error('School ID is missing');
+      toast.error('School ID is missing');
+      return;
+    }
     try {
       setAcceptingId(schoolId);
       await updateSchoolStatus(schoolId, 'accepted');
@@ -48,6 +73,15 @@ const PendingSchoolsSection = () => {
   };
 
   const handleRejectSchool = async (schoolId) => {
+    console.log('🔍 handleRejectSchool called with schoolId:', schoolId);
+    console.log('🔍 schoolId type:', typeof schoolId);
+    console.log('🔍 schoolId value:', schoolId);
+    
+    if (!schoolId) {
+      console.error('School ID is missing');
+      toast.error('School ID is missing');
+      return;
+    }
     try {
       setRejectingId(schoolId);
       await updateSchoolStatus(schoolId, 'rejected');
@@ -60,6 +94,7 @@ const PendingSchoolsSection = () => {
       setRejectingId(null);
     }
   };
+
 
   if (isLoading) {
     return (
@@ -97,8 +132,21 @@ const PendingSchoolsSection = () => {
       </div>
       
       <div className="divide-y divide-gray-200">
-        {pendingSchools.map((school) => (
-          <div key={school._id} className="p-6">
+        {pendingSchools.map((school, index) => {
+          // Extract school ID from any possible field
+          const schoolId = school._id || school.schoolId || school.id || school.userId || school.authId;
+          console.log(`🔍 School ${index} ID extraction:`, {
+            _id: school._id,
+            schoolId: school.schoolId,
+            id: school.id,
+            userId: school.userId,
+            authId: school.authId,
+            extractedId: schoolId,
+            allKeys: Object.keys(school)
+          });
+          
+          return (
+          <div key={schoolId || index} className="p-6">
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-center mb-2">
@@ -173,11 +221,11 @@ const PendingSchoolsSection = () => {
               
               <div className="ml-6 flex flex-col space-y-2">
                 <button
-                  onClick={() => handleAcceptSchool(school._id)}
-                  disabled={acceptingId === school._id}
+                  onClick={() => handleAcceptSchool(schoolId)}
+                  disabled={acceptingId === schoolId}
                   className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {acceptingId === school._id ? (
+                  {acceptingId === schoolId ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                       Accepting...
@@ -190,11 +238,11 @@ const PendingSchoolsSection = () => {
                   )}
                 </button>
                 <button
-                  onClick={() => handleRejectSchool(school._id)}
-                  disabled={rejectingId === school._id}
+                  onClick={() => handleRejectSchool(schoolId)}
+                  disabled={rejectingId === schoolId}
                   className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {rejectingId === school._id ? (
+                  {rejectingId === schoolId ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                       Rejecting...
@@ -208,7 +256,16 @@ const PendingSchoolsSection = () => {
                 </button>
                 
                 <button
-                  onClick={() => window.open(`/school/${school._id}`, '_blank')}
+                  onClick={() => {
+                    console.log('🔍 View Details clicked for schoolId:', schoolId);
+                    console.log('🔍 Full school object:', school);
+                    if (!schoolId) {
+                      toast.error('School ID is missing - cannot view details');
+                      return;
+                    }
+                    // Navigate to admin school details page
+                    window.open(`/admin/school/${schoolId}`, '_blank');
+                  }}
                   className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
                 >
                   View Details
@@ -216,8 +273,10 @@ const PendingSchoolsSection = () => {
               </div>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
+      
     </div>
   );
 };

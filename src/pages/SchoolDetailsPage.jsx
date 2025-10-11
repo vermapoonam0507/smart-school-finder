@@ -57,6 +57,7 @@ const SchoolDetailsPage = ({ shortlist, onShortlistToggle }) => {
         const response = await getSchoolById(schoolId);
         const raw = response?.data;
         const schoolData = raw?.data || raw; // support {data: {...}} or direct {...}
+        
         if (schoolData) {
           setSchool(schoolData);
         } else {
