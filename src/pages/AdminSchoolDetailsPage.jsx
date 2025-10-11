@@ -334,3 +334,4 @@ const AdminSchoolDetailsPage = () => {
 };
 
 export default AdminSchoolDetailsPage;
+
