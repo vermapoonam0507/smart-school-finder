@@ -90,9 +90,17 @@ export const updateUserStatus = (userId, statusData) => {
   res.status(200).json({ message: 'Route reached successfully' });
 };
 
-export const updateSchoolStatus = async (schoolId, newStatus) => {
-  return apiClient.patch(`/schools/admin/${encodeURIComponent(schoolId)}/status`, { status: newStatus });
+// export const updateSchoolStatus = async (schoolId, newStatus) => {
+//   return apiClient.patch(`/schools/admin/${encodeURIComponent(schoolId)}/status`, { status: newStatus });
+// };
+// update school status
+export const updateSchoolStatus = (schoolId, newStatus) => {
+  return apiClient.patch(`/schools/${encodeURIComponent(schoolId)}/status`, { status: newStatus });
 };
+
+// get pending reviews
+export const getPendingReviews = () => apiClient.get('/reviews/pending/all');
+
 
 
 export const updateSchoolInfo = (schoolId, data) => {
