@@ -8,6 +8,8 @@ const PendingSchoolsSection = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [acceptingId, setAcceptingId] = useState(null);
   const [rejectingId, setRejectingId] = useState(null);
+  const [selectedSchool, setSelectedSchool] = useState(null);
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     loadPendingSchools();
@@ -93,6 +95,16 @@ const PendingSchoolsSection = () => {
     } finally {
       setRejectingId(null);
     }
+  };
+
+  const showSchoolDetailsModal = (school) => {
+    setSelectedSchool(school);
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setSelectedSchool(null);
   };
 
   if (isLoading) {
@@ -262,7 +274,8 @@ const PendingSchoolsSection = () => {
                       toast.error('School ID is missing - cannot view details');
                       return;
                     }
-                    window.open(`/school/${schoolId}`, '_blank');
+                    // Show school details in a modal instead of navigating
+                    showSchoolDetailsModal(school);
                   }}
                   className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
                 >
@@ -274,6 +287,95 @@ const PendingSchoolsSection = () => {
           );
         })}
       </div>
+      
+      {/* School Details Modal */}
+      {showModal && selectedSchool && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold text-gray-900">School Details</h2>
+                <button
+                  onClick={closeModal}
+                  className="text-gray-400 hover:text-gray-600 text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+              
+              <div className="space-y-6">
+                {/* Basic Information */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800 mb-3">Basic Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">School Name</label>
+                      <p className="text-gray-900">{selectedSchool.name || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Board</label>
+                      <p className="text-gray-900">{selectedSchool.board || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">School Type</label>
+                      <p className="text-gray-900">{selectedSchool.schoolType || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Curriculum</label>
+                      <p className="text-gray-900">{selectedSchool.curriculum || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Established Year</label>
+                      <p className="text-gray-900">{selectedSchool.establishedYear || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Principal Name</label>
+                      <p className="text-gray-900">{selectedSchool.principalName || 'N/A'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Contact Information */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800 mb-3">Contact Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Email</label>
+                      <p className="text-gray-900">{selectedSchool.email || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Phone</label>
+                      <p className="text-gray-900">{selectedSchool.phone || 'N/A'}</p>
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="text-sm font-medium text-gray-500">Address</label>
+                      <p className="text-gray-900">{selectedSchool.address || 'N/A'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Description */}
+                {selectedSchool.description && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-800 mb-3">Description</h3>
+                    <p className="text-gray-700">{selectedSchool.description}</p>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex justify-end space-x-3 pt-4 border-t">
+                  <button
+                    onClick={closeModal}
+                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

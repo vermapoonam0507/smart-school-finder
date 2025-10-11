@@ -49,77 +49,24 @@ const SchoolDetailsPage = ({ shortlist, onShortlistToggle }) => {
   const [internationalExposure, setInternationalExposure] = useState(null);
 
   useEffect(() => {
-    console.log('🔍 SchoolDetailsPage loaded with schoolId:', schoolId);
-    console.log('🔍 schoolId type:', typeof schoolId);
-    
-    if (!schoolId) {
-      console.error('🔍 No schoolId provided to SchoolDetailsPage');
-      return;
-    }
+    if (!schoolId) return;
 
     const fetchSchoolDetails = async () => {
       try {
         setLoading(true);
-        console.log('🔍 Fetching school details for ID:', schoolId);
-        
-        // Try multiple endpoints to find the school
-        let response = null;
-        let foundViaEndpoint = null;
-        
-        // Try the regular endpoint first
-        try {
-          response = await getSchoolById(schoolId);
-          foundViaEndpoint = 'admin/schools';
-          console.log('🔍 Found via admin/schools endpoint:', response);
-        } catch (error) {
-          console.log('🔍 admin/schools endpoint failed:', error.response?.status);
-          
-          // Try the status endpoint for pending schools
-          try {
-            const { getSchoolsByStatus } = await import('../api/adminService');
-            const statusResponse = await getSchoolsByStatus('pending');
-            const schools = statusResponse?.data?.data || statusResponse?.data || [];
-            const foundSchool = schools.find(school => 
-              school._id === schoolId || 
-              school.schoolId === schoolId || 
-              school.id === schoolId
-            );
-            
-            if (foundSchool) {
-              response = { data: { data: foundSchool } };
-              foundViaEndpoint = 'admin/schools/status/pending';
-              console.log('🔍 Found via pending status endpoint:', response);
-            }
-          } catch (statusError) {
-            console.log('🔍 Status endpoint also failed:', statusError.response?.status);
-          }
-        }
-        
-        console.log('🔍 Final API Response:', response);
-        console.log('🔍 Found via endpoint:', foundViaEndpoint);
+        const response = await getSchoolById(schoolId);
         const raw = response?.data;
-        console.log('🔍 Raw response data:', raw);
         const schoolData = raw?.data || raw; // support {data: {...}} or direct {...}
-        console.log('🔍 Extracted school data:', schoolData);
         
         if (schoolData) {
           setSchool(schoolData);
         } else {
           console.warn(`No school data returned for ID: ${schoolId}`);
-          toast.error(`School with ID ${schoolId} not found`);
-          navigate("/admin/dashboard");
         }
       } catch (error) {
-        console.error("🔍 Fetch School Error:", error);
-        console.error("🔍 Error response:", error.response);
         toast.error("Could not load school details.");
-        // Navigate back to admin dashboard if coming from admin panel
-        const referrer = document.referrer;
-        if (referrer.includes('/admin/')) {
-          navigate("/admin/dashboard");
-        } else {
-          navigate("/schools");
-        }
+        console.error("Fetch School Error:", error);
+        navigate("/schools");
       } finally {
         setLoading(false);
       }
