@@ -255,7 +255,15 @@ const PendingSchoolsSection = () => {
                 </button>
                 
                 <button
-                  onClick={() => window.open(`/school/${schoolId}`, '_blank')}
+                  onClick={() => {
+                    console.log('🔍 View Details clicked for schoolId:', schoolId);
+                    console.log('🔍 Full school object:', school);
+                    if (!schoolId) {
+                      toast.error('School ID is missing - cannot view details');
+                      return;
+                    }
+                    window.open(`/school/${schoolId}`, '_blank');
+                  }}
                   className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
                 >
                   View Details

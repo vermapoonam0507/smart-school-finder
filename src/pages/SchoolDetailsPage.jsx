@@ -49,22 +49,34 @@ const SchoolDetailsPage = ({ shortlist, onShortlistToggle }) => {
   const [internationalExposure, setInternationalExposure] = useState(null);
 
   useEffect(() => {
-    if (!schoolId) return;
+    console.log('🔍 SchoolDetailsPage loaded with schoolId:', schoolId);
+    console.log('🔍 schoolId type:', typeof schoolId);
+    
+    if (!schoolId) {
+      console.error('🔍 No schoolId provided to SchoolDetailsPage');
+      return;
+    }
 
     const fetchSchoolDetails = async () => {
       try {
         setLoading(true);
+        console.log('🔍 Fetching school details for ID:', schoolId);
         const response = await getSchoolById(schoolId);
+        console.log('🔍 API Response:', response);
         const raw = response?.data;
+        console.log('🔍 Raw response data:', raw);
         const schoolData = raw?.data || raw; // support {data: {...}} or direct {...}
+        console.log('🔍 Extracted school data:', schoolData);
+        
         if (schoolData) {
           setSchool(schoolData);
         } else {
           console.warn(`No school data returned for ID: ${schoolId}`);
         }
       } catch (error) {
+        console.error("🔍 Fetch School Error:", error);
+        console.error("🔍 Error response:", error.response);
         toast.error("Could not load school details.");
-        console.error("Fetch School Error:", error);
         navigate("/schools");
       } finally {
         setLoading(false);
