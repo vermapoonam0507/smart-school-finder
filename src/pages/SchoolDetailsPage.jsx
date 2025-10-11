@@ -116,39 +116,55 @@ const SchoolDetailsPage = ({ shortlist, onShortlistToggle }) => {
           technologyRes,
           safetyRes,
           internationalRes
-        ] = await Promise.all([
-          getInfrastructureById(schoolId).catch(() => null),
-          getFeesAndScholarshipsById(schoolId).catch(() => null),
-          getAcademicsById(schoolId).catch(() => null),
-          getOtherDetailsById(schoolId).catch(() => null),
-          getFacultyById(schoolId).catch(() => null),
-          getAdmissionTimelineById(schoolId).catch(() => null),
-          getTechnologyAdoptionById(schoolId).catch(() => null),
-          getSafetyAndSecurityById(schoolId).catch(() => null),
-          getInternationalExposureById(schoolId).catch(() => null)
+        ] = await Promise.allSettled([
+          getInfrastructureById(schoolId).catch(err => {
+            console.warn('Infrastructure fetch failed:', err);
+            return null;
+          }),
+          getFeesAndScholarshipsById(schoolId).catch(err => {
+            console.warn('Fees fetch failed:', err);
+            return null;
+          }),
+          getAcademicsById(schoolId).catch(err => {
+            console.warn('Academics fetch failed:', err);
+            return null;
+          }),
+          getOtherDetailsById(schoolId).catch(err => {
+            console.warn('Other details fetch failed:', err);
+            return null;
+          }),
+          getFacultyById(schoolId).catch(err => {
+            console.warn('Faculty fetch failed:', err);
+            return null;
+          }),
+          getAdmissionTimelineById(schoolId).catch(err => {
+            console.warn('Admission timeline fetch failed:', err);
+            return null;
+          }),
+          getTechnologyAdoptionById(schoolId).catch(err => {
+            console.warn('Technology adoption fetch failed:', err);
+            return null;
+          }),
+          getSafetyAndSecurityById(schoolId).catch(err => {
+            console.warn('Safety and security fetch failed:', err);
+            return null;
+          }),
+          getInternationalExposureById(schoolId).catch(err => {
+            console.warn('International exposure fetch failed:', err);
+            return null;
+          })
         ]);
 
-        console.log("API Responses:", {
-          infrastructure: infrastructureRes?.data,
-          fees: feesRes?.data,
-          academics: academicsRes?.data,
-          otherDetails: otherDetailsRes?.data,
-          faculty: facultyRes?.data,
-          admission: admissionRes?.data,
-          technology: technologyRes?.data,
-          safety: safetyRes?.data,
-          international: internationalRes?.data
-        });
-
-        setInfrastructure(infrastructureRes?.data?.data || infrastructureRes?.data || null);
-        setFeesAndScholarships(feesRes?.data?.data || feesRes?.data || null);
-        setAcademics(academicsRes?.data?.data || academicsRes?.data || null);
-        setOtherDetails(otherDetailsRes?.data?.data || otherDetailsRes?.data || null);
-        setFaculty(facultyRes?.data?.data || facultyRes?.data || null);
-        setAdmissionTimeline(admissionRes?.data?.data || admissionRes?.data || null);
-        setTechnologyAdoption(technologyRes?.data?.data || technologyRes?.data || null);
-        setSafetyAndSecurity(safetyRes?.data?.data || safetyRes?.data || null);
-        setInternationalExposure(internationalRes?.data?.data || internationalRes?.data || null);
+        // Extract data safely with null fallbacks
+        setInfrastructure(infrastructureRes?.value?.data?.data || infrastructureRes?.value?.data || null);
+        setFeesAndScholarships(feesRes?.value?.data?.data || feesRes?.value?.data || null);
+        setAcademics(academicsRes?.value?.data?.data || academicsRes?.value?.data || null);
+        setOtherDetails(otherDetailsRes?.value?.data?.data || otherDetailsRes?.value?.data || null);
+        setFaculty(facultyRes?.value?.data?.data || facultyRes?.value?.data || null);
+        setAdmissionTimeline(admissionRes?.value?.data?.data || admissionRes?.value?.data || null);
+        setTechnologyAdoption(technologyRes?.value?.data?.data || technologyRes?.value?.data || null);
+        setSafetyAndSecurity(safetyRes?.value?.data?.data || safetyRes?.value?.data || null);
+        setInternationalExposure(internationalRes?.value?.data?.data || internationalRes?.value?.data || null);
       } catch (e) {
         console.error("Error fetching additional details:", e);
       }

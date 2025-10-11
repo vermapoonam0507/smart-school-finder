@@ -26,20 +26,36 @@ export const getStudentReviews = async (studentId) => {
 };
 
 export const submitReview = async (reviewData) => {
+  // ✅ Extract student info from reviewData or use defaults
+  const studentName = reviewData.studentName || reviewData.name || 'Anonymous Student';
+  const studentEmail = reviewData.studentEmail || reviewData.email || 'student@example.com';
+  
+  // DON'T send status - let the schema default handle it
   const backendData = {
-    schoolId: reviewData.schoolId,
     studentId: reviewData.studentId,
-    text: reviewData.comment, // Backend expects 'text'
-    ratings: reviewData.rating // Backend expects 'ratings'
+    schoolId: reviewData.schoolId,
+    text: reviewData.comment,
+    ratings: reviewData.rating,
+    student: {
+      name: studentName,
+      email: studentEmail,
+      studentId: reviewData.studentId
+    }
+    // ❌ REMOVED status field - let backend schema default to 'Pending'
   };
 
-  console.log('Submitting review to /reviews/', backendData);
+  console.log('📝 Submitting review to /reviews/');
+  console.log('📋 Review Data:', JSON.stringify(backendData, null, 2));
 
   try {
     const response = await apiClient.post('/reviews', backendData);
+    console.log('✅ Success response:', response.data);
     return response.data;
   } catch (error) {
-    console.error('Error submitting review:', error);
+    console.error('❌ Error submitting review:', error);
+    console.error('❌ Full error object:', error.response);
+    console.error('❌ Error response data:', error.response?.data);
+    
     throw error;
   }
 };
@@ -47,7 +63,8 @@ export const submitReview = async (reviewData) => {
 export const updateReview = async (schoolId, studentId, reviewData) => {
   const backendData = {
     text: reviewData.comment, // Backend expects 'text'
-    ratings: reviewData.rating // Backend expects 'ratings'
+    ratings: reviewData.rating, // Backend expects 'ratings'
+    status: 'Pending' // ✅ Set status back to Pending for re-approval
   };
 
   console.log('Updating review to /reviews/', schoolId, studentId, backendData);
