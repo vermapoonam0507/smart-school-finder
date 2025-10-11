@@ -9,29 +9,14 @@ import apiClient from './axios';
 
 // Register admin
 export const registerAdmin = async (adminData) => {
-  try {
-    return await apiClient.post('/admin/auth/register', {
-      ...adminData,
-      userType: 'admin',
-    });
-  } catch (error) {
-    if (error?.response?.status === 404) {
-      return apiClient.post('/auth/register', { ...adminData, userType: 'admin' });
-    }
-    throw error;
-  }
+  // Use regular auth register with school userType (since admin is registered as school)
+  return await apiClient.post('/auth/register', { ...adminData, userType: 'school' });
 };
 
 // Login admin
 export const loginAdmin = async (credentials) => {
-  try {
-    return await apiClient.post('/admin/auth/login', { ...credentials, userType: 'admin' });
-  } catch (error) {
-    if (error?.response?.status === 404) {
-      return apiClient.post('/auth/login', { ...credentials, userType: 'admin' });
-    }
-    throw error;
-  }
+  // Use the special admin login endpoint that checks against .env variables
+  return await apiClient.post('/admin/admin-login', credentials);
 };
 
 /**
@@ -82,13 +67,13 @@ export const updateSchoolInfo = (schoolId, data) =>
   apiClient.put(`/admin/schools/${encodeURIComponent(schoolId)}`, data);
 
 export const updateSchoolStatus = (schoolId, newStatus) =>
-  apiClient.patch(`/schools/admin/${encodeURIComponent(schoolId)}/status`, { status: newStatus });
+  apiClient.put(`/admin/schools/${encodeURIComponent(schoolId)}`, { status: newStatus });
 
 export const getSchoolsByStatus = (status) =>
   apiClient.get(`/admin/schools/status/${encodeURIComponent(status)}`);
 
-export const getAllSchools = () => apiClient.get('/schools/status/all');
-export const getPendingSchools = () => apiClient.get('/schools/admin/pending');
+export const getAllSchools = () => apiClient.get('/admin/schools/status/all');
+export const getPendingSchools = () => apiClient.get('/admin/schools/admin/pending');
 
 /**
  * ============================
@@ -135,7 +120,7 @@ export const getSchoolVideos = (schoolId) =>
 export const uploadSchoolPhotos = (schoolId, files) => {
   const formData = new FormData();
   Array.from(files).forEach((f) => formData.append('files', f));
-  return apiClient.post(`/schools/${encodeURIComponent(schoolId)}/upload/photos`, formData, {
+  return apiClient.post(`/admin/${encodeURIComponent(schoolId)}/upload/photos`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
 };
@@ -143,7 +128,7 @@ export const uploadSchoolPhotos = (schoolId, files) => {
 export const uploadSchoolVideo = (schoolId, file) => {
   const formData = new FormData();
   formData.append('file', file);
-  return apiClient.post(`/schools/${encodeURIComponent(schoolId)}/upload/video`, formData, {
+  return apiClient.post(`/admin/${encodeURIComponent(schoolId)}/upload/video`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
 };

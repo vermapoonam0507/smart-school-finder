@@ -180,12 +180,18 @@ const SearchPage = () => {
       const response = await searchSchools(searchParams);
       setSearchResults(response.data || []);
       
+      // Show message when no schools are found, but don't treat it as an error
       if (!response.data || response.data.length === 0) {
-        setError('No schools found matching your criteria. Try adjusting your filters.');
+        setError('No schools found matching your criteria. Try adjusting your filters or expanding your search.');
       }
     } catch (error) {
       console.error('Search error:', error);
-      setError('Failed to search schools. Please try again.');
+      // Only show error for actual failures, not for "no results found"
+      if (error.response?.status !== 404) {
+        setError('Failed to search schools. Please try again.');
+      } else {
+        setError('No schools found matching your criteria. Try adjusting your filters or expanding your search.');
+      }
       setSearchResults([]);
     } finally {
       setLoading(false);

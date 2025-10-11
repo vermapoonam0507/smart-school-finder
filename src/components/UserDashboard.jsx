@@ -10,7 +10,9 @@ import {
   createStudentProfile,
   getUserProfile,
   updateUserPreferences,
-  createUserPreferences
+  createUserPreferences,
+  saveUserPreferences,
+  getUserPreferences
 } from '../api/userService';
 import { getSchoolById } from '../api/adminService';
 import { Download } from 'lucide-react';
@@ -25,7 +27,7 @@ const UserDashboard = ({ shortlist, comparisonList, onCompareToggle, onShortlist
   const [forms, setForms] = useState([]);
   const [isEditingProfile, setIsEditingProfile] = useState(() => !currentUser?.contactNo);
 
-  // Ensure student profile exists
+  // Ensure student profile exists and load preferences
   useEffect(() => {
     const ensureStudentProfile = async () => {
       if (!currentUser?._id) return;
@@ -46,6 +48,23 @@ const UserDashboard = ({ shortlist, comparisonList, onCompareToggle, onShortlist
           }
         } else if (!currentUser.contactNo) {
           updateUserContext({ ...currentUser, ...profileData });
+        }
+
+        // Load user preferences
+        try {
+          const preferencesRes = await getUserPreferences(currentUser._id);
+          console.log("Preferences response:", preferencesRes);
+          const preferencesData = preferencesRes?.data?.data || preferencesRes?.data;
+          console.log("Preferences data:", preferencesData);
+          if (preferencesData) {
+            updateUserContext({ 
+              ...currentUser, 
+              ...profileData,
+              preferences: preferencesData 
+            });
+          }
+        } catch (prefErr) {
+          console.log('No preferences found for user:', prefErr.message);
         }
       } catch (err) {
         console.error('Error ensuring student profile:', err);
@@ -100,35 +119,32 @@ const UserDashboard = ({ shortlist, comparisonList, onCompareToggle, onShortlist
 
       // Update preferences separately if present
       if (profileData.preferences) {
-        try {
-          await updateUserPreferences(authId, {
-            studentId: authId,
-            ...profileData.preferences
-          });
-        } catch (err) {
-          // If update fails with 'Preference not found', create instead
-          if (
-            err?.message?.includes('Preference not found') ||
-            err?.response?.data?.message?.includes('Preference not found')
-          ) {
-            await createUserPreferences({
-              studentId: authId,
-              ...profileData.preferences
-            });
-          } else {
-            throw err;
-          }
-        }
+        await saveUserPreferences(authId, {
+          studentId: authId,
+          ...profileData.preferences
+        });
       }
 
       // Fetch the updated profile from the server to ensure we have the latest data
       const freshProfile = await getUserProfile(authId);
       const freshData = freshProfile?.data?.data || freshProfile?.data;
 
+      // Also fetch updated preferences
+      let freshPreferences = null;
+      try {
+        const preferencesRes = await getUserPreferences(authId);
+        console.log("Updated preferences response:", preferencesRes);
+        freshPreferences = preferencesRes?.data?.data || preferencesRes?.data;
+        console.log("Updated preferences data:", freshPreferences);
+      } catch (prefErr) {
+        console.log('No preferences found after update:', prefErr.message);
+      }
+
       // Update the context with the fresh data from the server
       updateUserContext({
         ...currentUser,
-        ...freshData
+        ...freshData,
+        preferences: freshPreferences
       });
 
       toast.success('Profile updated successfully!');
@@ -161,6 +177,8 @@ const UserDashboard = ({ shortlist, comparisonList, onCompareToggle, onShortlist
   // Profile Summary component
   const ProfileSummary = () => {
     const profile = currentUser || {};
+    console.log("ProfileSummary - currentUser:", currentUser);
+    console.log("ProfileSummary - preferences:", profile.preferences);
     return (
       <div className="bg-white p-6 rounded-xl shadow-lg">
         <div className="flex items-center justify-between mb-4">

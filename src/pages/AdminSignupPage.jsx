@@ -49,7 +49,7 @@ const AdminSignupPage = () => {
         name: data.name,
         email: data.email,
         password: data.password,
-        userType: "admin",
+        userType: "school",
         authProvider: "email",
       };
 

@@ -141,7 +141,7 @@ export const updateUserProfile = async (authId, profileData) => {
 // USER PREFERENCES FUNCTIONS
 export const getUserPreferences = async (studentId) => {
   try {
-    const response = await apiClient.get(`/preferences/${studentId}`);
+    const response = await apiClient.get(`/users/preferences/${studentId}`);
     return response.data;
   } catch (error) {
     console.error("Error fetching user preferences:", error);
@@ -151,7 +151,7 @@ export const getUserPreferences = async (studentId) => {
 
 export const createUserPreferences = async (preferenceData) => {
   try {
-    const response = await apiClient.post(`/preferences`, preferenceData);
+    const response = await apiClient.post(`/users/preferences/`, preferenceData);
     return response.data;
   } catch (error) {
     console.error("Error creating user preferences:", error);
@@ -161,7 +161,7 @@ export const createUserPreferences = async (preferenceData) => {
 
 export const updateUserPreferences = async (studentId, preferenceData) => {
   try {
-    const response = await apiClient.put(`/preferences/${studentId}`, preferenceData);
+    const response = await apiClient.put(`/users/preferences/${studentId}`, preferenceData);
     return response.data;
   } catch (error) {
     console.error("Error updating user preferences:", error);
@@ -174,12 +174,12 @@ export const saveUserPreferences = async (studentId, preferenceData) => {
 
   try {
     // Try updating first
-    const response = await apiClient.put(`/api/users/preferences/${studentId}`, preferenceData);
+    const response = await apiClient.put(`/users/preferences/${studentId}`, preferenceData);
     return response.data;
   } catch (updateError) {
     // If update fails with 404 or 400, create new preferences
     if (updateError.response?.status === 404 || updateError.response?.status === 400) {
-      const response = await apiClient.post('/api/users/preferences/', { ...preferenceData, studentId });
+      const response = await apiClient.post('/users/preferences/', { ...preferenceData, studentId });
       return response.data;
     }
     throw updateError;

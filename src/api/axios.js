@@ -33,7 +33,12 @@ apiClient.interceptors.response.use(
     return response;
   },
   (error) => {
-    console.error('❌ API Error:', error.config?.url, error.response?.status, error.response?.data);
+    // Don't log 404 errors for search endpoints as they're expected when no results found
+    const isSearch404 = error.config?.url?.includes('/search') && error.response?.status === 404;
+    
+    if (!isSearch404) {
+      console.error('❌ API Error:', error.config?.url, error.response?.status, error.response?.data);
+    }
     
     let message;
     if (error.response?.status === 401) {

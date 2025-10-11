@@ -13,7 +13,7 @@ import apiClient from './axios';
  */
 export const getPublicSchoolsByStatus = (status) => {
   const safeStatus = encodeURIComponent(status);
-  return apiClient.get(`/schools/status/${safeStatus}`);
+  return apiClient.get(`/admin/schools/status/${safeStatus}`);
 };
 
 /**
@@ -21,14 +21,14 @@ export const getPublicSchoolsByStatus = (status) => {
  * Backend: GET /api/schools/:id
  */
 export const getSchoolById = (schoolId) => {
-  return apiClient.get(`/schools/${encodeURIComponent(schoolId)}`);
+  return apiClient.get(`/admin/schools/${encodeURIComponent(schoolId)}`);
 };
 
 /**
  * Search schools
  * Backend: GET /api/schools/search?q=...&filters... OR /api/search
  */
-export const searchSchools = (searchQuery, filters = {}) => {
+export const searchSchools = async (searchQuery, filters = {}) => {
   const params = new URLSearchParams();
   if (searchQuery) params.append('q', searchQuery);
   
@@ -39,7 +39,28 @@ export const searchSchools = (searchQuery, filters = {}) => {
     }
   });
   
-  return apiClient.get(`/schools/search?${params.toString()}`);
+  try {
+    return await apiClient.get(`/admin/search?${params.toString()}`);
+  } catch (error) {
+    // Handle 404 as "no results found" instead of error
+    if (error.response?.status === 404) {
+      return {
+        data: {
+          status: 'success',
+          message: 'No schools found for the given search.',
+          data: [],
+          pagination: {
+            page: 1,
+            limit: 10,
+            total: 0,
+            totalPages: 0
+          }
+        }
+      };
+    }
+    // Re-throw other errors
+    throw error;
+  }
 };
 
 /**
@@ -47,7 +68,7 @@ export const searchSchools = (searchQuery, filters = {}) => {
  * Backend: POST /api/schools/compare
  */
 export const compareSchools = (schoolIds) => {
-  return apiClient.post('/schools/compare', { schoolIds });
+  return apiClient.post('/admin/compare', { schoolIds });
 };
 
 /**
@@ -58,7 +79,7 @@ export const getSchoolsByFeeRange = (minFee, maxFee) => {
   const params = new URLSearchParams();
   if (minFee) params.append('min', minFee);
   if (maxFee) params.append('max', maxFee);
-  return apiClient.get(`/schools/filter-feeRange?${params.toString()}`);
+  return apiClient.get(`/admin/filter-feeRange?${params.toString()}`);
 };
 
 /**
@@ -66,7 +87,7 @@ export const getSchoolsByFeeRange = (minFee, maxFee) => {
  * Backend: GET /api/schools/filter-Shift?shift=...
  */
 export const getSchoolsByShift = (shift) => {
-  return apiClient.get(`/schools/filter-Shift?shift=${encodeURIComponent(shift)}`);
+  return apiClient.get(`/admin/filter-Shift?shift=${encodeURIComponent(shift)}`);
 };
 
 /**
@@ -74,7 +95,7 @@ export const getSchoolsByShift = (shift) => {
  * Backend: GET /api/schools/card/:id
  */
 export const getSchoolCardData = (schoolId) => {
-  return apiClient.get(`/schools/card/${encodeURIComponent(schoolId)}`);
+  return apiClient.get(`/admin/card/${encodeURIComponent(schoolId)}`);
 };
 
 /**
@@ -82,7 +103,7 @@ export const getSchoolCardData = (schoolId) => {
  * Backend: GET /api/schools/amenities/:id
  */
 export const getAmenitiesById = (schoolId) => {
-  return apiClient.get(`/schools/amenities/${encodeURIComponent(schoolId)}`);
+  return apiClient.get(`/admin/schools/amenities/${encodeURIComponent(schoolId)}`);
 };
 
 /**
@@ -90,7 +111,7 @@ export const getAmenitiesById = (schoolId) => {
  * Backend: GET /api/schools/activities/:id
  */
 export const getActivitiesById = (schoolId) => {
-  return apiClient.get(`/schools/activities/${encodeURIComponent(schoolId)}`);
+  return apiClient.get(`/admin/schools/activities/${encodeURIComponent(schoolId)}`);
 };
 
 /**
@@ -98,7 +119,7 @@ export const getActivitiesById = (schoolId) => {
  * Backend: GET /api/schools/alumnus/:id
  */
 export const getAlumniBySchool = (schoolId) => {
-  return apiClient.get(`/schools/alumnus/${encodeURIComponent(schoolId)}`);
+  return apiClient.get(`/admin/alumnus/${encodeURIComponent(schoolId)}`);
 };
 
 /**
@@ -106,7 +127,7 @@ export const getAlumniBySchool = (schoolId) => {
  * Backend: GET /api/schools/infrastructure/:id
  */
 export const getInfrastructureById = (schoolId) => {
-  return apiClient.get(`/schools/infrastructure/${encodeURIComponent(schoolId)}`);
+  return apiClient.get(`/admin/schools/infrastructure/${encodeURIComponent(schoolId)}`);
 };
 
 /**
@@ -114,7 +135,7 @@ export const getInfrastructureById = (schoolId) => {
  * Backend: GET /api/schools/other-details/:id
  */
 export const getOtherDetailsById = (schoolId) => {
-  return apiClient.get(`/schools/other-details/${encodeURIComponent(schoolId)}`);
+  return apiClient.get(`/admin/schools/other-details/${encodeURIComponent(schoolId)}`);
 };
 
 /**
@@ -122,7 +143,7 @@ export const getOtherDetailsById = (schoolId) => {
  * Backend: GET /api/schools/academics/:id
  */
 export const getAcademicsById = (schoolId) => {
-  return apiClient.get(`/schools/academics/${encodeURIComponent(schoolId)}`);
+  return apiClient.get(`/admin/schools/academics/${encodeURIComponent(schoolId)}`);
 };
 
 /**
@@ -130,7 +151,7 @@ export const getAcademicsById = (schoolId) => {
  * Backend: GET /api/schools/fees-scholarships/:id
  */
 export const getFeesAndScholarshipsById = (schoolId) => {
-  return apiClient.get(`/schools/fees-scholarships/${encodeURIComponent(schoolId)}`);
+  return apiClient.get(`/admin/schools/fees-scholarships/${encodeURIComponent(schoolId)}`);
 };
 
 /**
@@ -138,7 +159,7 @@ export const getFeesAndScholarshipsById = (schoolId) => {
  * Backend: GET /api/schools/technology-adoption/:id
  */
 export const getTechnologyAdoptionById = (schoolId) => {
-  return apiClient.get(`/schools/technology-adoption/${encodeURIComponent(schoolId)}`);
+  return apiClient.get(`/admin/schools/technology-adoption/${encodeURIComponent(schoolId)}`);
 };
 
 /**
@@ -146,7 +167,7 @@ export const getTechnologyAdoptionById = (schoolId) => {
  * Backend: GET /api/schools/admission/:id
  */
 export const getAdmissionDetails = (schoolId) => {
-  return apiClient.get(`/schools/admission/${encodeURIComponent(schoolId)}`);
+  return apiClient.get(`/admin/schools/admission-timeline/${encodeURIComponent(schoolId)}`);
 };
 
 /**
@@ -154,7 +175,7 @@ export const getAdmissionDetails = (schoolId) => {
  * Backend: GET /api/schools/:id/photos
  */
 export const getSchoolPhotos = (schoolId) => {
-  return apiClient.get(`/schools/${encodeURIComponent(schoolId)}/photos`);
+  return apiClient.get(`/admin/${encodeURIComponent(schoolId)}/photos`);
 };
 
 /**
@@ -162,7 +183,7 @@ export const getSchoolPhotos = (schoolId) => {
  * Backend: GET /api/schools/:id/videos
  */
 export const getSchoolVideos = (schoolId) => {
-  return apiClient.get(`/schools/${encodeURIComponent(schoolId)}/videos`);
+  return apiClient.get(`/admin/${encodeURIComponent(schoolId)}/videos`);
 };
 
 /**
@@ -170,7 +191,7 @@ export const getSchoolVideos = (schoolId) => {
  * Backend: GET /api/schools/:id/photo/:publicId
  */
 export const getSchoolPhoto = (schoolId, publicId) => {
-  return apiClient.get(`/schools/${encodeURIComponent(schoolId)}/photo/${encodeURIComponent(publicId)}`);
+  return apiClient.get(`/admin/${encodeURIComponent(schoolId)}/photo/${encodeURIComponent(publicId)}`);
 };
 
 /**
@@ -178,7 +199,7 @@ export const getSchoolPhoto = (schoolId, publicId) => {
  * Backend: GET /api/schools/:id/video/:publicId
  */
 export const getSchoolVideo = (schoolId, publicId) => {
-  return apiClient.get(`/schools/${encodeURIComponent(schoolId)}/video/${encodeURIComponent(publicId)}`);
+  return apiClient.get(`/admin/${encodeURIComponent(schoolId)}/video/${encodeURIComponent(publicId)}`);
 };
 
 /**
@@ -186,7 +207,7 @@ export const getSchoolVideo = (schoolId, publicId) => {
  * Backend: POST /api/schools/support (requires authentication)
  */
 export const addSupport = (supportData) => {
-  return apiClient.post('/schools/support', supportData);
+  return apiClient.post('/admin/support', supportData);
 };
 
 /**
@@ -194,7 +215,7 @@ export const addSupport = (supportData) => {
  * Backend: GET /api/schools/support/:studId
  */
 export const getSupportByStudent = (studentId) => {
-  return apiClient.get(`/schools/support/${encodeURIComponent(studentId)}`);
+  return apiClient.get(`/admin/support/${encodeURIComponent(studentId)}`);
 };
 
 /**
@@ -202,7 +223,7 @@ export const getSupportByStudent = (studentId) => {
  * Backend: GET /api/schools/support-id/:supportId
  */
 export const getSupportById = (supportId) => {
-  return apiClient.get(`/schools/support-id/${encodeURIComponent(supportId)}`);
+  return apiClient.get(`/admin/support-id/${encodeURIComponent(supportId)}`);
 };
 
 /**
@@ -210,7 +231,7 @@ export const getSupportById = (supportId) => {
  * Backend: DELETE /api/schools/support/:supportId (requires authentication)
  */
 export const deleteSupport = (supportId) => {
-  return apiClient.delete(`/schools/support/${encodeURIComponent(supportId)}`);
+  return apiClient.delete(`/admin/support/${encodeURIComponent(supportId)}`);
 };
 
 /**
@@ -218,7 +239,7 @@ export const deleteSupport = (supportId) => {
  * Backend: POST /api/schools/predict-schools OR /api/schools/predict
  */
 export const predictSchools = (predictorData) => {
-  return apiClient.post('/schools/predict-schools', predictorData);
+  return apiClient.post('/admin/predict-schools', predictorData);
 };
 
 /**
@@ -226,7 +247,7 @@ export const predictSchools = (predictorData) => {
  * Backend: GET /api/schools/blogs
  */
 export const getAllBlogs = () => {
-  return apiClient.get('/schools/blogs');
+  return apiClient.get('/admin/blogs');
 };
 
 /**
@@ -234,7 +255,7 @@ export const getAllBlogs = () => {
  * Backend: GET /api/schools/blogs/:id
  */
 export const getBlogById = (blogId) => {
-  return apiClient.get(`/schools/blogs/${encodeURIComponent(blogId)}`);
+  return apiClient.get(`/admin/blogs/${encodeURIComponent(blogId)}`);
 };
 
 /**
@@ -242,7 +263,7 @@ export const getBlogById = (blogId) => {
  * Backend: POST /api/schools/blogs
  */
 export const createBlog = (blogData) => {
-  return apiClient.post('/schools/blogs', blogData);
+  return apiClient.post('/admin/blogs', blogData);
 };
 
 /**
@@ -250,7 +271,7 @@ export const createBlog = (blogData) => {
  * Backend: GET /api/schools/admission-status/:studentId (requires authentication)
  */
 export const getAdmissionStatusByStudent = (studentId) => {
-  return apiClient.get(`/schools/admission-status/${encodeURIComponent(studentId)}`);
+  return apiClient.get(`/admin/admission-status/${encodeURIComponent(studentId)}`);
 };
 
 /**
@@ -258,7 +279,7 @@ export const getAdmissionStatusByStudent = (studentId) => {
  * Backend: POST /api/schools/admission-status (requires authentication)
  */
 export const addAdmissionStatus = (statusData) => {
-  return apiClient.post('/schools/admission-status', statusData);
+  return apiClient.post('/admin/admission-status', statusData);
 };
 
 /**
@@ -266,7 +287,7 @@ export const addAdmissionStatus = (statusData) => {
  * Backend: PUT /api/schools/admission-status/:studentId/:schoolId (requires authentication)
  */
 export const updateAdmissionStatus = (studentId, schoolId, statusData) => {
-  return apiClient.put(`/schools/admission-status/${encodeURIComponent(studentId)}/${encodeURIComponent(schoolId)}`, statusData);
+  return apiClient.put(`/admin/admission-status/${encodeURIComponent(studentId)}/${encodeURIComponent(schoolId)}`, statusData);
 };
 
 /**
@@ -274,7 +295,7 @@ export const updateAdmissionStatus = (studentId, schoolId, statusData) => {
  * Backend: DELETE /api/schools/admission-status/:studentId/:schoolId (requires authentication)
  */
 export const deleteAdmissionStatus = (studentId, schoolId) => {
-  return apiClient.delete(`/schools/admission-status/${encodeURIComponent(studentId)}/${encodeURIComponent(schoolId)}`);
+  return apiClient.delete(`/admin/admission-status/${encodeURIComponent(studentId)}/${encodeURIComponent(schoolId)}`);
 };
 
 /**
@@ -282,7 +303,7 @@ export const deleteAdmissionStatus = (studentId, schoolId) => {
  * Backend: GET /api/schools/filter/:studentId (requires authentication)
  */
 export const filterSchoolsByPreferences = (studentId) => {
-  return apiClient.get(`/schools/filter/${encodeURIComponent(studentId)}`);
+  return apiClient.get(`/admin/filter/${encodeURIComponent(studentId)}`);
 };
 
 export default {

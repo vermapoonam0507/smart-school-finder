@@ -50,7 +50,14 @@ const AdvancedSearchPage = () => {
       setPagination(pg || {});
     } catch (error) {
       console.error('Search error:', error);
-      toast.error('Error searching schools');
+      // Handle 404 as "no results found" instead of error
+      if (error.response?.status === 404) {
+        setSchools([]);
+        setPagination({});
+        toast.info('No schools found matching your criteria');
+      } else {
+        toast.error('Error searching schools');
+      }
     } finally {
       setLoading(false);
     }

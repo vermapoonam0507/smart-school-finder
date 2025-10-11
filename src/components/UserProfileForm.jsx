@@ -29,6 +29,8 @@ useEffect(() => {
         try {
             const res = await getUserProfile(currentUser.authId || currentUser._id);
             const data = res.data;
+            console.log("Profile data loaded:", data);
+            console.log("Preferences:", data.preferences);
             
             // Form ko fetched data se bhar do
             reset({
@@ -65,6 +67,7 @@ useEffect(() => {
 }, [currentUser, reset]);
 
   const onSubmit = async (data) => {
+    console.log("Form data:", data);
     // Structure the data to include preferences
     const profileData = {
       name: data.name,
@@ -76,6 +79,8 @@ useEffect(() => {
       city: data.city,
       userType: data.userType,
       preferences: {
+        state: data.state,
+        city: data.city,
         boards: data.boards,
         preferredStandard: data.preferredStandard,
         interests: data.interests,
@@ -83,6 +88,7 @@ useEffect(() => {
         shift: data.shift
       }
     };
+    console.log("Profile data to send:", profileData);
     
     await onProfileUpdate(profileData);
   };
