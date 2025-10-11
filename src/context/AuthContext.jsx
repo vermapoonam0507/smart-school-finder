@@ -51,68 +51,102 @@ export const AuthProvider = ({ children }) => {
       let response;
 
       if (userType === 'admin') {
-        // --- Admin login ---
-        response = await apiLoginAdmin(credentials);
-        // Support both endpoint shapes:
-        // 1) { token, admin }
-        // 2) { data: { token, auth } }
-        const directToken = response?.data?.token;
-        const directAdmin = response?.data?.admin;
-        const nestedToken = response?.data?.data?.token;
-        const nestedAuth = response?.data?.data?.auth;
-
-        const resolvedToken = directToken || nestedToken;
-        const resolvedAdmin = directAdmin || nestedAuth || {};
-
-        if (!resolvedToken) {
-          throw new Error('Admin login response missing token');
-        }
-
-        // Ensure userType is set to admin for route guards
-        const adminUser = { ...resolvedAdmin, userType: 'admin' };
-
-        setToken(resolvedToken);
-        localStorage.setItem('authToken', resolvedToken);
-        setUser(adminUser);
-        localStorage.setItem('userData', JSON.stringify(adminUser));
-
-      } else {
-        // --- Normal user login ---
-        response = await apiLoginUser(credentials);
-        const { token, auth: basicAuthData } = response.data.data;
-
-        setToken(token);
-        localStorage.setItem('authToken', token);
-
-        const userId = basicAuthData?._id;
-        if (!userId || basicAuthData.userType === 'school') {
-          setUser(basicAuthData);
-          localStorage.setItem('userData', JSON.stringify(basicAuthData));
-          return;
-        }
-
-        // Fetch full profile and preferences
-        const profileResponse = await getUserProfile(basicAuthData.authId || userId);
-        const studentId = profileResponse.data?.data?._id || profileResponse.data?._id;
-
-        let preferences = null;
         try {
-          if (studentId) {
-            const prefResponse = await getUserPreferences(studentId);
-            preferences = prefResponse?.data || prefResponse;
+          response = await apiLoginAdmin(credentials);
+          console.log('Full admin response:', response);
+          
+          // Handle different response structures
+          let token, adminData;
+          
+          // Check if response has nested data structure (response.data.data)
+          if (response?.data?.data) {
+            token = response.data.data.token;
+            adminData = response.data.data.admin || response.data.data.user || response.data.data.auth;
+          } 
+          // Check if response has flat structure (response.data)
+          else if (response?.data) {
+            token = response.data.token;
+            adminData = response.data.admin || response.data.user || response.data.auth;
+            
+            // If still no adminData, create minimal admin object
+            if (!adminData) {
+              console.log('Creating minimal admin data from response');
+              adminData = {
+                email: credentials.email,
+                userType: 'admin',
+                isAdmin: true
+              };
+            }
           }
-        } catch (_) {}
 
-        const fullUserData = {
-          ...basicAuthData,
-          ...(profileResponse.data?.data || profileResponse.data),
-          ...(preferences ? { preferences } : {})
-        };
+          // Validate token exists
+          if (!token) {
+            console.error('No token in response:', response.data);
+            throw new Error('No authentication token received');
+          }
 
-        setUser(fullUserData);
-        localStorage.setItem('userData', JSON.stringify(fullUserData));
+          // Create complete admin user object
+          const adminUser = {
+            ...adminData,
+            userType: 'admin',
+            isAdmin: true,
+            email: credentials.email
+          };
+
+          console.log('Setting admin user:', adminUser);
+
+          setToken(token);
+          localStorage.setItem('authToken', token);
+          setUser(adminUser);
+          localStorage.setItem('userData', JSON.stringify(adminUser));
+          
+          toast.success('Admin login successful!');
+          return;
+        } catch (error) {
+          const message = error.response?.data?.message || error.message;
+          console.error('Admin login error:', message);
+          throw new Error(`Admin login failed: ${message}`);
+        }
       }
 
+      // --- Normal user login ---
+      response = await apiLoginUser(credentials);
+      const { token, auth: basicAuthData } = response.data.data;
+
+      setToken(token);
+      localStorage.setItem('authToken', token);
+
+      const userId = basicAuthData?._id;
+      if (!userId || basicAuthData.userType === 'school') {
+        setUser(basicAuthData);
+        localStorage.setItem('userData', JSON.stringify(basicAuthData));
+        toast.success('Login successful!');
+        return;
+      }
+
+      // Fetch full profile and preferences
+      const profileResponse = await getUserProfile(basicAuthData.authId || userId);
+      const studentId = profileResponse.data?.data?._id || profileResponse.data?._id;
+
+      let preferences = null;
+      try {
+        if (studentId) {
+          const prefResponse = await getUserPreferences(studentId);
+          preferences = prefResponse?.data || prefResponse;
+        }
+      } catch (_) {
+        // Preferences are optional, continue without them
+      }
+
+      const fullUserData = {
+        ...basicAuthData,
+        ...(profileResponse.data?.data || profileResponse.data),
+        ...(preferences ? { preferences } : {})
+      };
+
+      setUser(fullUserData);
+      localStorage.setItem('userData', JSON.stringify(fullUserData));
+      toast.success('Login successful!');
     } catch (error) {
       console.error('Login failed:', error);
       setUser(null);
@@ -129,6 +163,7 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
     localStorage.removeItem('authToken');
     localStorage.removeItem('userData');
+    toast.success('Logged out successfully');
   };
 
   const value = useMemo(() => ({

@@ -1,7 +1,6 @@
-
 import React, { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
-// import getAllBlogs from wherever it is defined
+// import getAllBlogs from your API service
 
 function BlogManagementSection() {
   const [blogs, setBlogs] = useState([]);
@@ -12,9 +11,8 @@ function BlogManagementSection() {
     try {
       setIsLoading(true);
       const response = await getAllBlogs();
-      const raw = response?.data;
-      const blogsArray = Array.isArray(raw?.data) ? raw.data : (Array.isArray(raw) ? raw : []);
-      setBlogs(blogsArray);
+      const payload = response?.data?.data ?? response?.data ?? [];
+      setBlogs(Array.isArray(payload) ? payload : []);
     } catch (error) {
       console.error('Failed to load blogs:', error);
       toast.error('Failed to load blogs');
@@ -38,6 +36,17 @@ function BlogManagementSection() {
     return title.includes(q) || highlight.includes(q) || contributors.some((c) => c.includes(q));
   }) : [];
 
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <span className="ml-3 text-gray-600">Loading blogs...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <input
@@ -46,15 +55,11 @@ function BlogManagementSection() {
         value={searchTerm}
         onChange={e => setSearchTerm(e.target.value)}
       />
-      {isLoading ? (
-        <div>Loading...</div>
-      ) : (
-        <ul>
-          {filteredBlogs.map((blog, idx) => (
-            <li key={blog._id || idx}>{blog.title}</li>
-          ))}
-        </ul>
-      )}
+      <ul>
+        {filteredBlogs.map((blog, idx) => (
+          <li key={blog._id || idx}>{blog.title}</li>
+        ))}
+      </ul>
     </div>
   );
 }

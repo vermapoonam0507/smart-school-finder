@@ -3,10 +3,10 @@ import apiClient from './axios';
 
 export const getUserPreferences = async () => {
   try {
-   const { data } = await apiClient.get(`/preferences/${studId}`);
+    const { data } = await apiClient.get(`/preferences/${studId}`);
     return data;
   } catch (error) {
-    console.log('No user preferences found, using defaults');
+    // Silently fall back to defaults in the UI without noisy logs
     return null;
   }
 };
@@ -20,6 +20,3 @@ export const saveUserPreferences = async (preferences) => {
     throw error;
   }
 };
-
-
-

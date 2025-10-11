@@ -3,7 +3,7 @@ import { Routes, Route, Link, useNavigate } from "react-router-dom";
 import { School, LogOut, FileText, Eye, Check, X, Clock, Star } from "lucide-react";
 import {
   getSchoolById,
-  getSchoolsByStatus,
+  getPendingSchools,
   checkSchoolProfileExists,
 } from "../api/adminService";
 import RegistrationPage from "./RegistrationPage";
@@ -99,7 +99,7 @@ const ApprovalStatus = ({ currentUser }) => {
           setOwnSchool(found);
         }
         try {
-          const pend = await getSchoolsByStatus("pending");
+          const pend = await getPendingSchools();
           setPendingSchools(pend.data?.data || []);
         } catch (_) {
           setPendingSchools([]);

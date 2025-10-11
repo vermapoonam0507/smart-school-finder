@@ -55,7 +55,7 @@ const HomePage = () => {
       });
       setMatchingSchools(response.data || []);
     } catch (error) {
-      console.error('Error fetching matching schools:', error);
+      // Silently fall back to empty list to avoid console noise in UX
       setMatchingSchools([]);
     } finally {
       setLoading(prev => ({ ...prev, matching: false }));
@@ -77,7 +77,7 @@ const HomePage = () => {
       });
       setMatchingCitySchools(response.data || []);
     } catch (error) {
-      console.error('Error fetching matching city schools:', error);
+      // Silently fall back to empty list
       setMatchingCitySchools([]);
     } finally {
       setLoading(prev => ({ ...prev, matchingCity: false }));
@@ -96,7 +96,7 @@ const HomePage = () => {
       });
       setBoardNearbySchools(response.data || []);
     } catch (error) {
-      console.error('Error fetching board nearby schools:', error);
+      // Silently fall back to empty list
       setBoardNearbySchools([]);
     } finally {
       setLoading(prev => ({ ...prev, boardNearby: false }));
@@ -113,7 +113,7 @@ const HomePage = () => {
             setUserPreferences(preferences);
           }
         } catch (error) {
-          console.log('Using default preferences');
+          // Use defaults silently
         }
       }
     };

@@ -1,18 +1,13 @@
-// src/api/axios.js
-
 import axios from 'axios';
 
-// Prefer env var, fallback to localhost
-const rawBase = import.meta?.env?.VITE_API_URL || 'http://localhost:8080/api';
+// Remove /api from base URL to avoid double prefix
+const apiBaseURL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080').replace(/\/api\/?$/, '');
 
-// Normalize: remove trailing slashes
-const apiBaseURL = rawBase.replace(/\/$/, '');
+console.log('🔧 Axios Base URL:', apiBaseURL);
 
 const apiClient = axios.create({
-	baseURL: apiBaseURL,
+  baseURL: apiBaseURL,
 });
-
-
 
 apiClient.interceptors.request.use(
   (config) => {
@@ -20,20 +15,35 @@ apiClient.interceptors.request.use(
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
-
-    return config; 
+    
+    // Clean up URL - ensure single /api prefix
+    if (!config.url.startsWith('/api/')) {
+      config.url = `/api${config.url.startsWith('/') ? '' : '/'}${config.url}`;
+    }
+    
+    console.log('📤 API Request:', config.method?.toUpperCase(), config.url);
+    return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Response interceptor to surface consistent errors
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('✅ API Response:', response.config.url, response.status);
+    return response;
+  },
   (error) => {
-    // Attach a normalized message
-    const message = error?.response?.data?.message || error.message || 'Request failed';
+    console.error('❌ API Error:', error.config?.url, error.response?.status, error.response?.data);
+    
+    let message;
+    if (error.response?.status === 401) {
+      message = 'Invalid credentials or session expired. Please try logging in again.';
+    } else if (error.response?.status === 404) {
+      message = 'API endpoint not found. Please contact support.';
+    } else {
+      message = error.response?.data?.message || error.message || 'Request failed';
+    }
+    
     error.normalizedMessage = message;
     return Promise.reject(error);
   }

@@ -1,4 +1,4 @@
-import axiosInstance from './axios';
+import apiClient from './axios';
 
 /**
  * User Services - Frontend API calls for user-related operations
@@ -11,7 +11,7 @@ import axiosInstance from './axios';
 
 export const getShortlist = async (authId) => {
   try {
-    const response = await axiosInstance.get(`/users/shortlist/${authId}`);
+    const response = await apiClient.get(`users/shortlist/${authId}`);
     return response.data;
   } catch (error) {
     console.error("Error fetching shortlist:", error.response?.data || error.message);
@@ -21,7 +21,7 @@ export const getShortlist = async (authId) => {
 
 export const addToShortlist = async (authId, schoolId) => {
   try {
-    const response = await axiosInstance.post('/users/shortlist', { authId, schoolId });
+    const response = await apiClient.post('/api/users/shortlist', { authId, schoolId });
     return response.data;
   } catch (error) {
     console.error("Error adding to shortlist:", error.response?.data || error.message);
@@ -31,7 +31,7 @@ export const addToShortlist = async (authId, schoolId) => {
 
 export const removeFromShortlist = async (authId, schoolId) => {
   try {
-    const response = await axiosInstance.post('/users/shortlist/remove', { authId, schoolId });
+    const response = await apiClient.post('/api/users/shortlist/remove', { authId, schoolId });
     return response.data;
   } catch (error) {
     console.error("Error removing from shortlist:", error.response?.data || error.message);
@@ -41,7 +41,7 @@ export const removeFromShortlist = async (authId, schoolId) => {
 
 export const getShortlistCount = async (authId) => {
   try {
-    const response = await axiosInstance.get(`/users/shortlist/count/${authId}`);
+    const response = await apiClient.get(`/api/users/shortlist/count/${authId}`);
     return response.data;
   } catch (error) {
     console.error("Error fetching shortlist count:", error.response?.data || error.message);
@@ -56,7 +56,7 @@ export const getShortlistCount = async (authId) => {
 // Fetch user profile by authId
 export const getUserProfile = async (authId) => {
   try {
-    const response = await axiosInstance.get(`/users/${authId}`);
+    const response = await apiClient.get(`/users/${authId}`);
     return response.data;
   } catch (error) {
     console.error("Error fetching user profile:", error.response?.data || error.message);
@@ -67,7 +67,7 @@ export const getUserProfile = async (authId) => {
 // Create student profile
 export const createStudentProfile = async (profileData) => {
   try {
-    const response = await axiosInstance.post('/users/add', profileData);
+    const response = await apiClient.post('/api/users/add', profileData);
     return response.data;
   } catch (error) {
     console.error("Error creating student profile:", error.response?.data || error.message);
@@ -79,7 +79,7 @@ export const createStudentProfile = async (profileData) => {
 export const updateUserProfile = async (authId, profileData) => {
   try {
     // Try with the standard endpoint first
-    const response = await axiosInstance.put(`/users/${authId}`, profileData);
+    const response = await apiClient.put(`/users/${authId}`, profileData);
     return response.data;
   } catch (error) {
     console.error("Error updating profile (standard endpoint):", {
@@ -96,7 +96,7 @@ export const updateUserProfile = async (authId, profileData) => {
     
     // Try with the update endpoint
     try {
-      const response = await axiosInstance.put(`/users/update/${authId}`, profileData);
+      const response = await apiClient.put(`/api/users/update/${authId}`, profileData);
       return response.data;
     } catch (updateError) {
       console.error("Error with update endpoint:", {
@@ -113,7 +113,7 @@ export const updateUserProfile = async (authId, profileData) => {
       
       // As a last resort, try with the full path
       try {
-        const response = await axiosInstance.put(`/api/users/${authId}`, profileData);
+        const response = await apiClient.put(`/api/users/${authId}`, profileData);
         return response.data;
       } catch (finalError) {
         console.error("All update attempts failed:", {
@@ -138,33 +138,34 @@ export const updateUserProfile = async (authId, profileData) => {
 // USER PREFERENCES FUNCTIONS
 // =============================================================================
 
+// USER PREFERENCES FUNCTIONS
 export const getUserPreferences = async (studentId) => {
   try {
-    const response = await axiosInstance.get(`/users/preferences/${studentId}`);
+    const response = await apiClient.get(`/preferences/${studentId}`);
     return response.data;
   } catch (error) {
-    console.error("Error fetching user preferences:", error.response?.data || error.message);
-    throw error.response?.data || error;
+    console.error("Error fetching user preferences:", error);
+    throw error;
   }
 };
 
 export const createUserPreferences = async (preferenceData) => {
   try {
-    const response = await axiosInstance.post('/users/preferences/', preferenceData);
+    const response = await apiClient.post(`/preferences`, preferenceData);
     return response.data;
   } catch (error) {
-    console.error("Error creating user preferences:", error.response?.data || error.message);
-    throw error.response?.data || error;
+    console.error("Error creating user preferences:", error);
+    throw error;
   }
 };
 
 export const updateUserPreferences = async (studentId, preferenceData) => {
   try {
-    const response = await axiosInstance.put(`/users/preferences/${studentId}`, preferenceData);
+    const response = await apiClient.put(`/preferences/${studentId}`, preferenceData);
     return response.data;
   } catch (error) {
-    console.error("Error updating user preferences:", error.response?.data || error.message);
-    throw error.response?.data || error;
+    console.error("Error updating user preferences:", error);
+    throw error;
   }
 };
 
@@ -173,12 +174,12 @@ export const saveUserPreferences = async (studentId, preferenceData) => {
 
   try {
     // Try updating first
-    const response = await axiosInstance.put(`/users/preferences/${studentId}`, preferenceData);
+    const response = await apiClient.put(`/api/users/preferences/${studentId}`, preferenceData);
     return response.data;
   } catch (updateError) {
     // If update fails with 404 or 400, create new preferences
     if (updateError.response?.status === 404 || updateError.response?.status === 400) {
-      const response = await axiosInstance.post('/users/preferences/', { ...preferenceData, studentId });
+      const response = await apiClient.post('/api/users/preferences/', { ...preferenceData, studentId });
       return response.data;
     }
     throw updateError;
@@ -191,7 +192,7 @@ export const saveUserPreferences = async (studentId, preferenceData) => {
 
 export const submitApplication = async (applicationData) => {
   try {
-    const response = await axiosInstance.post('/applications/', applicationData);
+    const response = await apiClient.post('/api/applications/', applicationData);
     return response.data;
   } catch (error) {
     console.error("Error submitting application:", error.response?.data || error.message);
@@ -201,7 +202,7 @@ export const submitApplication = async (applicationData) => {
 
 export const getApplication = async (studId) => {
   try {
-    const response = await axiosInstance.get(`/applications/${studId}`);
+    const response = await apiClient.get(`/api/applications/${studId}`);
     return response.data;
   } catch (error) {
     if (error.response?.status === 404) return { data: null, status: 'Not Found' };
@@ -216,7 +217,7 @@ export const getApplication = async (studId) => {
 
 export const generateStudentPdf = async (studId) => {
   try {
-    const response = await axiosInstance.post(`/users/pdf/generate/${studId}`);
+    const response = await apiClient.post(`/api/users/pdf/generate/${studId}`);
     return response.data;
   } catch (error) {
     console.error("Error generating PDF:", error.response?.data || error.message);
@@ -230,7 +231,7 @@ export const generateStudentPdf = async (studId) => {
 
 export const getFormsByStudent = async (studId) => {
   try {
-    const response = await axiosInstance.get(`/form/student/${studId}`);
+    const response = await apiClient.get(`/api/form/student/${studId}`);
     return response.data;
   } catch (error) {
     console.error("Error fetching forms by student:", error.response?.data || error.message);

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getSchoolsByStatus } from "../api/adminService";
+import { getPublicSchoolsByStatus } from "../api/schoolService";
 import SchoolCard from "../components/SchoolCard";
 import { toast } from "react-toastify";
 import { useAuth } from "../context/AuthContext";
@@ -23,9 +23,15 @@ const SchoolsPage = ({
     const loadSchools = async () => {
       try {
         setLoading(true);
-        const response = await getSchoolsByStatus("accepted");
-        // Make sure to handle the case where response.data.data might not exist
-        setSchools(response.data?.data || []);
+        const response = await getPublicSchoolsByStatus("accepted");
+        // Normalize possible shapes: array, {data: [...]}, {data: {data: [...]}}
+        const raw = response?.data;
+        const normalized = Array.isArray(raw)
+          ? raw
+          : Array.isArray(raw?.data)
+          ? raw.data
+          : [];
+        setSchools(normalized);
       } catch (error) {
         console.error("Error fetching schools:", error);
         const errorMessage =
