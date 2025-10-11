@@ -105,7 +105,8 @@ export const deleteReview = async (reviewId) => {
 // Get all pending reviews
 export const getPendingReviews = async () => {
   try {
-    const response = await apiClient.get('/reviews/admin/pending/all');
+    const response = await apiClient.get('/reviews/pending/all'); // correct
+
     return response.data;
   } catch (error) {
     console.error('Error fetching pending reviews:', error);
