@@ -33,6 +33,11 @@ const PendingSchoolsSection = () => {
   };
 
   const handleAcceptSchool = async (schoolId) => {
+    if (!schoolId) {
+      console.error('School ID is missing');
+      toast.error('School ID is missing');
+      return;
+    }
     try {
       setAcceptingId(schoolId);
       await updateSchoolStatus(schoolId, 'accepted');
@@ -48,6 +53,11 @@ const PendingSchoolsSection = () => {
   };
 
   const handleRejectSchool = async (schoolId) => {
+    if (!schoolId) {
+      console.error('School ID is missing');
+      toast.error('School ID is missing');
+      return;
+    }
     try {
       setRejectingId(schoolId);
       await updateSchoolStatus(schoolId, 'rejected');
@@ -98,7 +108,7 @@ const PendingSchoolsSection = () => {
       
       <div className="divide-y divide-gray-200">
         {pendingSchools.map((school) => (
-          <div key={school._id} className="p-6">
+          <div key={school._id || school.schoolId} className="p-6">
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-center mb-2">
@@ -173,11 +183,11 @@ const PendingSchoolsSection = () => {
               
               <div className="ml-6 flex flex-col space-y-2">
                 <button
-                  onClick={() => handleAcceptSchool(school._id)}
-                  disabled={acceptingId === school._id}
+                  onClick={() => handleAcceptSchool(school._id || school.schoolId)}
+                  disabled={acceptingId === (school._id || school.schoolId)}
                   className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {acceptingId === school._id ? (
+                  {acceptingId === (school._id || school.schoolId) ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                       Accepting...
@@ -190,11 +200,11 @@ const PendingSchoolsSection = () => {
                   )}
                 </button>
                 <button
-                  onClick={() => handleRejectSchool(school._id)}
-                  disabled={rejectingId === school._id}
+                  onClick={() => handleRejectSchool(school._id || school.schoolId)}
+                  disabled={rejectingId === (school._id || school.schoolId)}
                   className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {rejectingId === school._id ? (
+                  {rejectingId === (school._id || school.schoolId) ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                       Rejecting...
@@ -208,7 +218,7 @@ const PendingSchoolsSection = () => {
                 </button>
                 
                 <button
-                  onClick={() => window.open(`/school/${school._id}`, '_blank')}
+                  onClick={() => window.open(`/school/${school._id || school.schoolId}`, '_blank')}
                   className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
                 >
                   View Details
