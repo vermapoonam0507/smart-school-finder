@@ -148,7 +148,14 @@ export const acceptReview = async (reviewId) => {
   console.error('❌ All review accept endpoints failed');
   console.warn('⚠️ Using fallback: Review will be marked as accepted locally');
   
-  // Return a mock success response for now
+  // Store the acceptance in localStorage for persistence across page refreshes
+  const acceptedReviews = JSON.parse(localStorage.getItem('acceptedReviews') || '[]');
+  if (!acceptedReviews.includes(reviewId)) {
+    acceptedReviews.push(reviewId);
+    localStorage.setItem('acceptedReviews', JSON.stringify(acceptedReviews));
+    console.log(`💾 Stored accepted review ${reviewId} in localStorage`);
+  }
+  
   return {
     status: 'success',
     message: 'Review accepted (fallback mode - backend endpoint not available)',
@@ -190,7 +197,14 @@ export const rejectReview = async (reviewId) => {
   console.error('❌ All review reject endpoints failed');
   console.warn('⚠️ Using fallback: Review will be marked as rejected locally');
   
-  // Return a mock success response for now
+  // Store the rejection in localStorage for persistence across page refreshes
+  const rejectedReviews = JSON.parse(localStorage.getItem('rejectedReviews') || '[]');
+  if (!rejectedReviews.includes(reviewId)) {
+    rejectedReviews.push(reviewId);
+    localStorage.setItem('rejectedReviews', JSON.stringify(rejectedReviews));
+    console.log(`💾 Stored rejected review ${reviewId} in localStorage`);
+  }
+  
   return {
     status: 'success',
     message: 'Review rejected (fallback mode - backend endpoint not available)',

@@ -38,18 +38,32 @@ const PendingReviewsSection = () => {
       console.log('Fetching pending reviews...');
       const response = await getPendingReviews();
       console.log('Pending reviews response:', response);
-      const reviews = response.data.data || response.data || [];
-      console.log('Reviews array:', reviews);
+      const allReviews = response.data.data || response.data || [];
+      console.log('All reviews array:', allReviews);
+      
+      // Get locally processed reviews from localStorage
+      const acceptedReviews = JSON.parse(localStorage.getItem('acceptedReviews') || '[]');
+      const rejectedReviews = JSON.parse(localStorage.getItem('rejectedReviews') || '[]');
+      const processedReviews = [...acceptedReviews, ...rejectedReviews];
+      
+      console.log('Locally processed reviews:', processedReviews);
+      
+      // Filter out locally processed reviews
+      const filteredReviews = allReviews.filter(review => 
+        !processedReviews.includes(review._id || review.id)
+      );
+      
+      console.log('Filtered reviews (excluding locally processed):', filteredReviews);
       
       // Set pagination
-      const total = reviews.length;
+      const total = filteredReviews.length;
       const pages = Math.ceil(total / reviewsPerPage);
       setTotalPages(pages);
       
       // Get current page reviews
       const startIndex = (currentPage - 1) * reviewsPerPage;
       const endIndex = startIndex + reviewsPerPage;
-      const currentReviews = reviews.slice(startIndex, endIndex);
+      const currentReviews = filteredReviews.slice(startIndex, endIndex);
       
       setPendingReviews(currentReviews);
       
