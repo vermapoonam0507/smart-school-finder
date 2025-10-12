@@ -1,20 +1,8 @@
 services:
   - type: web
     name: smart-school-finder
-    env: static
+    env: node
     buildCommand: npm install && npm run build
-    staticPublishPath: ./dist
-    headers:
-      - path: /*
-        name: X-Frame-Options
-        value: DENY
-      - path: /*
-        name: X-Content-Type-Options
-        value: nosniff
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
-        headers:
-          - name: Cache-Control
-            value: no-cache
+    startCommand: npm start
+    plan: free
+    region: oregon
