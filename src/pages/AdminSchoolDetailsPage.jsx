@@ -3,7 +3,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { 
   getSchoolById, 
-  updateSchoolStatus,
   getAmenitiesById,
   getActivitiesById,
   getInfrastructureById,
@@ -30,7 +29,6 @@ import {
   Calendar,
   User,
   Clock,
-  XCircle,
   Star,
   Phone,
   Mail,
@@ -60,7 +58,6 @@ const AdminSchoolDetailsPage = () => {
 
   const [school, setSchool] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [processing, setProcessing] = useState(false);
   const [amenities, setAmenities] = useState([]);
   const [activities, setActivities] = useState([]);
   const [infrastructure, setInfrastructure] = useState(null);
@@ -89,6 +86,29 @@ const AdminSchoolDetailsPage = () => {
         console.log('🔍 School data:', schoolData);
         
         if (schoolData) {
+          console.log('🔍 School Data Structure:', schoolData);
+          console.log('🔍 Available Image Fields:', {
+            photos: schoolData.photos,
+            profilePhoto: schoolData.profilePhoto,
+            image: schoolData.image,
+            logo: schoolData.logo,
+            profileImage: schoolData.profileImage,
+            schoolLogo: schoolData.schoolLogo,
+            schoolImage: schoolData.schoolImage,
+            schoolPhoto: schoolData.schoolPhoto,
+            avatar: schoolData.avatar,
+            picture: schoolData.picture,
+            thumbnail: schoolData.thumbnail
+          });
+          console.log('🔍 All school keys containing "image", "photo", "logo", "avatar":', 
+            Object.keys(schoolData).filter(key => 
+              key.toLowerCase().includes('image') || 
+              key.toLowerCase().includes('photo') || 
+              key.toLowerCase().includes('logo') || 
+              key.toLowerCase().includes('avatar') ||
+              key.toLowerCase().includes('picture')
+            )
+          );
           setSchool(schoolData);
         } else {
           console.warn(`No school data returned for ID: ${schoolId}`);
@@ -151,53 +171,197 @@ const AdminSchoolDetailsPage = () => {
           internationalRes
         ] = await Promise.allSettled([
           getInfrastructureById(schoolId).catch(err => {
-            console.warn('Infrastructure fetch failed:', err);
-            return null;
+            if (err.response?.status === 404) {
+              console.log('ℹ️ Infrastructure details not added for this school yet');
+            } else {
+              console.warn('Infrastructure fetch failed:', err.response?.status);
+            }
+            return { data: null };
           }),
           getFeesAndScholarshipsById(schoolId).catch(err => {
-            console.warn('Fees fetch failed:', err);
-            return null;
+            if (err.response?.status === 404) {
+              console.log('ℹ️ Fees details not added for this school yet');
+            } else {
+              console.warn('Fees fetch failed:', err.response?.status);
+            }
+            return { data: null };
           }),
           getAcademicsById(schoolId).catch(err => {
-            console.warn('Academics fetch failed:', err);
-            return null;
+            if (err.response?.status === 404) {
+              console.log('ℹ️ Academics details not added for this school yet');
+            } else {
+              console.warn('Academics fetch failed:', err.response?.status);
+            }
+            return { data: null };
           }),
           getOtherDetailsById(schoolId).catch(err => {
-            console.warn('Other details fetch failed:', err);
-            return null;
+            if (err.response?.status === 404) {
+              console.log('ℹ️ Other details not added for this school yet');
+            } else {
+              console.warn('Other details fetch failed:', err.response?.status);
+            }
+            return { data: null };
           }),
           getFacultyById(schoolId).catch(err => {
-            console.warn('Faculty fetch failed:', err);
-            return null;
+            if (err.response?.status === 404) {
+              console.log('ℹ️ Faculty details not added for this school yet');
+            } else {
+              console.warn('Faculty fetch failed:', err.response?.status);
+            }
+            return { data: null };
           }),
           getAdmissionTimelineById(schoolId).catch(err => {
-            console.warn('Admission timeline fetch failed:', err);
-            return null;
+            if (err.response?.status === 404) {
+              console.log('ℹ️ Admission timeline not added for this school yet');
+            } else {
+              console.warn('Admission timeline fetch failed:', err.response?.status);
+            }
+            return { data: null };
           }),
           getTechnologyAdoptionById(schoolId).catch(err => {
-            console.warn('Technology adoption fetch failed:', err);
-            return null;
+            if (err.response?.status === 404) {
+              console.log('ℹ️ Technology adoption details not added for this school yet');
+            } else {
+              console.warn('Technology adoption fetch failed:', err.response?.status);
+            }
+            return { data: null };
           }),
           getSafetyAndSecurityById(schoolId).catch(err => {
-            console.warn('Safety and security fetch failed:', err);
-            return null;
+            if (err.response?.status === 404) {
+              console.log('ℹ️ Safety & security details not added for this school yet');
+            } else {
+              console.warn('Safety and security fetch failed:', err.response?.status);
+            }
+            return { data: null };
           }),
           getInternationalExposureById(schoolId).catch(err => {
-            console.warn('International exposure fetch failed:', err);
-            return null;
+            if (err.response?.status === 404) {
+              console.log('ℹ️ International exposure details not added for this school yet');
+            } else {
+              console.warn('International exposure fetch failed:', err.response?.status);
+            }
+            return { data: null };
           })
         ]);
 
         // Extract data safely with null fallbacks
-        setInfrastructure(infrastructureRes?.value?.data?.data || infrastructureRes?.value?.data || null);
-        setFeesAndScholarships(feesRes?.value?.data?.data || feesRes?.value?.data || null);
-        setAcademics(academicsRes?.value?.data?.data || academicsRes?.value?.data || null);
-        setOtherDetails(otherDetailsRes?.value?.data?.data || otherDetailsRes?.value?.data || null);
-        setFaculty(facultyRes?.value?.data?.data || facultyRes?.value?.data || null);
-        setAdmissionTimeline(admissionRes?.value?.data?.data || admissionRes?.value?.data || null);
-        setTechnologyAdoption(technologyRes?.value?.data?.data || technologyRes?.value?.data || null);
-        setSafetyAndSecurity(safetyRes?.value?.data?.data || safetyRes?.value?.data || null);
-        setInternationalExposure(internationalRes?.value?.data?.data || internationalRes?.value?.data || null);
+        const infrastructureData = infrastructureRes?.value?.data?.data || infrastructureRes?.value?.data || null;
+        const feesData = feesRes?.value?.data?.data || feesRes?.value?.data || null;
+        const academicsData = academicsRes?.value?.data?.data || academicsRes?.value?.data || null;
+        const otherDetailsData = otherDetailsRes?.value?.data?.data || otherDetailsRes?.value?.data || null;
+        const facultyData = facultyRes?.value?.data?.data || facultyRes?.value?.data || null;
+        const admissionData = admissionRes?.value?.data?.data || admissionRes?.value?.data || null;
+        const technologyData = technologyRes?.value?.data?.data || technologyRes?.value?.data || null;
+        const safetyData = safetyRes?.value?.data?.data || safetyRes?.value?.data || null;
+        const internationalData = internationalRes?.value?.data?.data || internationalRes?.value?.data || null;
+
+        // Debug logging
+        console.log('🔍 API Response Debug:');
+        console.log('Infrastructure:', infrastructureData);
+        console.log('Fees:', feesData);
+        console.log('Academics:', academicsData);
+        console.log('Admission Timeline:', admissionData);
+        console.log('Safety & Security:', safetyData);
+        console.log('Technology Adoption:', technologyData);
+        console.log('International Exposure:', internationalData);
+        
+        // Log the structure of successful API calls
+        if (technologyData) {
+          console.log('🔍 Technology Adoption structure:', Object.keys(technologyData));
+        }
+        if (internationalData) {
+          console.log('🔍 International Exposure structure:', Object.keys(internationalData));
+        }
+
+        // Check if we have school data with embedded details
+        if (school) {
+          console.log('🔍 Checking school object for embedded data...');
+          console.log('🔍 School object keys:', Object.keys(school));
+          console.log('🔍 Full school object:', school);
+          
+          // Check for any fields that might contain the data we need
+          const allKeys = Object.keys(school);
+          const relevantKeys = allKeys.filter(key => 
+            key.toLowerCase().includes('infrastructure') ||
+            key.toLowerCase().includes('fees') ||
+            key.toLowerCase().includes('academic') ||
+            key.toLowerCase().includes('admission') ||
+            key.toLowerCase().includes('safety') ||
+            key.toLowerCase().includes('security') ||
+            key.toLowerCase().includes('technology') ||
+            key.toLowerCase().includes('international')
+          );
+          console.log('🔍 Relevant keys in school object:', relevantKeys);
+          
+          // Try to extract data from school object if API endpoints failed
+          // Check multiple possible field names for each data type
+          const infrastructureFromSchool = school.infrastructure || school.infrastructureDetails || school.infrastructureData;
+          if (!infrastructureData && infrastructureFromSchool) {
+            console.log('📦 Found infrastructure in school object:', infrastructureFromSchool);
+            setInfrastructure(infrastructureFromSchool);
+          } else {
+            setInfrastructure(infrastructureData);
+          }
+          
+          const feesFromSchool = school.feesAndScholarships || school.fees || school.feesData || school.scholarships;
+          if (!feesData && feesFromSchool) {
+            console.log('📦 Found fees in school object:', feesFromSchool);
+            setFeesAndScholarships(feesFromSchool);
+          } else {
+            setFeesAndScholarships(feesData);
+          }
+          
+          const academicsFromSchool = school.academics || school.academicDetails || school.academicData;
+          if (!academicsData && academicsFromSchool) {
+            console.log('📦 Found academics in school object:', academicsFromSchool);
+            setAcademics(academicsFromSchool);
+          } else {
+            setAcademics(academicsData);
+          }
+          
+          const admissionFromSchool = school.admissionTimeline || school.admissionDetails || school.admissionData || school.admissionProcess;
+          if (!admissionData && admissionFromSchool) {
+            console.log('📦 Found admission timeline in school object:', admissionFromSchool);
+            setAdmissionTimeline(admissionFromSchool);
+          } else {
+            setAdmissionTimeline(admissionData);
+          }
+          
+          const safetyFromSchool = school.safetyAndSecurity || school.safetyDetails || school.safetyData || school.security;
+          if (!safetyData && safetyFromSchool) {
+            console.log('📦 Found safety & security in school object:', safetyFromSchool);
+            setSafetyAndSecurity(safetyFromSchool);
+          } else {
+            setSafetyAndSecurity(safetyData);
+          }
+          
+          const technologyFromSchool = school.technologyAdoption || school.technologyDetails || school.technologyData || school.technology;
+          if (!technologyData && technologyFromSchool) {
+            console.log('📦 Found technology adoption in school object:', technologyFromSchool);
+            setTechnologyAdoption(technologyFromSchool);
+          } else {
+            setTechnologyAdoption(technologyData);
+          }
+          
+          const internationalFromSchool = school.internationalExposure || school.internationalDetails || school.internationalData || school.international;
+          if (!internationalData && internationalFromSchool) {
+            console.log('📦 Found international exposure in school object:', internationalFromSchool);
+            setInternationalExposure(internationalFromSchool);
+          } else {
+            setInternationalExposure(internationalData);
+          }
+        } else {
+          // Fallback to API data
+          setInfrastructure(infrastructureData);
+          setFeesAndScholarships(feesData);
+          setAcademics(academicsData);
+          setOtherDetails(otherDetailsData);
+          setFaculty(facultyData);
+          setAdmissionTimeline(admissionData);
+          setTechnologyAdoption(technologyData);
+          setSafetyAndSecurity(safetyData);
+          setInternationalExposure(internationalData);
+        }
       } catch (e) {
         console.error("Error fetching additional details:", e);
       }
@@ -208,43 +372,6 @@ const AdminSchoolDetailsPage = () => {
     fetchAdditionalDetails();
   }, [schoolId, navigate]);
 
-  const handleAcceptSchool = async () => {
-    if (!schoolId) {
-      toast.error('School ID is missing');
-      return;
-    }
-    
-    try {
-      setProcessing(true);
-      await updateSchoolStatus(schoolId, 'accepted');
-      toast.success('School accepted successfully!');
-      navigate("/admin/dashboard");
-    } catch (error) {
-      console.error('Failed to accept school:', error);
-      toast.error('Failed to accept school');
-    } finally {
-      setProcessing(false);
-    }
-  };
-
-  const handleRejectSchool = async () => {
-    if (!schoolId) {
-      toast.error('School ID is missing');
-      return;
-    }
-    
-    try {
-      setProcessing(true);
-      await updateSchoolStatus(schoolId, 'rejected');
-      toast.success('School rejected successfully!');
-      navigate("/admin/dashboard");
-    } catch (error) {
-      console.error('Failed to reject school:', error);
-      toast.error('Failed to reject school');
-    } finally {
-      setProcessing(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -270,115 +397,106 @@ const AdminSchoolDetailsPage = () => {
   }
 
   return (
-    <div className="bg-gray-50 min-h-screen">
-      {/* Top Header Bar */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <div className="h-10 w-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
-                <Building className="h-6 w-6 text-green-600" />
-              </div>
-              <h1 className="text-xl font-bold text-gray-900">School Information Portal</h1>
-            </div>
-            <div className="flex items-center space-x-3">
-              <button
-                onClick={() => navigate("/admin/dashboard")}
-                className="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors font-medium"
-              >
-                Back to Dashboard
-              </button>
-            </div>
+    <div className="bg-gray-100">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="bg-white shadow-lg rounded-lg p-6 mb-8 relative">
+          <div className="mb-4">
+            <button
+              onClick={() => navigate("/admin/dashboard")}
+              className="inline-flex items-center text-sm text-gray-700 hover:text-indigo-600"
+            >
+              ← Back to Dashboard
+            </button>
           </div>
-        </div>
-      </div>
-
-      {/* Main School Information Section */}
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-          <div className="p-8">
-            <div className="flex flex-col lg:flex-row gap-8">
-              {/* School Image */}
-              <div className="lg:w-1/3">
-                <div className="aspect-video bg-gray-200 rounded-lg overflow-hidden">
-                  {school.photos && school.photos.length > 0 ? (
-                    <img
-                      src={school.photos[0]}
-                      alt={school.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                      <Building className="h-16 w-16 text-gray-400" />
-                    </div>
-                  )}
-                </div>
+          
+          {/* School Header with Profile Photo and Details */}
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-6 mb-6">
+            {/* School Profile Photo */}
+            <div className="flex-shrink-0">
+            <img
+              src={(() => {
+                const imageSources = [
+                  school.photos && school.photos.length > 0 ? school.photos[0] : null,
+                  school.profilePhoto,
+                  school.image,
+                  school.logo,
+                  school.profileImage,
+                  school.schoolLogo,
+                  school.schoolImage,
+                  school.schoolPhoto,
+                  school.avatar,
+                  school.picture,
+                  school.thumbnail
+                ].filter(Boolean);
+                
+                const selectedSource = imageSources[0] || "/api/placeholder/200/200";
+                console.log('🖼️ Available image sources:', imageSources);
+                console.log('🖼️ Selected image source:', selectedSource);
+                return selectedSource;
+              })()}
+              alt={`${school.name} profile`}
+              className="w-32 h-32 md:w-40 md:h-40 rounded-lg object-cover border-4 border-gray-200 shadow-lg"
+              onError={(e) => {
+                console.log('🖼️ Image failed to load:', e.target.src);
+                // Prevent infinite loop by checking if we're already on a fallback
+                if (e.target.src.includes('/api/placeholder/') || e.target.src.includes('data:image/svg+xml')) {
+                  console.log('🖼️ Fallback image also failed, using SVG placeholder');
+                  e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjNmNGY2Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5YTNhZiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPk5vIEltYWdlPC90ZXh0Pjwvc3ZnPg==';
+                } else {
+                  console.log('🖼️ Trying fallback to placeholder...');
+                  e.target.src = "/api/placeholder/200/200";
+                }
+              }}
+              onLoad={(e) => {
+                console.log('🖼️ Image loaded successfully:', e.target.src);
+              }}
+            />
+            </div>
+            
+            {/* School Details */}
+            <div className="flex-1 min-w-0">
+              <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-2">
+                {school.name}
+              </h1>
+              <p className="text-lg text-gray-600 flex items-center mb-4">
+                <MapPin size={18} className="mr-2" />
+                {school.address || school.location || "Address not provided"}
+              </p>
+              <p className="text-md text-gray-700 mb-4">{school.description}</p>
+              
+              {/* Contact Information */}
+              <div className="flex flex-wrap gap-4 mb-4">
+                {school.phone && (
+                  <div className="flex items-center text-gray-600 hover:text-indigo-600 transition-colors">
+                    <Phone size={16} className="mr-2" />
+                    <span className="text-sm">{school.phone}</span>
+                  </div>
+                )}
+                {school.email && (
+                  <div className="flex items-center text-gray-600 hover:text-indigo-600 transition-colors">
+                    <Mail size={16} className="mr-2" />
+                    <span className="text-sm">{school.email}</span>
+                  </div>
+                )}
+                {school.website && (
+                  <div className="flex items-center text-gray-600 hover:text-indigo-600 transition-colors">
+                    <Globe size={16} className="mr-2" />
+                    <a 
+                      href={school.website} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-sm hover:underline"
+                    >
+                      {school.website}
+                    </a>
+                  </div>
+                )}
               </div>
-
-              {/* School Details */}
-              <div className="lg:w-2/3">
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                      {school.name}
-                    </h1>
-                    <div className="flex items-center mb-4">
-                      <div className="bg-green-500 text-white px-3 py-1 rounded-full text-sm font-medium mr-3">
-                        85/100
-                      </div>
-                      <span className="text-sm text-gray-600">Excellent</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Location */}
-                <div className="flex items-center text-gray-600 mb-4">
-                  <MapPin className="h-4 w-4 mr-2" />
-                  <span>{school.address || school.location || "Address not provided"}</span>
-                </div>
-
-                {/* Rating and Establishment */}
-                <div className="flex items-center mb-6">
-                  <div className="flex items-center mr-4">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <Star
-                        key={star}
-                        size={16}
-                        className={`${
-                          star <= 4 ? 'text-yellow-400 fill-current' : 'text-gray-300'
-                        }`}
-                      />
-                    ))}
-                  </div>
-                  <span className="text-sm text-gray-600">
-                    Established {school.establishedYear || '1995'}
-                  </span>
-                </div>
-
-                {/* Contact Information */}
-                <div className="space-y-3 mb-6">
-                  {school.phone && (
-                    <div className="flex items-center text-gray-600">
-                      <Phone className="h-4 w-4 mr-3" />
-                      <span>{school.phone}</span>
-                    </div>
-                  )}
-                  {school.email && (
-                    <div className="flex items-center text-gray-600">
-                      <Mail className="h-4 w-4 mr-3" />
-                      <span>{school.email}</span>
-                    </div>
-                  )}
-                  {school.website && (
-                    <div className="flex items-center text-gray-600">
-                      <Globe className="h-4 w-4 mr-3" />
-                      <span>{school.website}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Social Media Links */}
-                <div className="flex items-center space-x-3">
+              
+              {/* Social Media Links */}
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-gray-500">Follow us:</span>
+                <div className="flex gap-2">
                   <div className="h-8 w-8 bg-blue-600 rounded-full flex items-center justify-center">
                     <Facebook className="h-4 w-4 text-white" />
                   </div>
@@ -392,198 +510,209 @@ const AdminSchoolDetailsPage = () => {
                     <Linkedin className="h-4 w-4 text-white" />
                   </div>
                 </div>
-
-                {/* Admin Action Buttons */}
-                <div className="mt-6 flex flex-wrap gap-3">
-                  <a
-                    href={school.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors font-medium"
-                  >
-                    Visit Website
-                  </a>
-                  {school.status === 'pending' && (
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleStatusUpdate('accepted')}
-                        disabled={processing}
-                        className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50"
-                      >
-                        {processing ? 'Processing...' : 'Accept'}
-                      </button>
-                      <button
-                        onClick={() => handleStatusUpdate('rejected')}
-                        disabled={processing}
-                        className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors font-medium disabled:opacity-50"
-                      >
-                        {processing ? 'Processing...' : 'Reject'}
-                      </button>
-                    </div>
-                  )}
-                </div>
               </div>
             </div>
           </div>
-        </div>
-
-        {/* Basic Information Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          <InfoBox
-            icon={<Building size={20} />}
-            label="School Type"
-            value={school.schoolType}
-          />
-          <InfoBox
-            icon={<BookOpen size={20} />}
-            label="Board"
-            value={school.board}
-          />
-          <InfoBox
-            icon={<Users size={20} />}
-            label="Curriculum"
-            value={school.curriculum}
-          />
-          <InfoBox
-            icon={<Calendar size={20} />}
-            label="Established Year"
-            value={school.establishedYear}
-          />
-          <InfoBox
-            icon={<User size={20} />}
-            label="Principal"
-            value={school.principalName}
-          />
-          <InfoBox
-            icon={<Sun size={20} />}
-            label="Gender Type"
-            value={school.genderType}
-          />
-        </div>
-
-        {/* Contact Information */}
-        <div className="bg-white shadow-lg rounded-lg p-6 mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-            <MapPin size={24} className="mr-2" />
-            Contact Information
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="text-sm font-medium text-gray-500">Email</label>
-              <p className="text-gray-900">{school.email || "N/A"}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-500">Phone</label>
-              <p className="text-gray-900">{school.phone || "N/A"}</p>
-            </div>
-            <div className="md:col-span-2">
-              <label className="text-sm font-medium text-gray-500">Address</label>
-              <p className="text-gray-900">{school.address || "N/A"}</p>
-            </div>
-            {school.website && (
-              <div className="md:col-span-2">
-                <label className="text-sm font-medium text-gray-500">Website</label>
-                <p className="text-gray-900">
-                  <a 
-                    href={school.website} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:text-blue-800"
-                  >
-                    {school.website}
-                  </a>
-                </p>
-              </div>
-            )}
+          
+          <div className="mt-6 flex flex-wrap gap-3">
+            <a
+              href={school.website}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+            >
+              Visit Website
+            </a>
           </div>
         </div>
 
-        {/* Additional Information */}
-        {(school.board || school.schoolType || school.curriculum) && (
-          <div className="bg-white shadow-lg rounded-lg p-6 mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-              <Award size={24} className="mr-2" />
-              School Information
+        <div className="bg-white shadow-lg rounded-lg p-6">
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold text-gray-800 mb-6 border-b pb-3">
+              Basic Information
             </h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              <InfoBox
+                icon={<Award size={16} />}
+                label="Board"
+                value={school.board}
+              />
+              <InfoBox
+                icon={<Users size={16} />}
+                label="Gender Type"
+                value={school.genderType}
+              />
+              <InfoBox
+                icon={<Building size={16} />}
+                label="School Mode"
+                value={school.schoolMode}
+              />
+              <InfoBox
+                icon={<BookOpen size={16} />}
+                label="Classes Upto"
+                value={school.upto}
+              />
+              <InfoBox
+                icon={<Sun size={16} />}
+                label="Shifts"
+                value={school.shifts}
+              />
+            </div>
+          </div>
+
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-6 border-b pb-3">
+              Amenities & Activities
+            </h2>
+            
+            {/* Summary Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+              
+              {/* Amenities Count Card */}
+              <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm text-center">
+                <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <CheckCircle size={16} className="text-purple-600" />
+                </div>
+                <div className="text-2xl font-bold text-purple-600 mb-1">
+                  {amenities.length}
+                </div>
+                <div className="text-sm text-gray-600">Amenities</div>
+              </div>
+
+              {/* Activities Count Card */}
+              <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm text-center">
+                <div className="w-8 h-8 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <Award size={16} className="text-teal-600" />
+                </div>
+                <div className="text-2xl font-bold text-teal-600 mb-1">
+                  {activities.length}
+                </div>
+                <div className="text-sm text-gray-600">Activities</div>
+              </div>
+
+              {/* Total Facilities Card */}
+              <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm text-center">
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <Building size={16} className="text-blue-600" />
+                </div>
+                <div className="text-2xl font-bold text-blue-600 mb-1">
+                  {amenities.length + activities.length}
+                </div>
+                <div className="text-sm text-gray-600">Total Facilities</div>
+              </div>
+
+              {/* Available Services Card */}
+              <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm text-center">
+                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <Sun size={16} className="text-green-600" />
+                </div>
+                <div className="text-2xl font-bold text-green-600 mb-1">
+                  {amenities.length > 0 && activities.length > 0 ? '100%' : amenities.length > 0 || activities.length > 0 ? '50%' : '0%'}
+                </div>
+                <div className="text-sm text-gray-600">Services Available</div>
+              </div>
+            </div>
+
+            {/* Detailed Sections */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {school.board && (
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Board</label>
-                  <p className="text-gray-900">{school.board}</p>
-                </div>
-              )}
-              {school.schoolType && (
-                <div>
-                  <label className="text-sm font-medium text-gray-500">School Type</label>
-                  <p className="text-gray-900">{school.schoolType}</p>
-                </div>
-              )}
-              {school.curriculum && (
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Curriculum</label>
-                  <p className="text-gray-900">{school.curriculum}</p>
-                </div>
-              )}
-              {school.genderType && (
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Gender Type</label>
-                  <p className="text-gray-900">{school.genderType}</p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+              
+              {/* Amenities Section */}
+              <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Available Amenities</h3>
+                {amenities.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    {amenities.map((amenity, index) => (
+                      <div key={index} className="flex items-center">
+                        <CheckCircle size={14} className="text-green-500 mr-2 flex-shrink-0" />
+                        <span className="text-sm text-gray-700">{typeof amenity === 'object' ? amenity.name : amenity}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-sm">No amenities information available</p>
+                )}
+              </div>
 
-        {/* Description */}
-        {school.description && (
-          <div className="bg-white shadow-lg rounded-lg p-6 mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Description</h2>
-            <p className="text-gray-700 leading-relaxed">{school.description}</p>
-          </div>
-        )}
+              {/* Activities Section */}
+              <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Available Activities</h3>
+                {activities.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    {activities.map((activity, index) => (
+                      <div key={index} className="flex items-center">
+                        <Award size={14} className="text-blue-500 mr-2 flex-shrink-0" />
+                        <span className="text-sm text-gray-700">{typeof activity === 'object' ? activity.name : activity}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-sm">No activities information available</p>
+                )}
+              </div>
+            </div>
 
-        {/* Amenities & Activities Section */}
-        <div className="bg-white shadow-lg rounded-lg p-6 mb-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6 border-b pb-3">
-            Amenities & Activities
-          </h2>
-          {amenities.length > 0 || activities.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {amenities.map((amenity) => (
-                <span
-                  key={amenity}
-                  className="bg-purple-100 text-purple-800 text-sm font-medium px-3 py-1 rounded-full flex items-center"
-                >
-                  <CheckCircle size={14} className="mr-1.5" />
-                  {amenity}
-                </span>
-              ))}
-              {activities.map((activity) => (
-                <span
-                  key={activity}
-                  className="bg-teal-100 text-teal-800 text-sm font-medium px-3 py-1 rounded-full flex items-center"
-                >
-                  <CheckCircle size={14} className="mr-1.5" />
-                  {activity}
-                </span>
-              ))}
-            </div>
-          ) : (
-            <div className="text-gray-500 text-center py-8">
-              <p>No amenities or activities information available.</p>
-            </div>
-          )}
+          </div>
         </div>
 
         {/* Infrastructure Section */}
         {infrastructure && (
-          <div className="bg-white shadow-lg rounded-lg p-6 mb-8">
+          <div className="bg-white shadow-lg rounded-lg p-6">
             <h2 className="text-2xl font-bold text-gray-800 mb-6 border-b pb-3">
               🏢 Infrastructure
             </h2>
+            
+            {/* Infrastructure Summary Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+              
+              {/* Labs Card */}
+              <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm text-center">
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <Building size={16} className="text-blue-600" />
+                </div>
+                <div className="text-2xl font-bold text-blue-600 mb-1">
+                  {infrastructure.labs ? infrastructure.labs.length : 0}
+                </div>
+                <div className="text-sm text-gray-600">Laboratories</div>
+              </div>
+
+              {/* Sports Card */}
+              <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm text-center">
+                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <Sun size={16} className="text-green-600" />
+                </div>
+                <div className="text-2xl font-bold text-green-600 mb-1">
+                  {infrastructure.sportsGrounds ? infrastructure.sportsGrounds.length : 0}
+                </div>
+                <div className="text-sm text-gray-600">Sports Facilities</div>
+              </div>
+
+              {/* Library Card */}
+              <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm text-center">
+                <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <BookOpen size={16} className="text-purple-600" />
+                </div>
+                <div className="text-2xl font-bold text-purple-600 mb-1">
+                  {infrastructure.libraryBooks ? (infrastructure.libraryBooks / 1000).toFixed(1) + 'K' : '0'}
+                </div>
+                <div className="text-sm text-gray-600">Books</div>
+              </div>
+
+              {/* Smart Classrooms Card */}
+              <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm text-center">
+                <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <Award size={16} className="text-indigo-600" />
+                </div>
+                <div className="text-2xl font-bold text-indigo-600 mb-1">
+                  {infrastructure.smartClassrooms || 0}
+                </div>
+                <div className="text-sm text-gray-600">Smart Classrooms</div>
+              </div>
+            </div>
+
+            {/* Detailed Infrastructure Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {infrastructure.labs && infrastructure.labs.length > 0 && (
-                <div>
+                <div className="bg-gray-50 p-4 rounded-lg">
                   <h3 className="text-lg font-semibold text-gray-700 mb-3">Laboratories</h3>
                   <div className="flex flex-wrap gap-2">
                     {infrastructure.labs.map((lab, index) => (
@@ -595,7 +724,7 @@ const AdminSchoolDetailsPage = () => {
                 </div>
               )}
               {infrastructure.sportsGrounds && infrastructure.sportsGrounds.length > 0 && (
-                <div>
+                <div className="bg-gray-50 p-4 rounded-lg">
                   <h3 className="text-lg font-semibold text-gray-700 mb-3">Sports Facilities</h3>
                   <div className="flex flex-wrap gap-2">
                     {infrastructure.sportsGrounds.map((sport, index) => (
@@ -607,13 +736,13 @@ const AdminSchoolDetailsPage = () => {
                 </div>
               )}
               {infrastructure.libraryBooks && (
-                <div>
+                <div className="bg-gray-50 p-4 rounded-lg">
                   <h3 className="text-lg font-semibold text-gray-700 mb-3">Library</h3>
                   <p className="text-gray-600">{infrastructure.libraryBooks.toLocaleString()} books available</p>
                 </div>
               )}
               {infrastructure.smartClassrooms && (
-                <div>
+                <div className="bg-gray-50 p-4 rounded-lg">
                   <h3 className="text-lg font-semibold text-gray-700 mb-3">Smart Classrooms</h3>
                   <p className="text-gray-600">{infrastructure.smartClassrooms} smart classrooms</p>
                 </div>
@@ -624,10 +753,44 @@ const AdminSchoolDetailsPage = () => {
 
         {/* Fees & Affordability Section */}
         {feesAndScholarships && (
-          <div className="bg-white shadow-lg rounded-lg p-6 mb-8">
+          <div className="bg-white shadow-lg rounded-lg p-6">
             <h2 className="text-2xl font-bold text-gray-800 mb-6 border-b pb-3">
               💰 Fees & Affordability
             </h2>
+            
+            {/* Fees Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+              <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm text-center">
+                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <Award size={16} className="text-green-600" />
+                </div>
+                <div className="text-2xl font-bold text-green-600 mb-1">
+                  {feesAndScholarships.scholarships ? feesAndScholarships.scholarships.length : 0}
+                </div>
+                <div className="text-sm text-gray-600">Scholarships</div>
+              </div>
+              
+              <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm text-center">
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <Building size={16} className="text-blue-600" />
+                </div>
+                <div className="text-2xl font-bold text-blue-600 mb-1">
+                  {feesAndScholarships.classFees ? feesAndScholarships.classFees.length : 0}
+                </div>
+                <div className="text-sm text-gray-600">Class Levels</div>
+              </div>
+              
+              <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm text-center">
+                <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <Users size={16} className="text-purple-600" />
+                </div>
+                <div className="text-2xl font-bold text-purple-600 mb-1">
+                  {feesAndScholarships.scholarships && feesAndScholarships.scholarships.length > 0 ? 'Available' : 'N/A'}
+                </div>
+                <div className="text-sm text-gray-600">Financial Aid</div>
+              </div>
+            </div>
+
             {feesAndScholarships.classFees && feesAndScholarships.classFees.length > 0 && (
               <div className="mb-6">
                 <h3 className="text-lg font-semibold text-gray-700 mb-3">Class-wise Fees</h3>
@@ -678,7 +841,7 @@ const AdminSchoolDetailsPage = () => {
 
         {/* Academics Section */}
         {academics && (
-          <div className="bg-white shadow-lg rounded-lg p-6 mb-8">
+          <div className="bg-white shadow-lg rounded-lg p-6">
             <h2 className="text-2xl font-bold text-gray-800 mb-6 border-b pb-3">
               🎓 Academics
             </h2>
@@ -739,7 +902,7 @@ const AdminSchoolDetailsPage = () => {
         )}
 
         {/* Faculty Quality Section */}
-        <div className="bg-white shadow-lg rounded-lg p-6 mb-8">
+        <div className="bg-white shadow-lg rounded-lg p-6">
           <h2 className="text-2xl font-bold text-gray-800 mb-6 border-b pb-3">
             👨‍🏫 Faculty Quality
           </h2>
@@ -818,7 +981,7 @@ const AdminSchoolDetailsPage = () => {
         </div>
 
         {/* Safety & Security Section */}
-        <div className="bg-white shadow-lg rounded-lg p-6 mb-8">
+        <div className="bg-white shadow-lg rounded-lg p-6">
           <h2 className="text-2xl font-bold text-gray-800 mb-6 border-b pb-3">
             🛡️ Safety & Security
           </h2>
@@ -914,57 +1077,188 @@ const AdminSchoolDetailsPage = () => {
             </div>
           ) : (
             <div className="text-gray-500 text-center py-8">
-              <p>No safety & security information available.</p>
+              <div className="bg-gray-50 rounded-lg p-6">
+                <div className="text-gray-400 mb-2">🛡️</div>
+                <p className="text-gray-600 font-medium mb-2">Safety & Security Details</p>
+                <p className="text-gray-500 text-sm">This school hasn't added safety & security information yet.</p>
+              </div>
             </div>
           )}
         </div>
 
-        {/* Admin Actions */}
-        <div className="bg-white shadow-lg rounded-lg p-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Admin Actions</h2>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <button
-              onClick={handleAcceptSchool}
-              disabled={processing}
-              className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {processing ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="h-5 w-5 mr-2" />
-                  Accept School
-                </>
+        {/* Admission Timeline Section */}
+        {admissionTimeline ? (
+          <div className="bg-white shadow-lg rounded-lg p-6">
+            <h2 className="text-2xl font-bold text-gray-800 mb-6 border-b pb-3">
+              📅 Admission Timeline
+            </h2>
+            <div className="space-y-4">
+              {admissionTimeline.applicationStartDate && (
+                <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
+                  <div className="flex items-center">
+                    <Calendar size={20} className="text-blue-600 mr-3" />
+                    <div>
+                      <h3 className="font-semibold text-gray-800">Application Start Date</h3>
+                      <p className="text-sm text-gray-600">When applications open</p>
+                    </div>
+                  </div>
+                  <span className="text-blue-600 font-medium">
+                    {new Date(admissionTimeline.applicationStartDate).toLocaleDateString()}
+                  </span>
+                </div>
               )}
-            </button>
-            <button
-              onClick={handleRejectSchool}
-              disabled={processing}
-              className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {processing ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <XCircle className="h-5 w-5 mr-2" />
-                  Reject School
-                </>
+              
+              {admissionTimeline.applicationEndDate && (
+                <div className="flex items-center justify-between p-4 bg-red-50 rounded-lg">
+                  <div className="flex items-center">
+                    <Calendar size={20} className="text-red-600 mr-3" />
+                    <div>
+                      <h3 className="font-semibold text-gray-800">Application End Date</h3>
+                      <p className="text-sm text-gray-600">Deadline for applications</p>
+                    </div>
+                  </div>
+                  <span className="text-red-600 font-medium">
+                    {new Date(admissionTimeline.applicationEndDate).toLocaleDateString()}
+                  </span>
+                </div>
               )}
-            </button>
-            <button
-              onClick={() => navigate("/admin/dashboard")}
-              className="inline-flex items-center px-6 py-3 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-            >
-              Back to Dashboard
-            </button>
+              
+              {admissionTimeline.examDate && (
+                <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
+                  <div className="flex items-center">
+                    <Calendar size={20} className="text-green-600 mr-3" />
+                    <div>
+                      <h3 className="font-semibold text-gray-800">Exam Date</h3>
+                      <p className="text-sm text-gray-600">Entrance examination date</p>
+                    </div>
+                  </div>
+                  <span className="text-green-600 font-medium">
+                    {new Date(admissionTimeline.examDate).toLocaleDateString()}
+                  </span>
+                </div>
+              )}
+              
+              {admissionTimeline.resultDate && (
+                <div className="flex items-center justify-between p-4 bg-purple-50 rounded-lg">
+                  <div className="flex items-center">
+                    <Calendar size={20} className="text-purple-600 mr-3" />
+                    <div>
+                      <h3 className="font-semibold text-gray-800">Result Date</h3>
+                      <p className="text-sm text-gray-600">When results are announced</p>
+                    </div>
+                  </div>
+                  <span className="text-purple-600 font-medium">
+                    {new Date(admissionTimeline.resultDate).toLocaleDateString()}
+                  </span>
+                </div>
+              )}
+              
+              {admissionTimeline.admissionProcess && (
+                <div className="mt-6">
+                  <h3 className="text-lg font-semibold text-gray-700 mb-3">Admission Process</h3>
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <p className="text-gray-700">{admissionTimeline.admissionProcess}</p>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="bg-white shadow-lg rounded-lg p-6">
+            <h2 className="text-2xl font-bold text-gray-800 mb-6 border-b pb-3">
+              📅 Admission Timeline
+            </h2>
+            <div className="text-gray-500 text-center py-8">
+              <div className="bg-gray-50 rounded-lg p-6">
+                <div className="text-gray-400 mb-2">📅</div>
+                <p className="text-gray-600 font-medium mb-2">Admission Timeline</p>
+                <p className="text-gray-500 text-sm">This school hasn't added admission timeline information yet.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Technology Adoption Section */}
+        {technologyAdoption && (
+          <div className="bg-white shadow-lg rounded-lg p-6">
+            <h2 className="text-2xl font-bold text-gray-800 mb-6 border-b pb-3">
+              💻 Technology Adoption
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {technologyAdoption.smartClassroomsPercentage && (
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-gray-800 mb-2">Smart Classrooms</h3>
+                  <div className="flex items-center justify-between">
+                    <span className="text-2xl font-bold text-blue-600">
+                      {technologyAdoption.smartClassroomsPercentage}%
+                    </span>
+                    <div className="w-16 bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-blue-500 h-2 rounded-full"
+                        style={{ width: `${technologyAdoption.smartClassroomsPercentage}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {technologyAdoption.elearningPlatforms && technologyAdoption.elearningPlatforms.length > 0 && (
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-gray-800 mb-2">E-learning Platforms</h3>
+                  <div className="space-y-2">
+                    {technologyAdoption.elearningPlatforms.map((platform, index) => (
+                      <div key={index} className="flex justify-between items-center">
+                        <span className="text-sm text-gray-700">{platform.platform}</span>
+                        <span className="text-sm font-medium text-green-600">{platform.usagePercentage}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* International Exposure Section */}
+        {internationalExposure && (
+          <div className="bg-white shadow-lg rounded-lg p-6">
+            <h2 className="text-2xl font-bold text-gray-800 mb-6 border-b pb-3">
+              🌍 International Exposure
+            </h2>
+            <div className="space-y-4">
+              {internationalExposure.studentsBenefitingPercentage && (
+                <div className="bg-purple-50 p-4 rounded-lg text-center">
+                  <h3 className="font-semibold text-gray-800 mb-2">Students Benefiting</h3>
+                  <div className="text-3xl font-bold text-purple-600 mb-2">
+                    {internationalExposure.studentsBenefitingPercentage}%
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-3">
+                    <div 
+                      className="bg-purple-500 h-3 rounded-full"
+                      style={{ width: `${internationalExposure.studentsBenefitingPercentage}%` }}
+                    ></div>
+                  </div>
+                </div>
+              )}
+              
+              {internationalExposure.exchangePrograms && internationalExposure.exchangePrograms.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-700 mb-3">Exchange Programs</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {internationalExposure.exchangePrograms.map((program, index) => (
+                      <div key={index} className="bg-blue-50 p-4 rounded-lg">
+                        <h4 className="font-medium text-gray-800">{program.partnerSchool}</h4>
+                        <p className="text-sm text-gray-600">{program.type}</p>
+                        <p className="text-sm text-gray-500">Duration: {program.duration}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );
