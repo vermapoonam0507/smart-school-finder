@@ -67,10 +67,22 @@ const LoginPage = () => {
       
     } catch (error) {
       console.error("Login failed:", error);
-      const errorMessage =
-        error.response?.data?.message ||
-        "Invalid email or password. Please try again.";
-      setServerError(errorMessage);
+      
+      // Handle specific error cases
+      if (error.response?.status === 401) {
+        const errorMessage = error.response?.data?.message || 
+          "Please verify your email before logging in.";
+        
+        setServerError(errorMessage);
+        
+        // Show additional info for email verification
+        toast.info("Please check your email inbox for verification link.");
+      } else {
+        const errorMessage =
+          error.response?.data?.message ||
+          "Invalid email or password. Please try again.";
+        setServerError(errorMessage);
+      }
     } finally {
       setIsLoading(false);
     }

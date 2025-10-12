@@ -25,3 +25,11 @@ export const loginUser = (credentials) => {
 export const verifyEmail = (token) => {
   return apiClient.get(`/auth/verify-email/${token}`);
 };
+
+/**
+ * Function to resend verification email
+ * @param {string} email 
+ */
+export const resendVerificationEmail = (email) => {
+  return apiClient.post('/auth/resend-verification', { email });
+};

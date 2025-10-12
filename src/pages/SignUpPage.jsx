@@ -66,10 +66,27 @@ const SignUpPage = ({ isSchoolSignUp = false }) => {
       navigate("/login");
     } catch (error) {
       console.error("Sign up failed:", error);
-      const errorMessage =
-        error.response?.data?.message ||
-        "An account with this email already exists.";
-      toast.error(errorMessage);
+      
+      // Handle specific error cases
+      if (error.response?.status === 409) {
+        const errorMessage = error.response?.data?.message || 
+          "An account with this email already exists but is not verified.";
+        
+        toast.error(errorMessage);
+        
+        // Show additional info for email verification
+        toast.info("Please check your email inbox for verification link, or try logging in if you've already verified.");
+        
+        // Optionally redirect to login page
+        setTimeout(() => {
+          navigate("/login");
+        }, 3000);
+      } else {
+        const errorMessage =
+          error.response?.data?.message ||
+          "An error occurred during registration. Please try again.";
+        toast.error(errorMessage);
+      }
     } finally {
       setIsLoading(false);
     }
