@@ -200,11 +200,31 @@ export const rejectReview = async (reviewId) => {
 
 // Get school name by ID
 export const getSchoolName = async (schoolId) => {
-  try {
-    const response = await apiClient.get(`/schools/${schoolId}`);
-    return response.data.name || 'Unknown School';
-  } catch (error) {
-    console.error('Error fetching school name:', error);
-    return 'Unknown School';
+  const endpoints = [
+    `/admin/schools/${schoolId}`,
+    `/schools/${schoolId}`,
+    `/api/schools/${schoolId}`
+  ];
+
+  let lastError;
+  for (const endpoint of endpoints) {
+    try {
+      console.log(`🔄 Trying school endpoint: ${endpoint}`);
+      const response = await apiClient.get(endpoint);
+      const schoolData = response.data?.data || response.data;
+      const schoolName = schoolData?.name || schoolData?.schoolName;
+      
+      if (schoolName) {
+        console.log(`✅ Found school name: ${schoolName}`);
+        return schoolName;
+      }
+    } catch (error) {
+      console.log(`❌ Failed with endpoint: ${endpoint} - ${error.response?.status}`);
+      lastError = error;
+    }
   }
+  
+  // If all endpoints failed, return fallback
+  console.warn('⚠️ All school name endpoints failed, using fallback');
+  return `School ID: ${schoolId}`;
 };

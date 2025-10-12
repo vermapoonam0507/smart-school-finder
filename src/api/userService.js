@@ -55,24 +55,73 @@ export const getShortlistCount = async (authId) => {
 
 // Fetch user profile by authId
 export const getUserProfile = async (authId) => {
-  try {
-    const response = await apiClient.get(`/users/${authId}`);
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching user profile:", error.response?.data || error.message);
-    throw error.response?.data || error;
+  const endpoints = [
+    `/users/${authId}`,
+    `/api/users/${authId}`,
+    `/admin/users/${authId}`
+  ];
+
+  let lastError;
+  for (const endpoint of endpoints) {
+    try {
+      console.log(`🔄 Trying user endpoint: ${endpoint}`);
+      const response = await apiClient.get(endpoint);
+      const userData = response.data?.data || response.data;
+      
+      if (userData && (userData._id || userData.id)) {
+        console.log(`✅ Found user profile: ${userData.name || userData.email}`);
+        return { data: userData };
+      }
+    } catch (error) {
+      console.log(`❌ Failed with endpoint: ${endpoint} - ${error.response?.status}`);
+      lastError = error;
+      
+      // If it's a 400 with "Student Not Found", try next endpoint
+      if (error.response?.status === 400 && error.response?.data?.message?.includes('Student Not Found')) {
+        continue;
+      }
+      
+      // If it's not a 404, don't try other endpoints
+      if (error.response?.status !== 404) {
+        break;
+      }
+    }
   }
+  
+  // If all endpoints failed, throw the last error
+  console.warn('⚠️ All user profile endpoints failed');
+  throw lastError?.response?.data || lastError || new Error('User profile not found');
 };
 
 // Create student profile
 export const createStudentProfile = async (profileData) => {
-  try {
-    const response = await apiClient.post('/api/users/add', profileData);
-    return response.data;
-  } catch (error) {
-    console.error("Error creating student profile:", error.response?.data || error.message);
-    throw error.response?.data || error;
+  const endpoints = [
+    '/api/users/add',
+    '/users/add',
+    '/admin/users/add'
+  ];
+
+  let lastError;
+  for (const endpoint of endpoints) {
+    try {
+      console.log(`🔄 Trying create user endpoint: ${endpoint}`);
+      const response = await apiClient.post(endpoint, profileData);
+      console.log(`✅ User profile created successfully`);
+      return response.data;
+    } catch (error) {
+      console.log(`❌ Failed with endpoint: ${endpoint} - ${error.response?.status}`);
+      lastError = error;
+      
+      // If it's not a 404, don't try other endpoints
+      if (error.response?.status !== 404) {
+        break;
+      }
+    }
   }
+  
+  // If all endpoints failed, throw the last error
+  console.error("Error creating student profile:", lastError?.response?.data || lastError?.message);
+  throw lastError?.response?.data || lastError;
 };
 
 // Update student profile by authId

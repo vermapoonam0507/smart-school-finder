@@ -11,7 +11,9 @@
     "preview": "vite preview",
     "clean": "rm -rf dist node_modules/.vite",
     "deps:update": "ncu -u && npm install",
-    "deps:check": "ncu"
+    "deps:check": "ncu",
+    "deploy:build": "npm run clean && npm run build",
+    "deploy:check": "npm run build && npm run preview"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

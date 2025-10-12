@@ -1,0 +1,9 @@
+# Handle client-side routing for React Router
+/*    /index.html   200
+
+# Specific routes for better performance
+/admin/*    /index.html   200
+/school/*   /index.html   200
+/dashboard /index.html   200
+/shortlist /index.html   200
+/compare   /index.html   200

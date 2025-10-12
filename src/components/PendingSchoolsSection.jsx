@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle, Clock, MapPin, Phone, Mail, Calendar, User, XCircle } from 'lucide-react';
+import { CheckCircle, Clock, MapPin, Phone, Mail, Calendar, User, XCircle, Building, BookOpen, Users, Award, Sun, Eye } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { getSchoolsByStatus, updateSchoolStatus } from '../api/adminService';
 
@@ -146,131 +146,132 @@ const PendingSchoolsSection = () => {
           });
           
           return (
-          <div key={schoolId || index} className="p-6">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="flex items-center mb-2">
-                  <h4 className="text-lg font-semibold text-gray-900">{school.name}</h4>
-                  <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                    Pending
-                  </span>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div className="space-y-2">
-                    {school.address && (
-                      <div className="flex items-center text-sm text-gray-600">
-                        <MapPin className="h-4 w-4 mr-2 text-gray-400" />
-                        <span>{school.address}</span>
-                      </div>
-                    )}
-                    {school.phone && (
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Phone className="h-4 w-4 mr-2 text-gray-400" />
-                        <span>{school.phone}</span>
-                      </div>
-                    )}
-                    {school.email && (
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Mail className="h-4 w-4 mr-2 text-gray-400" />
-                        <span>{school.email}</span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="space-y-2">
-                    {school.principalName && (
-                      <div className="flex items-center text-sm text-gray-600">
-                        <User className="h-4 w-4 mr-2 text-gray-400" />
-                        <span>Principal: {school.principalName}</span>
-                      </div>
-                    )}
-                    {school.establishedYear && (
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Calendar className="h-4 w-4 mr-2 text-gray-400" />
-                        <span>Est. {school.establishedYear}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
+        <div key={schoolId || index} className="p-6 border-b border-gray-200 last:border-b-0">
+          {/* School Header */}
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex-1">
+              <div className="flex items-center mb-3">
+                <h4 className="text-xl font-bold text-gray-900">{school.name}</h4>
+                <span className="ml-3 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
+                  <Clock className="h-4 w-4 mr-1" />
+                  Pending Approval
+                </span>
+              </div>
+            </div>
+          </div>
 
-                {school.description && (
-                  <div className="mb-4">
-                    <p className="text-sm text-gray-700 line-clamp-3">{school.description}</p>
-                  </div>
+          {/* Essential School Information Only */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+            {/* Location */}
+            {school.address && (
+              <div className="flex items-start text-sm">
+                <MapPin className="h-4 w-4 mr-2 text-gray-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <span className="text-gray-500 block">Location</span>
+                  <span className="text-gray-900 font-medium">{school.address}</span>
+                </div>
+              </div>
+            )}
+            
+            {/* Board */}
+            {school.board && (
+              <div className="flex items-center text-sm">
+                <Award className="h-4 w-4 mr-2 text-gray-400" />
+                <div>
+                  <span className="text-gray-500 block">Board</span>
+                  <span className="text-gray-900 font-medium">{school.board}</span>
+                </div>
+              </div>
+            )}
+            
+            {/* Gender */}
+            {school.genderType && (
+              <div className="flex items-center text-sm">
+                <Users className="h-4 w-4 mr-2 text-gray-400" />
+                <div>
+                  <span className="text-gray-500 block">Gender</span>
+                  <span className="text-gray-900 font-medium">{school.genderType}</span>
+                </div>
+              </div>
+            )}
+            
+            {/* Shifts */}
+            {school.shifts && (
+              <div className="flex items-center text-sm">
+                <Clock className="h-4 w-4 mr-2 text-gray-400" />
+                <div>
+                  <span className="text-gray-500 block">Shifts</span>
+                  <span className="text-gray-900 font-medium">{school.shifts}</span>
+                </div>
+              </div>
+            )}
+            
+            {/* School Type */}
+            {school.schoolType && (
+              <div className="flex items-center text-sm">
+                <Building className="h-4 w-4 mr-2 text-gray-400" />
+                <div>
+                  <span className="text-gray-500 block">Type</span>
+                  <span className="text-gray-900 font-medium">{school.schoolType}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+            {/* Admin Actions */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-200">
+              <button
+                onClick={() => handleAcceptSchool(schoolId)}
+                disabled={acceptingId === schoolId}
+                className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {acceptingId === schoolId ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Accepting...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Accept School
+                  </>
                 )}
-
-                <div className="flex flex-wrap gap-2">
-                  {school.board && (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      {school.board}
-                    </span>
-                  )}
-                  {school.schoolType && (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      {school.schoolType}
-                    </span>
-                  )}
-                  {school.curriculum && (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                      {school.curriculum}
-                    </span>
-                  )}
-                </div>
-              </div>
+              </button>
               
-              <div className="ml-6 flex flex-col space-y-2">
-                <button
-                  onClick={() => handleAcceptSchool(schoolId)}
-                  disabled={acceptingId === schoolId}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {acceptingId === schoolId ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Accepting...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Accept School
-                    </>
-                  )}
-                </button>
-                <button
-                  onClick={() => handleRejectSchool(schoolId)}
-                  disabled={rejectingId === schoolId}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {rejectingId === schoolId ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Rejecting...
-                    </>
-                  ) : (
-                    <>
-                      <XCircle className="h-4 w-4 mr-2" />
-                      Reject School
-                    </>
-                  )}
-                </button>
-                
-                <button
-                  onClick={() => {
-                    console.log('🔍 View Details clicked for schoolId:', schoolId);
-                    console.log('🔍 Full school object:', school);
-                    if (!schoolId) {
-                      toast.error('School ID is missing - cannot view details');
-                      return;
-                    }
-                    // Navigate to admin school details page
-                    window.open(`/admin/school/${schoolId}`, '_blank');
-                  }}
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                >
-                  View Details
-                </button>
-              </div>
+              <button
+                onClick={() => handleRejectSchool(schoolId)}
+                disabled={rejectingId === schoolId}
+                className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {rejectingId === schoolId ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Rejecting...
+                  </>
+                ) : (
+                  <>
+                    <XCircle className="h-4 w-4 mr-2" />
+                    Reject School
+                  </>
+                )}
+              </button>
+              
+            <button
+              onClick={() => {
+                console.log('🔍 View Details clicked for schoolId:', schoolId);
+                console.log('🔍 Full school object:', school);
+                if (!schoolId) {
+                  toast.error('School ID is missing - cannot view details');
+                  return;
+                }
+                // Navigate to admin school details page
+                window.open(`/admin/school/${schoolId}`, '_blank');
+              }}
+              className="inline-flex items-center justify-center px-6 py-3 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+            >
+              <Eye className="h-4 w-4 mr-2" />
+              View Complete Details
+            </button>
             </div>
           </div>
           );

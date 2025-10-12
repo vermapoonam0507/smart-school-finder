@@ -37,6 +37,7 @@ const UserDashboard = ({ shortlist, comparisonList, onCompareToggle, onShortlist
         const profileData = profileRes?.data?.data || profileRes?.data;
 
         if (!profileData) {
+          console.log('🔄 User profile not found, creating new profile...');
           const createRes = await createStudentProfile({
             name: currentUser.name || '',
             email: currentUser.email,
@@ -44,9 +45,11 @@ const UserDashboard = ({ shortlist, comparisonList, onCompareToggle, onShortlist
           });
           const createdProfileData = createRes?.data?.data || createRes?.data;
           if (createdProfileData) {
+            console.log('✅ User profile created successfully');
             updateUserContext({ ...currentUser, ...createdProfileData });
           }
         } else if (!currentUser.contactNo) {
+          console.log('✅ User profile found, updating context');
           updateUserContext({ ...currentUser, ...profileData });
         }
 
@@ -68,6 +71,25 @@ const UserDashboard = ({ shortlist, comparisonList, onCompareToggle, onShortlist
         }
       } catch (err) {
         console.error('Error ensuring student profile:', err);
+        
+        // If it's a "Student Not Found" error, try to create the profile
+        if (err?.message?.includes('Student Not Found') || err?.status === 'failed') {
+          console.log('🔄 Student not found, attempting to create profile...');
+          try {
+            const createRes = await createStudentProfile({
+              name: currentUser.name || '',
+              email: currentUser.email,
+              authId: currentUser._id
+            });
+            const createdProfileData = createRes?.data?.data || createRes?.data;
+            if (createdProfileData) {
+              console.log('✅ User profile created after "Student Not Found" error');
+              updateUserContext({ ...currentUser, ...createdProfileData });
+            }
+          } catch (createErr) {
+            console.error('Failed to create user profile after "Student Not Found":', createErr);
+          }
+        }
       }
     };
 
