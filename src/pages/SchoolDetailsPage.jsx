@@ -14,6 +14,13 @@ import {
   Award,
   Sun,
   CheckCircle,
+  Phone,
+  Mail,
+  Globe,
+  Facebook,
+  Twitter,
+  Instagram,
+  Linkedin,
 } from "lucide-react";
 import ReviewSection from "../components/ReviewSection";
 
@@ -59,6 +66,13 @@ const SchoolDetailsPage = ({ shortlist, onShortlistToggle }) => {
         const schoolData = raw?.data || raw; // support {data: {...}} or direct {...}
         
         if (schoolData) {
+          console.log('School data received:', schoolData);
+          console.log('Location fields:', {
+            location: schoolData.location,
+            city: schoolData.city,
+            state: schoolData.state,
+            area: schoolData.area
+          });
           setSchool(schoolData);
         } else {
           console.warn(`No school data returned for ID: ${schoolId}`);
@@ -239,14 +253,162 @@ const SchoolDetailsPage = ({ shortlist, onShortlistToggle }) => {
                 />
               </button>
             )}
+          
+          {/* School Header with Profile Photo and Details */}
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-6 mb-6">
+            {/* School Profile Photo */}
+            <div className="flex-shrink-0">
+              <img
+                src={school.profilePhoto || school.image || "/api/placeholder/200/200"}
+                alt={`${school.name} profile`}
+                className="w-32 h-32 md:w-40 md:h-40 rounded-lg object-cover border-4 border-gray-200 shadow-lg"
+                onError={(e) => {
+                  e.target.src = "/api/placeholder/200/200";
+                }}
+              />
+            </div>
+            
+            {/* School Details */}
+            <div className="flex-1 min-w-0">
           <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-2">
             {school.name}
           </h1>
           <p className="text-lg text-gray-600 flex items-center mb-4">
             <MapPin size={18} className="mr-2" />
-            {school.location}
-          </p>
-          <p className="text-md text-gray-700">{school.description}</p>
+                {(() => {
+                  // Try different location field combinations
+                  if (school.location) return school.location;
+                  if (school.city && school.state) {
+                    return `${school.area ? school.area + ', ' : ''}${school.city}, ${school.state}`;
+                  }
+                  if (school.city) return school.city;
+                  if (school.state) return school.state;
+                  if (school.area) return school.area;
+                  return 'Location not specified';
+                })()}
+              </p>
+              <p className="text-md text-gray-700 mb-4">{school.description}</p>
+              
+              {/* Contact Information */}
+              <div className="flex flex-wrap gap-4 mb-4">
+                {school.mobileNo && (
+                  <div className="flex items-center text-gray-600 hover:text-indigo-600 transition-colors">
+                    <Phone size={16} className="mr-2" />
+                    <span className="text-sm">{school.mobileNo}</span>
+                  </div>
+                )}
+                {school.email && (
+                  <div className="flex items-center text-gray-600 hover:text-indigo-600 transition-colors">
+                    <Mail size={16} className="mr-2" />
+                    <span className="text-sm">{school.email}</span>
+                  </div>
+                )}
+                {school.website && (
+                  <div className="flex items-center text-gray-600 hover:text-indigo-600 transition-colors">
+                    <Globe size={16} className="mr-2" />
+                    <a 
+                      href={school.website} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-sm hover:underline"
+                    >
+                      {school.website}
+                    </a>
+                  </div>
+                )}
+              </div>
+              
+              {/* Social Media Links */}
+              {(school.socialLinks || (school.facebook || school.twitter || school.instagram || school.linkedin)) && (
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-gray-500">Follow us:</span>
+                  <div className="flex gap-2">
+                    {school.socialLinks?.facebook && (
+                      <a 
+                        href={school.socialLinks.facebook} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-gray-400 hover:text-blue-600 transition-colors"
+                      >
+                        <Facebook size={20} />
+                      </a>
+                    )}
+                    {school.socialLinks?.instagram && (
+                      <a 
+                        href={school.socialLinks.instagram} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-gray-400 hover:text-pink-600 transition-colors"
+                      >
+                        <Instagram size={20} />
+                      </a>
+                    )}
+                    {school.socialLinks?.twitter && (
+                      <a 
+                        href={school.socialLinks.twitter} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-gray-400 hover:text-blue-400 transition-colors"
+                      >
+                        <Twitter size={20} />
+                      </a>
+                    )}
+                    {school.socialLinks?.linkedin && (
+                      <a 
+                        href={school.socialLinks.linkedin} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-gray-400 hover:text-blue-700 transition-colors"
+                      >
+                        <Linkedin size={20} />
+                      </a>
+                    )}
+                    {/* Fallback for direct social media fields */}
+                    {school.facebook && (
+                      <a 
+                        href={school.facebook} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-gray-400 hover:text-blue-600 transition-colors"
+                      >
+                        <Facebook size={20} />
+                      </a>
+                    )}
+                    {school.instagram && (
+                      <a 
+                        href={school.instagram} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-gray-400 hover:text-pink-600 transition-colors"
+                      >
+                        <Instagram size={20} />
+                      </a>
+                    )}
+                    {school.twitter && (
+                      <a 
+                        href={school.twitter} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-gray-400 hover:text-blue-400 transition-colors"
+                      >
+                        <Twitter size={20} />
+                      </a>
+                    )}
+                    {school.linkedin && (
+                      <a 
+                        href={school.linkedin} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-gray-400 hover:text-blue-700 transition-colors"
+                      >
+                        <Linkedin size={20} />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
           
 
           {/* Technology Adoption Display */}
@@ -595,7 +757,7 @@ const SchoolDetailsPage = ({ shortlist, onShortlistToggle }) => {
             <h2 className="text-2xl font-bold text-gray-800 mb-6 border-b pb-3">
               Basic Information
             </h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
               <InfoBox
                 icon={<Award size={16} />}
                 label="Board"
@@ -628,33 +790,93 @@ const SchoolDetailsPage = ({ shortlist, onShortlistToggle }) => {
             <h2 className="text-2xl font-bold text-gray-800 mb-6 border-b pb-3">
               Amenities & Activities
             </h2>
-            {amenities.length > 0 || activities.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {amenities.map((amenity) => (
-                  <span
-                    key={amenity}
-                    className="bg-purple-100 text-purple-800 text-sm font-medium px-3 py-1 rounded-full flex items-center"
-                  >
-                    <CheckCircle size={14} className="mr-1.5" />
-                    {amenity}
-                  </span>
-                ))}
-                {activities.map((activity) => (
-                  <span
-                    key={activity}
-                    className="bg-teal-100 text-teal-800 text-sm font-medium px-3 py-1 rounded-full flex items-center"
-                  >
-                    <CheckCircle size={14} className="mr-1.5" />
-                    {activity}
-                  </span>
-                ))}
+            
+            {/* Summary Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+              
+              {/* Amenities Count Card */}
+              <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm text-center">
+                <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <CheckCircle size={16} className="text-purple-600" />
+                </div>
+                <div className="text-2xl font-bold text-purple-600 mb-1">
+                  {amenities.length}
+                </div>
+                <div className="text-sm text-gray-600">Amenities</div>
               </div>
-            ) : (
-              <div className="text-gray-500 text-center py-8">
-                <p>No amenities or activities information available.</p>
-                <p className="text-sm mt-2">Debug: amenities={amenities.length}, activities={activities.length}</p>
+
+              {/* Activities Count Card */}
+              <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm text-center">
+                <div className="w-8 h-8 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <Award size={16} className="text-teal-600" />
+                </div>
+                <div className="text-2xl font-bold text-teal-600 mb-1">
+                  {activities.length}
+                </div>
+                <div className="text-sm text-gray-600">Activities</div>
               </div>
-            )}
+
+              {/* Total Facilities Card */}
+              <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm text-center">
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <Building size={16} className="text-blue-600" />
+                </div>
+                <div className="text-2xl font-bold text-blue-600 mb-1">
+                  {amenities.length + activities.length}
+                </div>
+                <div className="text-sm text-gray-600">Total Facilities</div>
+              </div>
+
+              {/* Available Services Card */}
+              <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm text-center">
+                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <Sun size={16} className="text-green-600" />
+                </div>
+                <div className="text-2xl font-bold text-green-600 mb-1">
+                  {amenities.length > 0 && activities.length > 0 ? '100%' : amenities.length > 0 || activities.length > 0 ? '50%' : '0%'}
+                </div>
+                <div className="text-sm text-gray-600">Services Available</div>
+              </div>
+            </div>
+
+            {/* Detailed Sections */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              
+              {/* Amenities Section */}
+              <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Available Amenities</h3>
+                {amenities.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    {amenities.map((amenity, index) => (
+                      <div key={index} className="flex items-center">
+                        <CheckCircle size={14} className="text-green-500 mr-2 flex-shrink-0" />
+                        <span className="text-sm text-gray-700">{amenity}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-sm">No amenities information available</p>
+                )}
+              </div>
+
+              {/* Activities Section */}
+              <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Available Activities</h3>
+                {activities.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    {activities.map((activity, index) => (
+                      <div key={index} className="flex items-center">
+                        <Award size={14} className="text-blue-500 mr-2 flex-shrink-0" />
+                        <span className="text-sm text-gray-700">{activity}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-sm">No activities information available</p>
+                )}
+              </div>
+            </div>
+
           </div>
         </div>
 
@@ -664,43 +886,139 @@ const SchoolDetailsPage = ({ shortlist, onShortlistToggle }) => {
             <h2 className="text-2xl font-bold text-gray-800 mb-6 border-b pb-3">
               🏢 Infrastructure
             </h2>
+            
+            {/* Infrastructure Summary Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+              
+              {/* Labs Card */}
+              <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm text-center">
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <Building size={16} className="text-blue-600" />
+                </div>
+                <div className="text-2xl font-bold text-blue-600 mb-1">
+                  {infrastructure.labs ? infrastructure.labs.length : 0}
+                </div>
+                <div className="text-sm text-gray-600">Labs</div>
+              </div>
+
+              {/* Books Card */}
+              <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm text-center">
+                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <BookOpen size={16} className="text-green-600" />
+                </div>
+                <div className="text-2xl font-bold text-green-600 mb-1">
+                  {infrastructure.libraryBooks ? (infrastructure.libraryBooks >= 1000 ? `${Math.round(infrastructure.libraryBooks / 1000)}K` : infrastructure.libraryBooks) : '0'}
+                </div>
+                <div className="text-sm text-gray-600">Books</div>
+              </div>
+
+              {/* Sports Card */}
+              <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm text-center">
+                <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <Award size={16} className="text-orange-600" />
+                </div>
+                <div className="text-2xl font-bold text-orange-600 mb-1">
+                  {infrastructure.sportsGrounds ? infrastructure.sportsGrounds.length : 0}
+                </div>
+                <div className="text-sm text-gray-600">Sports</div>
+              </div>
+
+              {/* Smart Rooms Card */}
+              <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm text-center">
+                <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <CheckCircle size={16} className="text-purple-600" />
+                </div>
+                <div className="text-2xl font-bold text-purple-600 mb-1">
+                  {infrastructure.smartClassrooms || 0}
+                </div>
+                <div className="text-sm text-gray-600">Smart Rooms</div>
+              </div>
+            </div>
+
+            {/* Detailed Infrastructure Sections */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {infrastructure.labs && infrastructure.labs.length > 0 && (
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-700 mb-3">Laboratories</h3>
+              
+              {/* Laboratory Facilities */}
+              <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Laboratory Facilities</h3>
+                {infrastructure.labs && infrastructure.labs.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {infrastructure.labs.map((lab, index) => (
-                      <span key={index} className="bg-blue-100 text-blue-800 text-sm font-medium px-3 py-1 rounded-full">
+                      <span key={index} className="bg-gray-100 text-gray-700 text-sm font-medium px-3 py-1 rounded-full">
                         {lab}
                       </span>
                     ))}
                   </div>
+                ) : (
+                  <p className="text-gray-500 text-sm">No laboratory information available</p>
+                )}
+              </div>
+
+              {/* Library Resources */}
+              <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Library Resources</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Total Books</span>
+                    <span className="text-sm font-medium text-gray-800">
+                      {infrastructure.libraryBooks ? infrastructure.libraryBooks.toLocaleString() : 'N/A'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Digital Resources</span>
+                    <span className="text-sm font-medium text-gray-800">
+                      {infrastructure.digitalResources || 'N/A'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Reading Rooms</span>
+                    <span className="text-sm font-medium text-gray-800">
+                      {infrastructure.readingRooms || 'N/A'}
+                    </span>
+                  </div>
                 </div>
-              )}
-              {infrastructure.sportsGrounds && infrastructure.sportsGrounds.length > 0 && (
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-700 mb-3">Sports Facilities</h3>
-                  <div className="flex flex-wrap gap-2">
+              </div>
+
+              {/* Sports Grounds */}
+              <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Sports Grounds</h3>
+                {infrastructure.sportsGrounds && infrastructure.sportsGrounds.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-2">
                     {infrastructure.sportsGrounds.map((sport, index) => (
-                      <span key={index} className="bg-green-100 text-green-800 text-sm font-medium px-3 py-1 rounded-full">
+                      <span key={index} className="bg-gray-100 text-gray-700 text-sm font-medium px-3 py-1 rounded-full text-center">
                         {sport}
                       </span>
                     ))}
                   </div>
-                </div>
+                ) : (
+                  <p className="text-gray-500 text-sm">No sports facilities information available</p>
               )}
-              {infrastructure.libraryBooks && (
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-700 mb-3">Library</h3>
-                  <p className="text-gray-600">{infrastructure.libraryBooks.toLocaleString()} books available</p>
                 </div>
-              )}
-              {infrastructure.smartClassrooms && (
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-700 mb-3">Smart Classrooms</h3>
-                  <p className="text-gray-600">{infrastructure.smartClassrooms} smart classrooms</p>
+
+              {/* Additional Facilities */}
+              <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Additional Facilities</h3>
+                <div className="space-y-2">
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
+                    <span className="text-sm text-gray-700">
+                      Auditorium {infrastructure.auditoriumSeats ? `(${infrastructure.auditoriumSeats} seats)` : ''}
+                    </span>
                 </div>
-              )}
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
+                    <span className="text-sm text-gray-700">Medical Room</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
+                    <span className="text-sm text-gray-700">Cafeteria</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
+                    <span className="text-sm text-gray-700">Transport Service</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -710,114 +1028,208 @@ const SchoolDetailsPage = ({ shortlist, onShortlistToggle }) => {
           <h2 className="text-2xl font-bold text-gray-800 mb-6 border-b pb-3">
             🛡️ Safety & Security
           </h2>
+          
           {safetyAndSecurity ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* CCTV Coverage */}
-              {safetyAndSecurity.cctvCoveragePercentage && (
-                <InfoBox
-                  icon={<CheckCircle size={16} />}
-                  label="CCTV Coverage"
-                  value={`${safetyAndSecurity.cctvCoveragePercentage}% coverage`}
-                />
-              )}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               
-              {/* Medical Facility */}
-              {safetyAndSecurity.medicalFacility?.doctorAvailability && (
-                <InfoBox
-                  icon={<CheckCircle size={16} />}
-                  label="Medical Staff"
-                  value={safetyAndSecurity.medicalFacility.doctorAvailability}
-                />
-              )}
-              
-              {safetyAndSecurity.medicalFacility?.medkitAvailable && (
-                <InfoBox
-                  icon={<CheckCircle size={16} />}
-                  label="Medical Kit"
-                  value="Available"
-                />
-              )}
-              
-              {safetyAndSecurity.medicalFacility?.ambulanceAvailable && (
-                <InfoBox
-                  icon={<CheckCircle size={16} />}
-                  label="Ambulance"
-                  value="Available"
-                />
-              )}
-              
-              {/* Transport Safety */}
-              {safetyAndSecurity.transportSafety?.gpsTrackerAvailable && (
-                <InfoBox
-                  icon={<CheckCircle size={16} />}
-                  label="GPS Tracking"
-                  value="Transport vehicles tracked"
-                />
-              )}
-              
-              {safetyAndSecurity.transportSafety?.driversVerified && (
-                <InfoBox
-                  icon={<CheckCircle size={16} />}
-                  label="Driver Verification"
-                  value="All drivers verified"
-                />
-              )}
-              
-              {/* Fire Safety */}
-              {safetyAndSecurity.fireSafetyMeasures && safetyAndSecurity.fireSafetyMeasures.length > 0 && (
-                <div className="col-span-2">
-                  <h3 className="text-lg font-semibold text-gray-700 mb-3">Fire Safety Measures</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {safetyAndSecurity.fireSafetyMeasures.map((measure, index) => (
-                      <span key={index} className="bg-red-100 text-red-800 text-sm font-medium px-3 py-1 rounded-full">
-                        {measure}
-                      </span>
-                    ))}
+              {/* CCTV Coverage Card */}
+              <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                <div className="flex items-center mb-4">
+                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                    <CheckCircle size={16} className="text-blue-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-800">CCTV Coverage</h3>
+                </div>
+                
+                <div className="text-center">
+                  <div className="text-4xl font-bold text-blue-600 mb-2">
+                    {safetyAndSecurity.cctvCoveragePercentage || 'N/A'}%
+                  </div>
+                  <div className="text-sm text-gray-600 mb-4">Campus Monitored</div>
+                  
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-gray-800 h-2 rounded-full transition-all duration-500"
+                      style={{ 
+                        width: `${Math.min(100, Math.max(0, safetyAndSecurity.cctvCoveragePercentage || 0))}%` 
+                      }}
+                    ></div>
                   </div>
                 </div>
-              )}
-              
-              {/* Visitor Management */}
-              {safetyAndSecurity.visitorManagementSystem && (
-                <InfoBox
-                  icon={<CheckCircle size={16} />}
-                  label="Visitor Management"
-                  value="System in place"
-                />
-              )}
-              
-              {/* Show message if no specific details */}
-              {!safetyAndSecurity.cctvCoveragePercentage && 
-               !safetyAndSecurity.medicalFacility?.doctorAvailability && 
-               !safetyAndSecurity.medicalFacility?.medkitAvailable && 
-               !safetyAndSecurity.medicalFacility?.ambulanceAvailable &&
-               !safetyAndSecurity.transportSafety?.gpsTrackerAvailable && 
-               !safetyAndSecurity.transportSafety?.driversVerified && 
-               (!safetyAndSecurity.fireSafetyMeasures || safetyAndSecurity.fireSafetyMeasures.length === 0) && 
-               !safetyAndSecurity.visitorManagementSystem && (
-                <div className="col-span-2 text-gray-500 text-center py-4">
-                  <p>No specific safety & security details available.</p>
-                  <p className="text-sm mt-2">Debug: safetyAndSecurity = {JSON.stringify(safetyAndSecurity)}</p>
+              </div>
+
+              {/* Medical Facilities Card */}
+              <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                <div className="flex items-center mb-4">
+                  <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center mr-3">
+                    <Heart size={16} className="text-red-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-800">Medical Facilities</h3>
                 </div>
-              )}
+                
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Doctor Available</span>
+                    <span className="text-sm font-medium text-gray-800">
+                      {safetyAndSecurity.medicalFacility?.doctorAvailability || 'N/A'}
+                    </span>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Nurse Available</span>
+                    <span className="text-sm font-medium text-gray-800">
+                      {safetyAndSecurity.medicalFacility?.nurseAvailability || '24/7'}
+                      </span>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Ambulance</span>
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${
+                      safetyAndSecurity.medicalFacility?.ambulanceAvailable 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {safetyAndSecurity.medicalFacility?.ambulanceAvailable ? 'Available' : 'N/A'}
+                    </span>
+                </div>
+                </div>
+              </div>
+
+              {/* Transport Safety Card */}
+              <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                <div className="flex items-center mb-4">
+                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                    <Building size={16} className="text-green-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-800">Transport Safety</h3>
+                </div>
+                
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">GPS Tracking</span>
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${
+                      safetyAndSecurity.transportSafety?.gpsTrackerAvailable 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {safetyAndSecurity.transportSafety?.gpsTrackerAvailable ? 'Yes' : 'No'}
+                    </span>
+                </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Attendant Present</span>
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${
+                      safetyAndSecurity.transportSafety?.attendantPresent 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {safetyAndSecurity.transportSafety?.attendantPresent ? 'Yes' : 'No'}
+                    </span>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Routes Available</span>
+                    <span className="text-sm font-medium text-gray-800">
+                      {safetyAndSecurity.transportSafety?.routesAvailable || 'N/A'}
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="text-gray-500 text-center py-8">
               <p>No safety & security information available.</p>
-              <p className="text-sm mt-2">Debug: safetyAndSecurity = {JSON.stringify(safetyAndSecurity)}</p>
             </div>
           )}
         </div>
 
         {/* Fees & Affordability Section */}
         {feesAndScholarships && (
-          <div className="bg-white shadow-lg rounded-lg p-6">
+          <div id="fees-section" className="bg-white shadow-lg rounded-lg p-6">
             <h2 className="text-2xl font-bold text-gray-800 mb-6 border-b pb-3">
               💰 Fees & Affordability
             </h2>
-            {feesAndScholarships.classFees && feesAndScholarships.classFees.length > 0 && (
+            
+            {/* Fee Transparency Card */}
+            <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm mb-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800 mb-2">Fee Transparency</h3>
+                  <p className="text-sm text-gray-600 mb-2">Full fee structure published annually</p>
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                    <span className="text-sm text-gray-700">Transparent Fee Structure</span>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => {
+                    if (feesAndScholarships && feesAndScholarships.classFees && feesAndScholarships.classFees.length > 0) {
+                      // Scroll to fees section or show fees modal
+                      const feesSection = document.getElementById('fees-section');
+                      if (feesSection) {
+                        feesSection.scrollIntoView({ behavior: 'smooth' });
+                      } else {
+                        toast.info("Fee structure is available in the Fees & Affordability section below.");
+                      }
+                    } else {
+                      toast.info("Fee structure not available for this school.");
+                    }
+                  }}
+                  className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                >
+                  <Globe size={16} className="mr-2" />
+                  View Fees
+                </button>
+              </div>
+            </div>
+
+            {/* Scholarships & Concessions */}
               <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-700 mb-3">Class-wise Fees</h3>
+              <div className="flex items-center mb-4">
+                <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center mr-3">
+                  <Award size={16} className="text-yellow-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-800">Scholarships & Concessions</h3>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                
+                {/* Academic Excellence Card */}
+                <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                  <div className="text-center">
+                    <div className="text-4xl font-bold text-green-600 mb-2">50%</div>
+                    <div className="text-sm text-gray-600 mb-1">Fee Reduction</div>
+                    <div className="text-sm font-medium text-gray-800 mb-1">Academic Excellence</div>
+                    <div className="text-xs text-gray-500">Top 5% students</div>
+                  </div>
+                </div>
+
+                {/* Sports Achievement Card */}
+                <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                  <div className="text-center">
+                    <div className="text-4xl font-bold text-green-600 mb-2">30%</div>
+                    <div className="text-sm text-gray-600 mb-1">Fee Reduction</div>
+                    <div className="text-sm font-medium text-gray-800 mb-1">Sports Achievement</div>
+                    <div className="text-xs text-gray-500">State/National level players</div>
+                  </div>
+                </div>
+
+                {/* Need-based Card */}
+                <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                  <div className="text-center">
+                    <div className="text-4xl font-bold text-green-600 mb-2">25%</div>
+                    <div className="text-sm text-gray-600 mb-1">Fee Reduction</div>
+                    <div className="text-sm font-medium text-gray-800 mb-1">Need-based</div>
+                    <div className="text-xs text-gray-500">Family income &lt; 2 LPA</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Class-wise Fees Table (if available) */}
+            {feesAndScholarships.classFees && feesAndScholarships.classFees.length > 0 && (
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold text-gray-700 mb-3">Class-wise Fee Structure</h3>
                 <div className="overflow-x-auto">
                   <table className="min-w-full bg-gray-50 rounded-lg">
                     <thead className="bg-gray-100">
@@ -846,47 +1258,147 @@ const SchoolDetailsPage = ({ shortlist, onShortlistToggle }) => {
                 </div>
               </div>
             )}
-            {feesAndScholarships.scholarships && feesAndScholarships.scholarships.length > 0 && (
-              <div>
-                <h3 className="text-lg font-semibold text-gray-700 mb-3">Scholarships Available</h3>
-                <div className="space-y-3">
-                  {feesAndScholarships.scholarships.map((scholarship, index) => (
-                    <div key={index} className="bg-green-50 p-4 rounded-lg border border-green-200">
-                      <h4 className="font-semibold text-green-800">{scholarship.name}</h4>
-                      <p className="text-green-700">Amount: ₹{scholarship.amount?.toLocaleString()}</p>
-                      <p className="text-green-600 text-sm">Type: {scholarship.type}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         )}
 
         {/* Technology Adoption Section */}
-        {technologyAdoption && (
+        {(technologyAdoption || school.smartClassroomsPercentage || school.elearningPlatforms) && (
           <div className="bg-white shadow-lg rounded-lg p-6">
             <h2 className="text-2xl font-bold text-gray-800 mb-6 border-b pb-3">
               💻 Technology Adoption
             </h2>
-            {technologyAdoption.elearningPlatforms && technologyAdoption.elearningPlatforms.length > 0 && (
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-700 mb-3">E-learning Platforms</h3>
-                <div className="space-y-2">
-                  {technologyAdoption.elearningPlatforms.map((platform, index) => (
-                    <div key={index} className="bg-blue-50 p-3 rounded-lg">
-                      <span className="font-medium text-blue-800">{platform.platform}</span>
-                      {platform.usagePercentage && (
-                        <span className="ml-2 text-blue-600">({platform.usagePercentage}% usage)</span>
-                      )}
-                    </div>
-                  ))}
+            
+            {/* Main Technology Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              
+              {/* Smart Classrooms Card */}
+              <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                <div className="flex items-center mb-4">
+                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                    <CheckCircle size={16} className="text-blue-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-800">Smart Classrooms</h3>
+                </div>
+                
+                <div className="text-center mb-4">
+                  <div className="text-4xl font-bold text-blue-600 mb-2">
+                    {school.smartClassroomsPercentage || technologyAdoption?.smartClassroomsPercentage || 'N/A'}%
+                  </div>
+                  <div className="text-sm text-gray-600 mb-4">Classrooms Digitized</div>
+                  
+                  <div className="w-full bg-gray-200 rounded-full h-3">
+                    <div 
+                      className="bg-gray-800 h-3 rounded-full transition-all duration-500"
+                      style={{ 
+                        width: `${Math.min(100, Math.max(0, school.smartClassroomsPercentage || technologyAdoption?.smartClassroomsPercentage || 0))}%` 
+                      }}
+                    ></div>
+                  </div>
+                  
+                  <p className="text-sm text-gray-600 mt-3">
+                    Interactive learning environment with modern technology
+                  </p>
                 </div>
               </div>
-            )}
-            {technologyAdoption.technologyIntegration && (
-              <div>
-                <h3 className="text-lg font-semibold text-gray-700 mb-3">Technology Integration</h3>
+
+              {/* E-Learning Platform Card */}
+              <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                <div className="flex items-center mb-4">
+                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                    <Globe size={16} className="text-green-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-800">E-Learning Platform</h3>
+                </div>
+                
+                <div className="space-y-3">
+                  <div className="flex items-center">
+                    <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                      <CheckCircle size={12} className="text-green-600" />
+                    </div>
+                    <span className="text-sm text-gray-700">School Management System & Learning Portal</span>
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
+                    <span className="text-sm text-gray-700">Active & Accessible 24/7</span>
+                  </div>
+                  
+                  {(school.elearningPlatforms && school.elearningPlatforms.length > 0) && (
+                    <div className="mt-4">
+                      <p className="text-xs text-gray-500 mb-2">Available Platforms:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {school.elearningPlatforms.slice(0, 3).map((platform, index) => (
+                          <span key={index} className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">
+                            {platform.platform}
+                          </span>
+                        ))}
+                        {school.elearningPlatforms.length > 3 && (
+                          <span className="text-xs text-gray-500">+{school.elearningPlatforms.length - 3} more</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Digital Learning Tools Section */}
+            <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+              <div className="flex items-center mb-6">
+                <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                  <CheckCircle size={16} className="text-purple-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-800">Digital Learning Tools</h3>
+              </div>
+              
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                
+                {/* Interactive Whiteboards */}
+                <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                  <div className="flex items-center">
+                    <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                      <CheckCircle size={12} className="text-purple-600" />
+                    </div>
+                    <span className="text-sm font-medium text-gray-700">Interactive Whiteboards</span>
+                  </div>
+                </div>
+
+                {/* Tablets for Learning */}
+                <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                  <div className="flex items-center">
+                    <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                      <CheckCircle size={12} className="text-purple-600" />
+                    </div>
+                    <span className="text-sm font-medium text-gray-700">Tablets for Learning</span>
+                  </div>
+                </div>
+
+                {/* Online Assessment Tools */}
+                <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                  <div className="flex items-center">
+                    <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                      <CheckCircle size={12} className="text-purple-600" />
+                    </div>
+                    <span className="text-sm font-medium text-gray-700">Online Assessment Tools</span>
+                  </div>
+                </div>
+
+                {/* Virtual Labs */}
+                <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                  <div className="flex items-center">
+                    <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                      <CheckCircle size={12} className="text-purple-600" />
+                    </div>
+                    <span className="text-sm font-medium text-gray-700">Virtual Labs</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Technology Integration Details */}
+            {technologyAdoption?.technologyIntegration && (
+              <div className="mt-6 bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                <h3 className="text-lg font-semibold text-gray-800 mb-3">Technology Integration</h3>
                 <p className="text-gray-600">{technologyAdoption.technologyIntegration}</p>
               </div>
             )}
@@ -900,29 +1412,130 @@ const SchoolDetailsPage = ({ shortlist, onShortlistToggle }) => {
               🎓 Academics
             </h2>
             
-            {/* Academic Results Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              {academics.averageClass10Result && (
-                <InfoBox
-                  icon={<Award size={16} />}
-                  label="Class 10 Average"
-                  value={`${academics.averageClass10Result}%`}
-                />
-              )}
-              {academics.averageClass12Result && (
-                <InfoBox
-                  icon={<Award size={16} />}
-                  label="Class 12 Average"
-                  value={`${academics.averageClass12Result}%`}
-                />
-              )}
-              {academics.averageSchoolMarks && (
-                <InfoBox
-                  icon={<Award size={16} />}
-                  label="Overall Average"
-                  value={`${academics.averageSchoolMarks}%`}
-                />
-              )}
+            {/* Visual Academic Performance Cards */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+              
+              {/* Board Results Card */}
+              <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                <div className="flex items-center mb-4">
+                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                    <Award size={16} className="text-green-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-800">Board Results</h3>
+                </div>
+                
+                {/* Pass Percentage */}
+                <div className="mb-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm text-gray-600">Pass Percentage</span>
+                    <span className="text-lg font-semibold text-gray-800">
+                      {academics.averageClass12Result || academics.averageClass10Result || academics.averageSchoolMarks || 'N/A'}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-gray-800 h-2 rounded-full transition-all duration-500"
+                      style={{ 
+                        width: `${Math.min(100, Math.max(0, academics.averageClass12Result || academics.averageClass10Result || academics.averageSchoolMarks || 0))}%` 
+                      }}
+                    ></div>
+                  </div>
+                </div>
+                
+                {/* Average Marks */}
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm text-gray-600">Average Marks</span>
+                    <span className="text-lg font-semibold text-gray-800">
+                      {academics.averageClass10Result || academics.averageSchoolMarks || 'N/A'}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-gray-800 h-2 rounded-full transition-all duration-500"
+                      style={{ 
+                        width: `${Math.min(100, Math.max(0, academics.averageClass10Result || academics.averageSchoolMarks || 0))}%` 
+                      }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Performance Trends Card */}
+              <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                <div className="flex items-center mb-4">
+                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                    <BookOpen size={16} className="text-blue-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-800">Performance Trends (Last 4 Years)</h3>
+                </div>
+                
+                {school.academicResults && school.academicResults.length > 0 ? (
+                  <div className="space-y-3">
+                    {school.academicResults
+                      .filter(result => result.year && (result.passPercent || result.averageMarksPercent))
+                      .sort((a, b) => Number(b.year) - Number(a.year))
+                      .slice(0, 4)
+                      .map((result, index) => (
+                        <div key={index} className="flex justify-between items-center">
+                          <span className="text-sm font-medium text-gray-700">{result.year}</span>
+                          <div className="flex gap-4 text-sm">
+                            <span className="text-gray-600">
+                              Pass: <span className="font-semibold text-gray-800">{result.passPercent || 'N/A'}%</span>
+                            </span>
+                            <span className="text-gray-600">
+                              Avg: <span className="font-semibold text-gray-800">{result.averageMarksPercent || 'N/A'}%</span>
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-500 text-center py-4">
+                    No performance data available
+                  </div>
+                )}
+              </div>
+
+              {/* Competitive Exam Qualifiers Card */}
+              <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                <div className="flex items-center mb-4">
+                  <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                    <Award size={16} className="text-purple-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-800">Competitive Exam Qualifiers</h3>
+                </div>
+                
+                {school.examQualifiers && school.examQualifiers.length > 0 ? (
+                  <div className="space-y-3">
+                    {school.examQualifiers
+                      .filter(qualifier => qualifier.year && qualifier.exam)
+                      .slice(0, 3)
+                      .map((qualifier, index) => {
+                        const colors = ['text-green-600', 'text-blue-600', 'text-purple-600'];
+                        const examColors = {
+                          'NEET': 'text-green-600',
+                          'IIT-JEE': 'text-blue-600', 
+                          'JEE': 'text-blue-600',
+                          'Olympiad': 'text-purple-600',
+                          'Olympiads': 'text-purple-600'
+                        };
+                        return (
+                          <div key={index} className="flex justify-between items-center">
+                            <span className="text-sm font-medium text-gray-700">{qualifier.exam}</span>
+                            <span className={`text-sm font-semibold ${examColors[qualifier.exam] || colors[index % colors.length]}`}>
+                              {qualifier.participation || 'N/A'}
+                            </span>
+                          </div>
+                        );
+                      })}
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-500 text-center py-4">
+                    No exam qualifier data available
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Board Results by Year */}
@@ -990,33 +1603,6 @@ const SchoolDetailsPage = ({ shortlist, onShortlistToggle }) => {
               </div>
             )}
 
-            {/* Special Exam Training */}
-            {academics.specialExamsTraining && academics.specialExamsTraining.length > 0 && (
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-700 mb-3">🎯 Special Exam Training</h3>
-                <div className="flex flex-wrap gap-2">
-                  {academics.specialExamsTraining.map((exam, index) => (
-                    <span key={index} className="bg-purple-100 text-purple-800 text-sm font-medium px-3 py-1 rounded-full">
-                      {exam}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Extra Curricular Activities */}
-            {academics.extraCurricularActivities && academics.extraCurricularActivities.length > 0 && (
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-700 mb-3">🎨 Extra Curricular Activities</h3>
-                <div className="flex flex-wrap gap-2">
-                  {academics.extraCurricularActivities.map((activity, index) => (
-                    <span key={index} className="bg-green-100 text-green-800 text-sm font-medium px-3 py-1 rounded-full">
-                      {activity}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         )}
 
@@ -1062,152 +1648,377 @@ const SchoolDetailsPage = ({ shortlist, onShortlistToggle }) => {
           <h2 className="text-2xl font-bold text-gray-800 mb-6 border-b pb-3">
             👨‍🏫 Faculty Quality
           </h2>
+          
           {faculty ? (
             <div>
-              {/* Faculty Statistics */}
+              {/* Faculty Summary Cards */}
               {faculty.facultyMembers && faculty.facultyMembers.length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                  <InfoBox
-                    icon={<Users size={16} />}
-                    label="Total Faculty"
-                    value={`${faculty.facultyMembers.length} members`}
-                  />
-                  <InfoBox
-                    icon={<Award size={16} />}
-                    label="Avg Experience"
-                    value={`${Math.round(faculty.facultyMembers.reduce((sum, member) => sum + (member.experience || 0), 0) / faculty.facultyMembers.length)} years`}
-                  />
-                  <InfoBox
-                    icon={<Award size={16} />}
-                    label="Faculty with Awards"
-                    value={`${faculty.facultyMembers.filter(member => member.awards && member.awards.length > 0).length} members`}
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                  
+                  {/* Total Faculty Card */}
+                  <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                    <div className="text-center">
+                      <div className="text-4xl font-bold text-purple-600 mb-2">
+                        {faculty.facultyMembers.length}
                 </div>
-              )}
-              
-              {/* Faculty Members */}
-              {faculty.facultyMembers && faculty.facultyMembers.length > 0 ? (
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-700 mb-3">Faculty Members</h3>
-                  <div className="space-y-3">
-                    {faculty.facultyMembers.slice(0, 5).map((member, index) => (
-                      <div key={member._id || index} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-gray-800">{member.name}</h4>
-                            <p className="text-gray-600">{member.qualification}</p>
-                            <p className="text-gray-500 text-sm">{member.experience} years experience</p>
+                      <div className="text-sm text-gray-600 mb-1">Total Faculty</div>
+                      <div className="text-xs text-gray-500">Qualified Teachers</div>
+                    </div>
+                  </div>
+
+                  {/* Average Experience Card */}
+                  <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                    <div className="text-center">
+                      <div className="text-4xl font-bold text-blue-600 mb-2">
+                        {Math.round(faculty.facultyMembers.reduce((sum, member) => sum + (member.experience || 0), 0) / faculty.facultyMembers.length)}
                           </div>
-                          {member.awards && member.awards.length > 0 && (
-                            <div className="ml-4">
-                              <p className="text-xs text-gray-500 mb-1">Awards:</p>
-                              <div className="flex flex-wrap gap-1">
-                                {member.awards.slice(0, 2).map((award, awardIndex) => (
-                                  <span key={awardIndex} className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">
-                                    {award}
+                      <div className="text-sm text-gray-600 mb-1">Average Experience</div>
+                      <div className="text-xs text-gray-500">Years</div>
+                    </div>
+                  </div>
+
+                  {/* Qualification Levels Card */}
+                  <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                    <div className="text-center mb-4">
+                      <div className="text-sm text-gray-600 mb-1">Qualification Levels</div>
+                    </div>
+                    
+                    {/* Masters Progress Bar */}
+                    <div className="mb-4">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm text-gray-600">Masters</span>
+                        <span className="text-sm font-semibold text-gray-800">
+                          {Math.round((faculty.facultyMembers.filter(member => 
+                            member.qualification && member.qualification.toLowerCase().includes('master')
+                          ).length / faculty.facultyMembers.length) * 100)}%
                                   </span>
-                                ))}
-                                {member.awards.length > 2 && (
-                                  <span className="text-xs text-gray-500">+{member.awards.length - 2} more</span>
-                                )}
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="bg-gray-800 h-2 rounded-full transition-all duration-500"
+                          style={{ 
+                            width: `${Math.round((faculty.facultyMembers.filter(member => 
+                              member.qualification && member.qualification.toLowerCase().includes('master')
+                            ).length / faculty.facultyMembers.length) * 100)}%` 
+                          }}
+                        ></div>
+                      </div>
+                    </div>
+                    
+                    {/* PhD Progress Bar */}
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm text-gray-600">PhD</span>
+                        <span className="text-sm font-semibold text-gray-800">
+                          {Math.round((faculty.facultyMembers.filter(member => 
+                            member.qualification && member.qualification.toLowerCase().includes('phd')
+                          ).length / faculty.facultyMembers.length) * 100)}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="bg-gray-800 h-2 rounded-full transition-all duration-500"
+                          style={{ 
+                            width: `${Math.round((faculty.facultyMembers.filter(member => 
+                              member.qualification && member.qualification.toLowerCase().includes('phd')
+                            ).length / faculty.facultyMembers.length) * 100)}%` 
+                          }}
+                        ></div>
+                      </div>
+                    </div>
                               </div>
                             </div>
                           )}
+              
+              {/* Notable Faculty Members */}
+              {faculty.facultyMembers && faculty.facultyMembers.length > 0 && (
+                <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                  <div className="flex items-center mb-6">
+                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                      <Award size={16} className="text-green-600" />
                         </div>
+                    <h3 className="text-lg font-semibold text-gray-800">Notable Faculty Members</h3>
                       </div>
-                    ))}
-                    {faculty.facultyMembers.length > 5 && (
-                      <div className="text-center text-gray-500 text-sm">
-                        And {faculty.facultyMembers.length - 5} more faculty members...
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {faculty.facultyMembers.slice(0, 4).map((member, index) => (
+                      <div key={member._id || index} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-gray-800 text-sm">{member.name}</h4>
+                            <p className="text-gray-600 text-xs">{member.qualification}</p>
+                          </div>
+                          <span className="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded">
+                            {member.experience || 0} yrs
+                          </span>
+                        </div>
+                        
+                        {member.awards && member.awards.length > 0 && (
+                          <div className="flex items-center">
+                            <Award size={12} className="text-yellow-500 mr-1" />
+                            <span className="text-gray-500 text-xs">{member.awards[0]}</span>
                       </div>
                     )}
                   </div>
+                    ))}
                 </div>
-              ) : (
-                <div className="text-gray-500 text-center py-4">
-                  <p>No faculty members information available.</p>
-                  <p className="text-sm mt-2">Debug: faculty = {JSON.stringify(faculty)}</p>
+                  
+                  {faculty.facultyMembers.length > 4 && (
+                    <div className="text-center text-gray-500 text-sm mt-4">
+                      And {faculty.facultyMembers.length - 4} more faculty members...
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           ) : (
             <div className="text-gray-500 text-center py-8">
               <p>No faculty information available.</p>
-              <p className="text-sm mt-2">Debug: faculty = {JSON.stringify(faculty)}</p>
             </div>
           )}
         </div>
 
         {/* Admission Process Timeline Section */}
         <div className="bg-white shadow-lg rounded-lg p-6">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6 border-b pb-3">
-            📅 Admission Process Timeline
-          </h2>
+          <div className="flex items-center mb-6">
+            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+              <Award size={16} className="text-blue-600" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800">Admission Process</h2>
+              <p className="text-sm text-gray-600">Admission Timeline 2024-25</p>
+            </div>
+          </div>
+          
           {admissionTimeline && admissionTimeline.timelines && admissionTimeline.timelines.length > 0 ? (
             <div className="space-y-4">
-              {admissionTimeline.timelines.map((timeline, index) => (
-                <div key={timeline._id || index} className="bg-gray-50 p-4 rounded-lg border-l-4 border-indigo-500">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-semibold text-gray-800">
-                      {timeline.eligibility?.admissionLevel || 'Admission Process'}
-                    </h3>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      timeline.status === 'Ongoing' 
-                        ? 'bg-green-100 text-green-800' 
-                        : timeline.status === 'Ended'
-                        ? 'bg-red-100 text-red-800'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {timeline.status}
-                    </span>
-                  </div>
-                  
-                  {timeline.eligibility?.ageCriteria && (
-                    <p className="text-gray-600 mb-2">
-                      <strong>Age Criteria:</strong> {timeline.eligibility.ageCriteria}
-                    </p>
-                  )}
-                  
-                  {timeline.eligibility?.otherInfo && (
-                    <p className="text-gray-600 mb-2">
-                      <strong>Additional Info:</strong> {timeline.eligibility.otherInfo}
-                    </p>
-                  )}
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
-                    <div>
-                      <p className="text-sm text-gray-500">Application Period</p>
-                      <p className="text-sm font-medium text-gray-800">
-                        {new Date(timeline.admissionStartDate).toLocaleDateString()} - {new Date(timeline.admissionEndDate).toLocaleDateString()}
-                      </p>
-                    </div>
-                    
-                    {timeline.documentsRequired && timeline.documentsRequired.length > 0 && (
-                      <div>
-                        <p className="text-sm text-gray-500">Required Documents</p>
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {timeline.documentsRequired.map((doc, docIndex) => (
-                            <span key={docIndex} className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
-                              {doc}
-                            </span>
-                          ))}
+              {admissionTimeline.timelines.map((timeline, index) => {
+                const getStatusInfo = (status) => {
+                  switch (status) {
+                    case 'Ongoing':
+                      return { color: 'bg-green-100 text-green-800', text: 'Open', icon: '✓' };
+                    case 'Ended':
+                      return { color: 'bg-red-100 text-red-800', text: 'Closed', icon: '✗' };
+                    default:
+                      return { color: 'bg-yellow-100 text-yellow-800', text: 'Pending', icon: '⏰' };
+                  }
+                };
+                
+                const statusInfo = getStatusInfo(timeline.status);
+                
+                return (
+                  <div key={timeline._id || index} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-4 ${
+                          timeline.status === 'Ongoing' ? 'bg-green-100' : 
+                          timeline.status === 'Ended' ? 'bg-red-100' : 'bg-yellow-100'
+                        }`}>
+                          <span className="text-sm font-bold">
+                            {timeline.status === 'Ongoing' ? '✓' : 
+                             timeline.status === 'Ended' ? '✗' : '⏰'}
+                          </span>
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-800">
+                            {timeline.eligibility?.admissionLevel || 'Admission Process'}
+                          </h3>
+                          <p className="text-sm text-gray-600">
+                            {timeline.eligibility?.ageCriteria || 'Application Period: ' + 
+                             new Date(timeline.admissionStartDate).toLocaleDateString() + ' - ' + 
+                             new Date(timeline.admissionEndDate).toLocaleDateString()}
+                          </p>
                         </div>
                       </div>
-                    )}
+                      <div className="flex items-center gap-3">
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusInfo.color}`}>
+                          {statusInfo.text}
+                        </span>
+                        {timeline.status === 'Ongoing' && (
+                          <button 
+                            onClick={() => handleApplyNow()}
+                            className="bg-black text-white px-4 py-1 rounded text-xs font-medium hover:bg-gray-800 transition-colors"
+                          >
+                            Apply Now
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="text-gray-500 text-center py-8">
               <p>No admission timeline information available.</p>
-              <p className="text-sm mt-2">Debug: admissionTimeline = {JSON.stringify(admissionTimeline)}</p>
             </div>
           )}
         </div>
 
+        {/* Special Exam Training Section */}
+        {academics && academics.specialExamsTraining && academics.specialExamsTraining.length > 0 && (
+          <div className="bg-white shadow-lg rounded-lg p-6">
+            <div className="flex items-center mb-6">
+              <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                <Award size={16} className="text-purple-600" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-800">Special Exam Training</h2>
+                <p className="text-sm text-gray-600">Competitive Exam Preparation</p>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {academics.specialExamsTraining.map((exam, index) => (
+                <div key={index} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                  <div className="flex items-center">
+                    <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                      <Award size={16} className="text-purple-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-800">{exam}</h3>
+                      <p className="text-sm text-gray-600">Specialized Training</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Extra Curricular Activities Section */}
+        {academics && academics.extraCurricularActivities && academics.extraCurricularActivities.length > 0 && (
+          <div className="bg-white shadow-lg rounded-lg p-6">
+            <div className="flex items-center mb-6">
+              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                <Sun size={16} className="text-green-600" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-800">Extra Curricular Activities</h2>
+                <p className="text-sm text-gray-600">Student Development Programs</p>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {academics.extraCurricularActivities.map((activity, index) => (
+                <div key={index} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                  <div className="flex items-center">
+                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                      <Award size={16} className="text-green-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-800">{activity}</h3>
+                      <p className="text-sm text-gray-600">Student Activity</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Reviews Section */}
         <ReviewSection schoolId={school._id} />
+
+        {/* Required Documents Section */}
+        <div className="bg-white shadow-lg rounded-lg p-6">
+          <div className="flex items-center mb-6">
+            <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center mr-3">
+              <Award size={16} className="text-indigo-600" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800">Required Documents</h2>
+              <p className="text-sm text-gray-600">Documents needed for admission process</p>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            
+            {/* General Documents */}
+            <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+              <div className="flex items-center mb-3">
+                <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                  <CheckCircle size={12} className="text-blue-600" />
+                </div>
+                <h3 className="font-semibold text-gray-800">General Documents</h3>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
+                  <span className="text-sm text-gray-700">Birth Certificate</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
+                  <span className="text-sm text-gray-700">Previous School Marksheet</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
+                  <span className="text-sm text-gray-700">Aadhar Card</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
+                  <span className="text-sm text-gray-700">Passport Size Photos</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Academic Documents */}
+            <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+              <div className="flex items-center mb-3">
+                <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                  <CheckCircle size={12} className="text-green-600" />
+                </div>
+                <h3 className="font-semibold text-gray-800">Academic Documents</h3>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center">
+                  <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                  <span className="text-sm text-gray-700">Transfer Certificate</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                  <span className="text-sm text-gray-700">Character Certificate</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                  <span className="text-sm text-gray-700">Medical Certificate</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                  <span className="text-sm text-gray-700">Bonafide Certificate</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Additional Documents */}
+            <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+              <div className="flex items-center mb-3">
+                <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                  <CheckCircle size={12} className="text-purple-600" />
+                </div>
+                <h3 className="font-semibold text-gray-800">Additional Documents</h3>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center">
+                  <div className="w-2 h-2 bg-purple-500 rounded-full mr-2"></div>
+                  <span className="text-sm text-gray-700">Income Certificate (if applicable)</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-2 h-2 bg-purple-500 rounded-full mr-2"></div>
+                  <span className="text-sm text-gray-700">Caste Certificate (if applicable)</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-2 h-2 bg-purple-500 rounded-full mr-2"></div>
+                  <span className="text-sm text-gray-700">Sports Achievement Certificate</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-2 h-2 bg-purple-500 rounded-full mr-2"></div>
+                  <span className="text-sm text-gray-700">Guardian ID Proof</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

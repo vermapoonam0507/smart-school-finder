@@ -77,10 +77,13 @@ const SignUpPage = ({ isSchoolSignUp = false }) => {
         // Show additional info for email verification
         toast.info("Please check your email inbox for verification link, or try logging in if you've already verified.");
         
+        // Show helpful message about what to do next
+        toast.info("If you can't find the verification email, try logging in - it may have been verified already.");
+        
         // Optionally redirect to login page
         setTimeout(() => {
           navigate("/login");
-        }, 3000);
+        }, 4000);
       } else {
         const errorMessage =
           error.response?.data?.message ||

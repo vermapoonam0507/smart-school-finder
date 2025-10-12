@@ -31,6 +31,14 @@ import {
   User,
   Clock,
   XCircle,
+  Star,
+  Phone,
+  Mail,
+  Globe,
+  Facebook,
+  Instagram,
+  Twitter,
+  Linkedin,
 } from "lucide-react";
 
 const InfoBox = ({ icon, label, value }) => (
@@ -262,34 +270,160 @@ const AdminSchoolDetailsPage = () => {
   }
 
   return (
-    <div className="bg-gray-100 min-h-screen">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="bg-white shadow-lg rounded-lg p-6 mb-8 relative">
-          <div className="mb-4">
-            <button
-              onClick={() => navigate("/admin/dashboard")}
-              className="inline-flex items-center text-sm text-gray-700 hover:text-indigo-600"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Admin Dashboard
-            </button>
+    <div className="bg-gray-50 min-h-screen">
+      {/* Top Header Bar */}
+      <div className="bg-white shadow-sm border-b">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="h-10 w-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                <Building className="h-6 w-6 text-green-600" />
+              </div>
+              <h1 className="text-xl font-bold text-gray-900">School Information Portal</h1>
+            </div>
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => navigate("/admin/dashboard")}
+                className="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+              >
+                Back to Dashboard
+              </button>
+            </div>
           </div>
-          
-          <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-2">
-            {school.name}
-          </h1>
-          <p className="text-lg text-gray-600 flex items-center mb-4">
-            <MapPin size={18} className="mr-2" />
-            {school.address || school.location || "Address not provided"}
-          </p>
-          <p className="text-md text-gray-700">{school.description}</p>
-          
-          {/* Status Badge */}
-          <div className="mt-4">
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
-              <Clock size={16} className="mr-1" />
-              Pending Approval
-            </span>
+        </div>
+      </div>
+
+      {/* Main School Information Section */}
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+          <div className="p-8">
+            <div className="flex flex-col lg:flex-row gap-8">
+              {/* School Image */}
+              <div className="lg:w-1/3">
+                <div className="aspect-video bg-gray-200 rounded-lg overflow-hidden">
+                  {school.photos && school.photos.length > 0 ? (
+                    <img
+                      src={school.photos[0]}
+                      alt={school.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                      <Building className="h-16 w-16 text-gray-400" />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* School Details */}
+              <div className="lg:w-2/3">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                      {school.name}
+                    </h1>
+                    <div className="flex items-center mb-4">
+                      <div className="bg-green-500 text-white px-3 py-1 rounded-full text-sm font-medium mr-3">
+                        85/100
+                      </div>
+                      <span className="text-sm text-gray-600">Excellent</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Location */}
+                <div className="flex items-center text-gray-600 mb-4">
+                  <MapPin className="h-4 w-4 mr-2" />
+                  <span>{school.address || school.location || "Address not provided"}</span>
+                </div>
+
+                {/* Rating and Establishment */}
+                <div className="flex items-center mb-6">
+                  <div className="flex items-center mr-4">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star
+                        key={star}
+                        size={16}
+                        className={`${
+                          star <= 4 ? 'text-yellow-400 fill-current' : 'text-gray-300'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-sm text-gray-600">
+                    Established {school.establishedYear || '1995'}
+                  </span>
+                </div>
+
+                {/* Contact Information */}
+                <div className="space-y-3 mb-6">
+                  {school.phone && (
+                    <div className="flex items-center text-gray-600">
+                      <Phone className="h-4 w-4 mr-3" />
+                      <span>{school.phone}</span>
+                    </div>
+                  )}
+                  {school.email && (
+                    <div className="flex items-center text-gray-600">
+                      <Mail className="h-4 w-4 mr-3" />
+                      <span>{school.email}</span>
+                    </div>
+                  )}
+                  {school.website && (
+                    <div className="flex items-center text-gray-600">
+                      <Globe className="h-4 w-4 mr-3" />
+                      <span>{school.website}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Social Media Links */}
+                <div className="flex items-center space-x-3">
+                  <div className="h-8 w-8 bg-blue-600 rounded-full flex items-center justify-center">
+                    <Facebook className="h-4 w-4 text-white" />
+                  </div>
+                  <div className="h-8 w-8 bg-pink-600 rounded-full flex items-center justify-center">
+                    <Instagram className="h-4 w-4 text-white" />
+                  </div>
+                  <div className="h-8 w-8 bg-blue-400 rounded-full flex items-center justify-center">
+                    <Twitter className="h-4 w-4 text-white" />
+                  </div>
+                  <div className="h-8 w-8 bg-blue-700 rounded-full flex items-center justify-center">
+                    <Linkedin className="h-4 w-4 text-white" />
+                  </div>
+                </div>
+
+                {/* Admin Action Buttons */}
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <a
+                    href={school.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+                  >
+                    Visit Website
+                  </a>
+                  {school.status === 'pending' && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleStatusUpdate('accepted')}
+                        disabled={processing}
+                        className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50"
+                      >
+                        {processing ? 'Processing...' : 'Accept'}
+                      </button>
+                      <button
+                        onClick={() => handleStatusUpdate('rejected')}
+                        disabled={processing}
+                        className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors font-medium disabled:opacity-50"
+                      >
+                        {processing ? 'Processing...' : 'Reject'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 

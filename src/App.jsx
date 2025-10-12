@@ -27,6 +27,7 @@ import AdminDashboardPage from "./pages/AdminDashboardPage";
 import AdminSchoolDetailsPage from "./pages/AdminSchoolDetailsPage";
 import AdminProtectedRoute from "./components/AdminProtectedRoute";
 import BlogPage from "./pages/BlogPage";
+import BlogDetailsPage from "./pages/BlogDetailsPage";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useAuth } from "./context/AuthContext";
@@ -218,6 +219,7 @@ useEffect(() => {
           <Route path="/predictor" element={<PredictorPage />} />
           <Route path="/chatbot" element={<ChatbotPage />} />
           <Route path="/blog" element={<BlogPage />} />
+          <Route path="/blog/:id" element={<BlogDetailsPage />} />
           <Route
             path="/school/:id"
             element={
