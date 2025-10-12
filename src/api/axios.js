@@ -1,7 +1,8 @@
 import axios from 'axios';
 
 // Remove /api from base URL to avoid double prefix
-const apiBaseURL = (import.meta.env.VITE_API_BASE_URL || 'https://backend-tc-sa-v2.onrender.com').replace(/\/api\/?$/, '');
+// Force production backend for now
+const apiBaseURL = 'https://backend-tc-sa-v2.onrender.com';
 
 console.log('🔧 Axios Base URL:', apiBaseURL);
 
