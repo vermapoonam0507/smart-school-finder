@@ -1,8 +1,10 @@
 services:
   - type: web
     name: smart-school-finder
-    env: node
+    env: static
     buildCommand: npm install && npm run build
-    startCommand: npm start
-    plan: free
-    region: oregon
+    staticPublishPath: ./dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
