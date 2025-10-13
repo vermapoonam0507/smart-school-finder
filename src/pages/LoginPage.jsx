@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Eye, EyeOff } from "lucide-react";
+import { toast } from "react-toastify";
 import { useAuth } from "../context/AuthContext";
 
 const loginSchema = z.object({
@@ -22,11 +23,14 @@ const LoginPage = () => {
 
   const [serverError, setServerError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showResendButton, setShowResendButton] = useState(false);
+  const [userEmail, setUserEmail] = useState("");
 
   const {
     register,
     handleSubmit,
     setValue,
+    watch,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(loginSchema),
@@ -74,6 +78,8 @@ const LoginPage = () => {
           "Please verify your email before logging in.";
         
         setServerError(errorMessage);
+        setShowResendButton(true);
+        setUserEmail(data.email);
         
         // Show additional info for email verification
         toast.info("Please check your email inbox for verification link.");
@@ -82,10 +88,31 @@ const LoginPage = () => {
           error.response?.data?.message ||
           "Invalid email or password. Please try again.";
         setServerError(errorMessage);
+        setShowResendButton(false);
       }
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleResendVerification = () => {
+    // Since backend doesn't have resend verification endpoint,
+    // provide helpful guidance instead
+    const currentEmail = watch("email") || userEmail;
+    
+    if (!currentEmail) {
+      toast.error("Please enter your email address first.");
+      return;
+    }
+    
+    toast.info("Resend verification feature is not available.");
+    toast.info("Please check your email inbox (including spam folder) for the verification link.");
+    toast.info("If you can't find it, try registering again with a different email address.");
+    
+    // Hide the button after showing guidance
+    setTimeout(() => {
+      setShowResendButton(false);
+    }, 2000);
   };
 
   return (
@@ -99,9 +126,27 @@ const LoginPage = () => {
         </div>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {serverError && (
-            <p className="text-sm text-red-600 bg-red-100 p-3 rounded-md text-center">
-              {serverError}
-            </p>
+            <div className="text-sm text-red-600 bg-red-100 p-3 rounded-md text-center">
+              <p>{serverError}</p>
+              {showResendButton && (
+                <div className="mt-2 space-y-1">
+                  <button
+                    type="button"
+                    onClick={handleResendVerification}
+                    className="text-blue-600 hover:text-blue-800 underline text-xs block"
+                  >
+                    Need help with verification?
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate("/signup")}
+                    className="text-green-600 hover:text-green-800 underline text-xs block"
+                  >
+                    Try registering with a different email
+                  </button>
+                </div>
+              )}
+            </div>
           )}
           <div>
             <label

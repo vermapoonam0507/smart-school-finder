@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, Calendar, User, Search, ArrowLeft } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Heart, Calendar, User, Search, ArrowLeft, ChevronDown, ChevronRight } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { getAllBlogs } from '../api/blogService';
 import { toast } from 'react-toastify';
 
@@ -8,6 +8,8 @@ const BlogPage = () => {
   const [blogs, setBlogs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [expandedBlogs, setExpandedBlogs] = useState(new Set());
+  const navigate = useNavigate();
 
 
   useEffect(() => {
@@ -26,6 +28,22 @@ const BlogPage = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const toggleExpanded = (blogId) => {
+    setExpandedBlogs(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(blogId)) {
+        newSet.delete(blogId);
+      } else {
+        newSet.add(blogId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleViewDetails = (blogId) => {
+    navigate(`/blog/${blogId}`);
   };
 
 
@@ -94,42 +112,80 @@ const BlogPage = () => {
           </div>
         ) : (
           <div className="grid gap-8">
-            {filteredBlogs.map((blog) => (
-              <article key={blog._id} className="bg-white rounded-lg shadow-md overflow-hidden">
-                <div className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h2 className="text-2xl font-bold text-gray-900 mb-3">
-                        {blog.title}
-                      </h2>
-                      
-                      <p className="text-gray-600 mb-4 text-lg leading-relaxed">
-                        {blog.highlight}
-                      </p>
-                      
-                      <div className="prose max-w-none text-gray-700 mb-6">
-                        <p className="whitespace-pre-wrap">{blog.description}</p>
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-6 text-sm text-gray-500">
-                          <div className="flex items-center">
-                            <User className="h-4 w-4 mr-2" />
-                            <span>{Array.isArray(blog.contributor) ? blog.contributor.join(', ') : blog.contributor}</span>
-                          </div>
-                          <div className="flex items-center">
-                            <Calendar className="h-4 w-4 mr-2" />
-                            <span>{new Date(blog.createdAt).toLocaleDateString()}</span>
-                          </div>
+            {filteredBlogs.map((blog) => {
+              const isExpanded = expandedBlogs.has(blog._id);
+              const descriptionPreview = blog.description.length > 200 
+                ? blog.description.substring(0, 200) + '...' 
+                : blog.description;
+              
+              return (
+                <article key={blog._id} className="bg-white rounded-lg shadow-md overflow-hidden">
+                  <div className="p-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h2 className="text-2xl font-bold text-gray-900 mb-3">
+                          {blog.title}
+                        </h2>
+                        
+                        <p className="text-gray-600 mb-4 text-lg leading-relaxed">
+                          {blog.highlight}
+                        </p>
+                        
+                        <div className="prose max-w-none text-gray-700 mb-6">
+                          <p className="whitespace-pre-wrap">
+                            {isExpanded ? blog.description : descriptionPreview}
+                          </p>
                         </div>
                         
-
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-6 text-sm text-gray-500">
+                            <div className="flex items-center">
+                              <User className="h-4 w-4 mr-2" />
+                              <span>{Array.isArray(blog.contributor) ? blog.contributor.join(', ') : blog.contributor}</span>
+                            </div>
+                            <div className="flex items-center">
+                              <Calendar className="h-4 w-4 mr-2" />
+                              <span>{new Date(blog.createdAt).toLocaleDateString()}</span>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center space-x-2">
+                            {/* Expand/Collapse Button */}
+                            {blog.description.length > 200 && (
+                              <button
+                                onClick={() => toggleExpanded(blog._id)}
+                                className="flex items-center text-blue-600 hover:text-blue-800 text-sm font-medium"
+                              >
+                                {isExpanded ? (
+                                  <>
+                                    <ChevronUp className="h-4 w-4 mr-1" />
+                                    Show Less
+                                  </>
+                                ) : (
+                                  <>
+                                    <ChevronDown className="h-4 w-4 mr-1" />
+                                    Show More
+                                  </>
+                                )}
+                              </button>
+                            )}
+                            
+                            {/* View Details Button */}
+                            <button
+                              onClick={() => handleViewDetails(blog._id)}
+                              className="flex items-center text-green-600 hover:text-green-800 text-sm font-medium"
+                            >
+                              <ChevronRight className="h-4 w-4 mr-1" />
+                              View Details
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </article>
-            ))}
+                </article>
+              );
+            })}
           </div>
         )}
       </div>

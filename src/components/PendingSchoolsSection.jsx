@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CheckCircle, Clock, MapPin, Phone, Mail, Calendar, User, XCircle, Building, BookOpen, Users, Award, Sun, Eye } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { getSchoolsByStatus, updateSchoolStatus } from '../api/adminService';
+import { Link } from 'react-router-dom';
 
 const PendingSchoolsSection = () => {
   const [pendingSchools, setPendingSchools] = useState([]);
