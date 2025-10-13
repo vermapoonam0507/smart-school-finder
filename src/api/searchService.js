@@ -17,7 +17,7 @@ export const searchSchools = async ({
   if (search) params.search = search;
   const boardsJoined = join(boards); if (boardsJoined) params.boards = boardsJoined;
   const citiesJoined = join(cities); if (citiesJoined) params.cities = citiesJoined;
-  const statesJoined = join(states); if (statesJoined) params.states = statesJoined;
+  const statesJoined = join(states); if (statesJoined) params.state = statesJoined;
   const modesJoined = join(schoolMode); if (modesJoined) params.schoolMode = modesJoined;
   const genderJoined = join(genderType); if (genderJoined) params.genderType = genderJoined;
   const feeJoined = join(feeRange); if (feeJoined) {
@@ -28,29 +28,35 @@ export const searchSchools = async ({
   params.page = page;
   params.limit = limit;
 
-  try {
-    // Remove /api prefix here because apiClient already includes it
-    const path = '/admin/search';
-    const { data } = await apiClient.get(path, { params });
-    return data;
-  } catch (error) {
-    // Handle 404 as "no results found" instead of error
-    if (error.response?.status === 404) {
-      return {
-        status: 'success',
-        message: 'No schools found for the given search.',
-        data: [],
-        pagination: {
-          page,
-          limit,
-          total: 0,
-          totalPages: 0
-        }
-      };
+  const candidatePaths = ['/admin/search'];
+  let lastError;
+  for (const path of candidatePaths) {
+    try {
+      const { data } = await apiClient.get(path, { params });
+      return data;
+    } catch (error) {
+      lastError = error;
+      if (error.response?.status === 404) {
+        continue; // try next candidate
+      }
+      throw error; // non-404 -> surface immediately
     }
-    // Re-throw other errors
-    throw error;
   }
+
+  if (lastError?.response?.status === 404) {
+    return {
+      status: 'success',
+      message: 'No schools found for the given search.',
+      data: [],
+      pagination: {
+        page,
+        limit,
+        total: 0,
+        totalPages: 0
+      }
+    };
+  }
+  throw lastError || new Error('Search failed');
 };
 
 export const getSchoolById = async (id) => {

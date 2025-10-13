@@ -3,8 +3,10 @@ import { Search, Filter, X, MapPin, DollarSign, Award, Users, Building, BookOpen
 import { toast } from 'react-toastify';
 import SchoolCard from '../components/SchoolCard';
 import { searchSchools as searchSchoolsApi } from '../api/searchService';
+import { useNavigate } from 'react-router-dom';
 
 const AdvancedSearchPage = () => {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState({
     feeRange: [],
@@ -26,22 +28,52 @@ const AdvancedSearchPage = () => {
   const [pagination, setPagination] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Initial search
+  // Load filter options and initial search
   useEffect(() => {
+    // You can replace these with backend-provided options if available
+    setFilterOptions({
+      feeRanges: [
+        '1000 - 10000','10000 - 25000','25000 - 50000','50000 - 75000','75000 - 100000',
+        '1 Lakh - 2 Lakh','2 Lakh - 3 Lakh','3 Lakh - 4 Lakh','4 Lakh - 5 Lakh','More than 5 Lakh'
+      ],
+      boards: ['CBSE','ICSE','CISCE','NIOS','SSC','IGCSE','IB','KVS','JNV','DBSE','MSBSHSE','UPMSP','KSEEB','WBBSE','GSEB','RBSE','BSEB','PSEB','BSE','SEBA','MPBSE','STATE','OTHER'],
+      schoolTypes: ['convent','private','government'],
+      ownerships: ['Private','Government','Trust'],
+      coEdStatuses: ['boy','girl','co-ed'],
+      languages: ['English','Hindi','Marathi','Kannada','Tamil','Telugu','Gujarati','Bengali'],
+      classes: ['Pre-KG','LKG','UKG','1st','2nd','3rd','4th','5th','6th','7th','8th','9th','10th','11th','12th'],
+      academicSessions: ['2023-24','2024-25','2025-26'],
+      admissionProcesses: ['Entrance Test','Interview','Merit','Lottery'],
+      cities: ['Mumbai','Pune','Nagpur','Bengaluru','Chennai','Delhi','Hyderabad','Ahmedabad','Kolkata','Jaipur']
+    });
     searchSchools();
   }, [currentPage]);
+
+  // Auto search on filter/search changes (debounced)
+  useEffect(() => {
+    const t = setTimeout(() => searchSchools(), 400);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, filters]);
 
   const searchSchools = async () => {
     setLoading(true);
     try {
       const boards = filters.board;
       const cities = filters.location;
-      const state = [];
+      const states = [];
+      const schoolMode = filters.schoolType; // already in backend format
+      const genderType = filters.coEdStatus; // boy | girl | co-ed
+      const feeRange = filters.feeRange;
+
       const resp = await searchSchoolsApi({
         search: searchQuery,
         boards,
         cities,
-        state,
+        states,
+        schoolMode,
+        genderType,
+        feeRange,
         page: currentPage,
         limit: 12
       });
@@ -280,7 +312,17 @@ const AdvancedSearchPage = () => {
             {!loading && schools.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {schools.map((school) => (
-                  <SchoolCard key={school._id} school={school} />
+                  <SchoolCard
+                    key={school._id || school.id || school.schoolId}
+                    school={school}
+                    onCardClick={() => navigate(`/school/${school._id || school.id || school.schoolId}`)}
+                    onCompareToggle={() => {}}
+                    isCompared={false}
+                    currentUser={null}
+                    onShortlistToggle={() => {}}
+                    isShortlisted={false}
+                    onApply={() => navigate(`/apply/${school._id || school.id || school.schoolId}`)}
+                  />
                 ))}
               </div>
             )}

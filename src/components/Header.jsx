@@ -64,6 +64,7 @@ const Header = ({ isMobileMenuOpen, setMobileMenuOpen, compareCount, shortlistCo
             </>
         ) : (
             <>
+                <Link to="/guest-search" className="text-gray-600 hover:text-blue-600">Continue as Guest</Link>
                 <Link to="/login" className="text-gray-600 hover:text-blue-600">Sign In</Link>
                 <Link to="/admin/login" className="text-gray-600 hover:text-blue-600 flex items-center">
                   <Shield className="w-4 h-4 mr-1" />
@@ -112,6 +113,7 @@ const Header = ({ isMobileMenuOpen, setMobileMenuOpen, compareCount, shortlistCo
             </button>
           ) : (
             <>
+              <Link to="/guest-search" className="block w-full text-center text-gray-600 hover:text-blue-600 mb-2 py-2" onClick={() => setMobileMenuOpen(false)}>Continue as Guest</Link>
               <Link to="/login" className="block w-full text-center text-gray-600 hover:text-blue-600 mb-2 py-2" onClick={() => setMobileMenuOpen(false)}>Sign In</Link>
               <Link to="/admin/login" className="block w-full text-center text-gray-600 hover:text-blue-600 mb-2 py-2 flex items-center justify-center" onClick={() => setMobileMenuOpen(false)}>
                 <Shield className="w-4 h-4 mr-1" />

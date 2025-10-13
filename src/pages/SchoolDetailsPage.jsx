@@ -5,6 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { getSchoolById, getAmenitiesById, getActivitiesById, getInfrastructureById, getFeesAndScholarshipsById, getAcademicsById, getOtherDetailsById, getFacultyById, getAdmissionTimelineById, getTechnologyAdoptionById, getSafetyAndSecurityById, getInternationalExposureById } from "../api/adminService";
 import { toast } from "react-toastify";
+import { validateSchoolId, handleInvalidSchoolId } from "../utils/objectIdUtils";
 import {
   MapPin,
   BookOpen,
@@ -50,6 +51,19 @@ const SchoolDetailsPage = ({ shortlist, onShortlistToggle }) => {
 
   useEffect(() => {
     if (!schoolId) return;
+
+    // Validate schoolId format
+    const isValidObjectId = (id) => {
+      return /^[0-9a-fA-F]{24}$/.test(id);
+    };
+
+    // If schoolId is not a valid ObjectId, show error
+    if (!isValidObjectId(schoolId)) {
+      console.error(`Invalid school ID format: ${schoolId}. Expected MongoDB ObjectId format.`);
+      toast.error("Invalid school ID format. Please check the URL.");
+      navigate("/schools");
+      return;
+    }
 
     const fetchSchoolDetails = async () => {
       try {

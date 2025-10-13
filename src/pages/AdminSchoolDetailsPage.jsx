@@ -68,6 +68,19 @@ const AdminSchoolDetailsPage = () => {
   useEffect(() => {
     if (!schoolId) return;
 
+    // Validate schoolId format
+    const isValidObjectId = (id) => {
+      return /^[0-9a-fA-F]{24}$/.test(id);
+    };
+
+    // If schoolId is not a valid ObjectId, show error
+    if (!isValidObjectId(schoolId)) {
+      console.error(`Invalid school ID format: ${schoolId}. Expected MongoDB ObjectId format.`);
+      toast.error("Invalid school ID format. Please check the URL.");
+      navigate("/admin/dashboard");
+      return;
+    }
+
     const fetchSchoolDetails = async () => {
       try {
         setLoading(true);
