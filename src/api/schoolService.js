@@ -124,10 +124,10 @@ export const getAlumniBySchool = (schoolId) => {
 
 /**
  * Get infrastructure by school ID
- * Backend: GET /api/schools/infrastructure/:id
+ * Backend: GET /api/admin/schools/infrastructure/:id
  */
 export const getInfrastructureById = (schoolId) => {
-  return apiClient.get(`/schools/infrastructure/${encodeURIComponent(schoolId)}`);
+  return apiClient.get(`/admin/schools/infrastructure/${encodeURIComponent(schoolId)}`);
 };
 
 /**
@@ -140,18 +140,18 @@ export const getOtherDetailsById = (schoolId) => {
 
 /**
  * Get academics by school ID
- * Backend: GET /api/schools/academics/:id
+ * Backend: GET /api/admin/schools/academics/:id
  */
 export const getAcademicsById = (schoolId) => {
-  return apiClient.get(`/schools/academics/${encodeURIComponent(schoolId)}`);
+  return apiClient.get(`/admin/schools/academics/${encodeURIComponent(schoolId)}`);
 };
 
 /**
  * Get fees and scholarships by school ID
- * Backend: GET /api/schools/fees-scholarships/:id
+ * Backend: GET /api/admin/schools/fees-scholarships/:id
  */
 export const getFeesAndScholarshipsById = (schoolId) => {
-  return apiClient.get(`/schools/fees-scholarships/${encodeURIComponent(schoolId)}`);
+  return apiClient.get(`/admin/schools/fees-scholarships/${encodeURIComponent(schoolId)}`);
 };
 
 /**

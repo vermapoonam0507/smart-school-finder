@@ -177,7 +177,7 @@ const SearchPage = () => {
         limit: 20
       };
       
-      const response = await searchSchools(searchParams);
+      const response = await searchSchools({ ...searchParams, progressive: false });
       setSearchResults(response.data || []);
       
       // Show message when no schools are found, but don't treat it as an error
@@ -650,9 +650,9 @@ const SearchPage = () => {
               </div>
             ) : searchResults.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {searchResults.map((school) => (
+                {searchResults.map((school, idx) => (
                   <SchoolCard
-                    key={school._id || school.id}
+                    key={`${school._id || school.id || 'school'}-${idx}`}
                     school={school}
                     onCardClick={() => navigate(`/school/${school._id || school.id}`)}
                     onCompareToggle={() => {}}

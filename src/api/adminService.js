@@ -87,7 +87,7 @@ export const updateFaculty = (schoolId, data) =>
   apiClient.put(`/admin/schools/faculty/${encodeURIComponent(schoolId)}`, data);
 
 export const getAdmissionTimelineById = (schoolId) =>
-  apiClient.get(`/schools/admission-timeline/${encodeURIComponent(schoolId)}`);
+  apiClient.get(`/admin/schools/admission-timeline/${encodeURIComponent(schoolId)}`);
 export const updateAdmissionTimeline = (schoolId, data) =>
   apiClient.put(`/admin/schools/admission-timeline/${encodeURIComponent(schoolId)}`, data);
 
@@ -97,7 +97,7 @@ export const updateTechnologyAdoption = (schoolId, data) =>
   apiClient.put(`/admin/schools/technology-adoption/${encodeURIComponent(schoolId)}`, data);
 
 export const getSafetyAndSecurityById = (schoolId) =>
-  apiClient.get(`/schools/safety-security/${encodeURIComponent(schoolId)}`);
+  apiClient.get(`/admin/schools/safety-security/${encodeURIComponent(schoolId)}`);
 export const updateSafetyAndSecurity = (schoolId, data) =>
   apiClient.put(`/admin/schools/safety-security/${encodeURIComponent(schoolId)}`, data);
 
@@ -172,10 +172,10 @@ export const getAmenitiesById = (schoolId) =>
 export const getActivitiesById = (schoolId) =>
   apiClient.get(`/admin/schools/activities/${encodeURIComponent(schoolId)}`);
 export const getInfrastructureById = (schoolId) =>
-  apiClient.get(`/schools/infrastructure/${encodeURIComponent(schoolId)}`);
+  apiClient.get(`/admin/schools/infrastructure/${encodeURIComponent(schoolId)}`);
 export const getFeesAndScholarshipsById = (schoolId) =>
-  apiClient.get(`/schools/fees-scholarships/${encodeURIComponent(schoolId)}`);
+  apiClient.get(`/admin/schools/fees-scholarships/${encodeURIComponent(schoolId)}`);
 export const getAcademicsById = (schoolId) =>
-  apiClient.get(`/schools/academics/${encodeURIComponent(schoolId)}`);
+  apiClient.get(`/admin/schools/academics/${encodeURIComponent(schoolId)}`);
 export const getOtherDetailsById = (schoolId) =>
   apiClient.get(`/admin/schools/other-details/${encodeURIComponent(schoolId)}`);

@@ -22,7 +22,11 @@ apiClient.interceptors.request.use(
       config.url = `/api${config.url.startsWith('/') ? '' : '/'}${config.url}`;
     }
     
-    console.log('📤 API Request:', config.method?.toUpperCase(), config.url);
+    // Optional silent flag to reduce console noise for internal retries
+    const isSilent = config.headers && (config.headers['X-Silent-Request'] === '1');
+    if (!isSilent) {
+      console.log('📤 API Request:', config.method?.toUpperCase(), config.url);
+    }
     return config;
   },
   (error) => Promise.reject(error)
@@ -30,14 +34,18 @@ apiClient.interceptors.request.use(
 
 apiClient.interceptors.response.use(
   (response) => {
-    console.log('✅ API Response:', response.config.url, response.status);
+    const isSilent = response.config?.headers && (response.config.headers['X-Silent-Request'] === '1');
+    if (!isSilent) {
+      console.log('✅ API Response:', response.config.url, response.status);
+    }
     return response;
   },
   (error) => {
     // Don't log 404 errors for search endpoints as they're expected when no results found
     const isSearch404 = error.config?.url?.includes('/search') && error.response?.status === 404;
+    const isSilent = error.config?.headers && (error.config.headers['X-Silent-Request'] === '1');
     
-    if (!isSearch404) {
+    if (!isSearch404 && !isSilent) {
       console.error('❌ API Error:', error.config?.url, error.response?.status, error.response?.data);
     }
     

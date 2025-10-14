@@ -55,42 +55,23 @@ export const getShortlistCount = async (authId) => {
 
 // Fetch user profile by authId
 export const getUserProfile = async (authId) => {
-  const endpoints = [
-    `/users/${authId}`,
-    `/api/users/${authId}`,
-    `/admin/users/${authId}`
-  ];
-
-  let lastError;
-  for (const endpoint of endpoints) {
-    try {
-      console.log(`🔄 Trying user endpoint: ${endpoint}`);
-      const response = await apiClient.get(endpoint);
-      const userData = response.data?.data || response.data;
-      
-      if (userData && (userData._id || userData.id)) {
-        console.log(`✅ Found user profile: ${userData.name || userData.email}`);
-        return { data: userData };
-      }
-    } catch (error) {
-      console.log(`❌ Failed with endpoint: ${endpoint} - ${error.response?.status}`);
-      lastError = error;
-      
-      // If it's a 400 with "Student Not Found", try next endpoint
-      if (error.response?.status === 400 && error.response?.data?.message?.includes('Student Not Found')) {
-        continue;
-      }
-      
-      // If it's not a 404, don't try other endpoints
-      if (error.response?.status !== 404) {
-        break;
-      }
+  // Only valid backend paths: /api/users/:authId mounted via axios base /api prefix
+  try {
+    const response = await apiClient.get(`/users/${authId}`);
+    const userData = response.data?.data || response.data;
+    if (userData && (userData._id || userData.id)) return { data: userData };
+    return { data: null };
+  } catch (error) {
+    // 400 -> Student Not Found (not an error for UI; means no profile yet)
+    if (error.response?.status === 400) {
+      return { data: null, status: 'Not Found' };
     }
+    // 404 -> endpoint not found should be rare; surface friendly message
+    if (error.response?.status === 404) {
+      throw new Error('User endpoint not found');
+    }
+    throw error;
   }
-  
-  // If all endpoints failed, throw the last error
-  console.warn('⚠️ All user profile endpoints failed');
-  throw lastError?.response?.data || lastError || new Error('User profile not found');
 };
 
 // Create student profile

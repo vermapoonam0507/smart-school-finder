@@ -1000,59 +1000,48 @@ const AdminSchoolDetailsPage = () => {
           </h2>
           {safetyAndSecurity ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* CCTV Coverage */}
-              {safetyAndSecurity.cctvCoveragePercentage && (
-                <InfoBox
-                  icon={<CheckCircle size={16} />}
-                  label="CCTV Coverage"
-                  value={`${safetyAndSecurity.cctvCoveragePercentage}% coverage`}
-                />
-              )}
+              {/* CCTV Coverage (render even if 0) */}
+              <InfoBox
+                icon={<CheckCircle size={16} />}
+                label="CCTV Coverage"
+                value={
+                  typeof safetyAndSecurity.cctvCoveragePercentage === 'number'
+                    ? `${safetyAndSecurity.cctvCoveragePercentage}% coverage`
+                    : 'N/A'
+                }
+              />
               
               {/* Medical Facility */}
-              {safetyAndSecurity.medicalFacility?.doctorAvailability && (
-                <InfoBox
-                  icon={<CheckCircle size={16} />}
-                  label="Medical Staff"
-                  value={safetyAndSecurity.medicalFacility.doctorAvailability}
-                />
-              )}
-              
-              {safetyAndSecurity.medicalFacility?.medkitAvailable && (
-                <InfoBox
-                  icon={<CheckCircle size={16} />}
-                  label="Medical Kit"
-                  value="Available"
-                />
-              )}
-              
-              {safetyAndSecurity.medicalFacility?.ambulanceAvailable && (
-                <InfoBox
-                  icon={<CheckCircle size={16} />}
-                  label="Ambulance"
-                  value="Available"
-                />
-              )}
+              <InfoBox
+                icon={<CheckCircle size={16} />}
+                label="Medical Staff"
+                value={safetyAndSecurity.medicalFacility?.doctorAvailability || 'N/A'}
+              />
+              <InfoBox
+                icon={<CheckCircle size={16} />}
+                label="Medical Kit"
+                value={safetyAndSecurity.medicalFacility?.medkitAvailable ? 'Available' : 'Not available'}
+              />
+              <InfoBox
+                icon={<CheckCircle size={16} />}
+                label="Ambulance"
+                value={safetyAndSecurity.medicalFacility?.ambulanceAvailable ? 'Available' : 'Not available'}
+              />
               
               {/* Transport Safety */}
-              {safetyAndSecurity.transportSafety?.gpsTrackerAvailable && (
-                <InfoBox
-                  icon={<CheckCircle size={16} />}
-                  label="GPS Tracking"
-                  value="Transport vehicles tracked"
-                />
-              )}
-              
-              {safetyAndSecurity.transportSafety?.driversVerified && (
-                <InfoBox
-                  icon={<CheckCircle size={16} />}
-                  label="Driver Verification"
-                  value="All drivers verified"
-                />
-              )}
+              <InfoBox
+                icon={<CheckCircle size={16} />}
+                label="GPS Tracking"
+                value={safetyAndSecurity.transportSafety?.gpsTrackerAvailable ? 'Yes' : 'No'}
+              />
+              <InfoBox
+                icon={<CheckCircle size={16} />}
+                label="Driver Verification"
+                value={safetyAndSecurity.transportSafety?.driversVerified ? 'All drivers verified' : 'Not verified'}
+              />
               
               {/* Fire Safety */}
-              {safetyAndSecurity.fireSafetyMeasures && safetyAndSecurity.fireSafetyMeasures.length > 0 && (
+              {Array.isArray(safetyAndSecurity.fireSafetyMeasures) && safetyAndSecurity.fireSafetyMeasures.length > 0 ? (
                 <div className="col-span-2">
                   <h3 className="text-lg font-semibold text-gray-700 mb-3">Fire Safety Measures</h3>
                   <div className="flex flex-wrap gap-2">
@@ -1063,30 +1052,20 @@ const AdminSchoolDetailsPage = () => {
                     ))}
                   </div>
                 </div>
-              )}
-              
-              {/* Visitor Management */}
-              {safetyAndSecurity.visitorManagementSystem && (
+              ) : (
                 <InfoBox
                   icon={<CheckCircle size={16} />}
-                  label="Visitor Management"
-                  value="System in place"
+                  label="Fire Safety"
+                  value="No measures recorded"
                 />
               )}
               
-              {/* Show message if no specific details */}
-              {!safetyAndSecurity.cctvCoveragePercentage && 
-               !safetyAndSecurity.medicalFacility?.doctorAvailability && 
-               !safetyAndSecurity.medicalFacility?.medkitAvailable && 
-               !safetyAndSecurity.medicalFacility?.ambulanceAvailable &&
-               !safetyAndSecurity.transportSafety?.gpsTrackerAvailable && 
-               !safetyAndSecurity.transportSafety?.driversVerified && 
-               (!safetyAndSecurity.fireSafetyMeasures || safetyAndSecurity.fireSafetyMeasures.length === 0) && 
-               !safetyAndSecurity.visitorManagementSystem && (
-                <div className="col-span-2 text-gray-500 text-center py-4">
-                  <p>No specific safety & security details available.</p>
-                </div>
-              )}
+              {/* Visitor Management */}
+              <InfoBox
+                icon={<CheckCircle size={16} />}
+                label="Visitor Management"
+                value={safetyAndSecurity.visitorManagementSystem ? 'System in place' : 'Not available'}
+              />
             </div>
           ) : (
             <div className="text-gray-500 text-center py-8">
@@ -1106,73 +1085,25 @@ const AdminSchoolDetailsPage = () => {
               📅 Admission Timeline
             </h2>
             <div className="space-y-4">
-              {admissionTimeline.applicationStartDate && (
-                <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
-                  <div className="flex items-center">
-                    <Calendar size={20} className="text-blue-600 mr-3" />
-                    <div>
-                      <h3 className="font-semibold text-gray-800">Application Start Date</h3>
-                      <p className="text-sm text-gray-600">When applications open</p>
+              {Array.isArray(admissionTimeline.timelines) && admissionTimeline.timelines.length > 0 ? (
+                admissionTimeline.timelines.map((timeline, index) => (
+                  <div key={timeline._id || index} className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
+                    <div className="flex items-center">
+                      <Calendar size={20} className="text-blue-600 mr-3" />
+                      <div>
+                        <h3 className="font-semibold text-gray-800">{timeline.eligibility?.admissionLevel || 'Admission Process'}</h3>
+                        <p className="text-sm text-gray-600">{timeline.eligibility?.ageCriteria || '—'}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-gray-700"><strong>Start:</strong> {timeline.admissionStartDate ? new Date(timeline.admissionStartDate).toLocaleDateString() : 'N/A'}</p>
+                      <p className="text-gray-700"><strong>End:</strong> {timeline.admissionEndDate ? new Date(timeline.admissionEndDate).toLocaleDateString() : 'N/A'}</p>
+                      <p className="text-gray-700"><strong>Status:</strong> {timeline.status || 'N/A'}</p>
                     </div>
                   </div>
-                  <span className="text-blue-600 font-medium">
-                    {new Date(admissionTimeline.applicationStartDate).toLocaleDateString()}
-                  </span>
-                </div>
-              )}
-              
-              {admissionTimeline.applicationEndDate && (
-                <div className="flex items-center justify-between p-4 bg-red-50 rounded-lg">
-                  <div className="flex items-center">
-                    <Calendar size={20} className="text-red-600 mr-3" />
-                    <div>
-                      <h3 className="font-semibold text-gray-800">Application End Date</h3>
-                      <p className="text-sm text-gray-600">Deadline for applications</p>
-                    </div>
-                  </div>
-                  <span className="text-red-600 font-medium">
-                    {new Date(admissionTimeline.applicationEndDate).toLocaleDateString()}
-                  </span>
-                </div>
-              )}
-              
-              {admissionTimeline.examDate && (
-                <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
-                  <div className="flex items-center">
-                    <Calendar size={20} className="text-green-600 mr-3" />
-                    <div>
-                      <h3 className="font-semibold text-gray-800">Exam Date</h3>
-                      <p className="text-sm text-gray-600">Entrance examination date</p>
-                    </div>
-                  </div>
-                  <span className="text-green-600 font-medium">
-                    {new Date(admissionTimeline.examDate).toLocaleDateString()}
-                  </span>
-                </div>
-              )}
-              
-              {admissionTimeline.resultDate && (
-                <div className="flex items-center justify-between p-4 bg-purple-50 rounded-lg">
-                  <div className="flex items-center">
-                    <Calendar size={20} className="text-purple-600 mr-3" />
-                    <div>
-                      <h3 className="font-semibold text-gray-800">Result Date</h3>
-                      <p className="text-sm text-gray-600">When results are announced</p>
-                    </div>
-                  </div>
-                  <span className="text-purple-600 font-medium">
-                    {new Date(admissionTimeline.resultDate).toLocaleDateString()}
-                  </span>
-                </div>
-              )}
-              
-              {admissionTimeline.admissionProcess && (
-                <div className="mt-6">
-                  <h3 className="text-lg font-semibold text-gray-700 mb-3">Admission Process</h3>
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <p className="text-gray-700">{admissionTimeline.admissionProcess}</p>
-                  </div>
-                </div>
+                ))
+              ) : (
+                <div className="p-4 border rounded-lg bg-gray-50 text-gray-600">No admission timeline entries yet.</div>
               )}
             </div>
           </div>
