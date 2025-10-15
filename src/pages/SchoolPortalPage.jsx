@@ -172,6 +172,7 @@ const ApprovalStatus = ({ currentUser }) => {
 const ViewStudentApplications = ({ schoolEmail }) => {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const getApps = async () => {
@@ -195,6 +196,26 @@ const ViewStudentApplications = ({ schoolEmail }) => {
         app.id === id ? { ...app, status: newStatus } : app
       )
     );
+  };
+
+  const handleShortlist = (app) => {
+    try {
+      // Optimistically mark as shortlisted in current view
+      handleStatusChange(app.id, 'Shortlisted');
+      // Persist a client-side shortlist so the Shortlisted view can include it
+      const key = `clientShortlistedIds:${schoolEmail || 'default'}`;
+      const existing = JSON.parse(localStorage.getItem(key) || '[]');
+      if (!existing.includes(app.id)) {
+        localStorage.setItem(key, JSON.stringify([...existing, app.id]));
+      }
+    } catch (_) {}
+    navigate('/school-portal/shortlisted');
+  };
+
+  const handleOpenDetails = (app) => {
+    const studId = app.studId || app._raw?.studId || app._raw?.studentId || app._raw?.student?._id;
+    if (!studId) return;
+    window.open(`/api/users/pdf/view/${studId}`,'_blank');
   };
 
   if (loading)
@@ -247,6 +268,12 @@ const ViewStudentApplications = ({ schoolEmail }) => {
                 </td>
                 <td className="p-4 flex space-x-2">
                   <button
+                    onClick={() => handleShortlist(app)}
+                    className="px-2 py-1 text-xs font-semibold rounded bg-blue-600 text-white hover:bg-blue-700"
+                  >
+                    Shortlist
+                  </button>
+                  <button
                     onClick={() => handleStatusChange(app.id, "Accepted")}
                     className="p-2 text-green-600 bg-green-100 rounded-full hover:bg-green-200"
                   >
@@ -258,7 +285,7 @@ const ViewStudentApplications = ({ schoolEmail }) => {
                   >
                     <X size={16} />
                   </button>
-                  <button className="text-sm text-blue-600 hover:underline">
+                  <button onClick={() => handleOpenDetails(app)} className="text-sm text-blue-600 hover:underline">
                     Details
                   </button>
                 </td>
@@ -286,10 +313,13 @@ const ViewShortlistedApplications = ({ schoolEmail }) => {
         setLoading(true);
         const response = await fetchStudentApplications(schoolEmail);
         const all = response.data || [];
-        // Consider both 'Accepted' and 'Shortlisted' as shortlisted
-        const shortlisted = all.filter(
-          (a) => typeof a.status === 'string' && ["Accepted", "Shortlisted", "accepted", "shortlisted"].includes(a.status)
-        );
+        // Include client-side shortlisted ids
+        const key = `clientShortlistedIds:${schoolEmail || 'default'}`;
+        const localIds = new Set(JSON.parse(localStorage.getItem(key) || '[]'));
+        const shortlisted = all.filter((a) => {
+          const st = (a.status || '').toString().toLowerCase();
+          return st === 'accepted' || st === 'shortlisted' || localIds.has(a.id);
+        });
         setApplications(shortlisted);
       } catch (error) {
         console.error("Error fetching shortlisted applications:", error);
@@ -345,10 +375,9 @@ const SchoolPortalPage = ({ currentUser, onLogout, onRegister }) => {
 
   useEffect(() => {
     const loadCount = async () => {
-      const identity = currentUser?.schoolId || currentUser?._id || currentUser?.email;
-      if (!identity) return;
+      if (!currentUser?.email) return;
       try {
-        const res = await fetchStudentApplications(identity);
+        const res = await fetchStudentApplications(currentUser.email);
         const apps = res?.data || [];
         setApplicationsCount(Array.isArray(apps) ? apps.length : 0);
       } catch (_) {
@@ -356,7 +385,7 @@ const SchoolPortalPage = ({ currentUser, onLogout, onRegister }) => {
       }
     };
     loadCount();
-  }, [currentUser?.schoolId, currentUser?._id, currentUser?.email]);
+  }, [currentUser?.email]);
 
   if (!currentUser || currentUser.userType !== "school") {
     return (
@@ -372,7 +401,7 @@ const SchoolPortalPage = ({ currentUser, onLogout, onRegister }) => {
       <Routes>
         <Route
           path="shortlisted"
-          element={<ViewShortlistedApplications schoolEmail={currentUser?.schoolId || currentUser?._id || currentUser?.email} />}
+          element={<ViewShortlistedApplications schoolEmail={currentUser?.email} />}
         />
         <Route
           path="status"
@@ -380,7 +409,7 @@ const SchoolPortalPage = ({ currentUser, onLogout, onRegister }) => {
         />
         <Route
           path="applications"
-          element={<ViewStudentApplications schoolEmail={currentUser?.schoolId || currentUser?._id || currentUser?.email} />}
+          element={<ViewStudentApplications schoolEmail={currentUser?.email} />}
         />
         <Route
           path="register"
@@ -398,7 +427,7 @@ const SchoolPortalPage = ({ currentUser, onLogout, onRegister }) => {
         
         <Route
           index
-          element={<ViewStudentApplications schoolEmail={currentUser?.schoolId || currentUser?._id || currentUser?.email} />}
+          element={<ViewStudentApplications schoolEmail={currentUser?.email} />}
         />
       </Routes>
     </div>

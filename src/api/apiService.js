@@ -41,7 +41,7 @@ export const fetchStudentApplications = async (schoolIdOrEmail) => {
     const candidates = [
         `/api/applications/school/${identity}`,
         `/api/applications/by-school/${identity}`,
-        `/api/applications?schoolId=${identity}`,
+    `/api/applications?schoolId=${identity}`,
         `/api/applications`, // fetch all, filter on client as last resort
     ];
 
@@ -49,18 +49,18 @@ export const fetchStudentApplications = async (schoolIdOrEmail) => {
     for (const path of candidates) {
         try {
             const res = await apiClient.get(path, { headers: { 'X-Silent-Request': '1' } });
-            const raw = res?.data;
+      const raw = res?.data;
             let list = Array.isArray(raw)
                 ? raw
                 : (Array.isArray(raw?.data) ? raw.data
                   : Array.isArray(raw?.applications) ? raw.applications
                   : (raw && typeof raw === 'object') ? [raw?.data || raw] : []);
             // If we hit the generic list endpoint, filter by school id/email if present in items
-            if (res?.config?.url?.endsWith('/api/applications') && identityRaw) {
+      if (res?.config?.url?.endsWith('/api/applications') && identityRaw) {
                 list = list.filter((it) => {
                     const sId = typeof it?.schoolId === 'object' ? (it?.schoolId?._id || it?.schoolId?.id) : it?.schoolId;
                     const sEmail = it?.schoolEmail || it?.school?.email;
-                    return String(sId) === identityRaw || String(sEmail) === identityRaw;
+          return String(sId) === identityRaw || String(sEmail) === identityRaw;
                 });
             }
             // normalize a subset of fields used by SchoolPortalPage
@@ -70,6 +70,9 @@ export const fetchStudentApplications = async (schoolIdOrEmail) => {
                 class: it?.class || it?.className || it?.appliedClass || '—',
                 date: it?.createdAt ? new Date(it.createdAt).toISOString().slice(0,10) : (it?.date || '—'),
                 status: it?.status || it?.applicationStatus || 'Pending',
+                schoolId: (typeof it?.schoolId === 'object' ? (it?.schoolId?._id || it?.schoolId?.id) : it?.schoolId) || null,
+                studId: it?.studId || it?.studentId || it?.student?._id || null,
+                _raw: it,
             }));
             return { data: normalized };
         } catch (e) {
@@ -77,11 +80,52 @@ export const fetchStudentApplications = async (schoolIdOrEmail) => {
         }
     }
 
-    // Fallback to mock if backend endpoints unavailable
-    console.warn('Falling back to mock applications for school:', schoolIdOrEmail, lastErr?.message);
-    await new Promise(resolve => setTimeout(resolve, 200));
-    const applications = studentApplicationsData.filter(app => app.schoolEmail === schoolIdOrEmail);
-    return { data: applications };
+  // Fallback to mock if backend endpoints unavailable
+  console.warn('Falling back to mock applications for school:', schoolIdOrEmail, lastErr?.message);
+  await new Promise(resolve => setTimeout(resolve, 200));
+  const applications = studentApplicationsData.filter(app => app.schoolEmail === schoolIdOrEmail);
+  return { data: applications };
+};
+
+// Update an application's status (accept/reject/shortlist)
+export const updateApplicationStatus = async (applicationId, newStatus) => {
+    const body = { status: newStatus };
+    const candidates = [
+        `/api/applications/${encodeURIComponent(applicationId)}/status`,
+        `/api/applications/${encodeURIComponent(applicationId)}`,
+    ];
+    let lastErr;
+    for (const path of candidates) {
+        try {
+            const method = path.endsWith('/status') ? 'put' : 'patch';
+            const res = await apiClient[method](path, body);
+            return res?.data || { ok: true };
+        } catch (e) {
+            lastErr = e;
+        }
+    }
+    throw lastErr || new Error('Failed to update application');
+};
+
+// Fetch full application by id for details view
+export const fetchApplicationById = async (applicationId) => {
+    const id = encodeURIComponent(String(applicationId || ''));
+    const candidates = [
+        `/api/applications/item/${id}`,
+        `/api/applications/${id}`,
+    ];
+    let lastErr;
+    for (const path of candidates) {
+        try {
+            const res = await apiClient.get(path, { headers: { 'X-Silent-Request': '1' } });
+            const raw = res?.data;
+            const obj = (raw && typeof raw === 'object') ? (raw?.data || raw) : null;
+            return { data: obj };
+        } catch (e) {
+            lastErr = e;
+        }
+    }
+    throw lastErr || new Error('Application not found');
 };
 
 export const addSchool = async (schoolData) => {
