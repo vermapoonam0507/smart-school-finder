@@ -5,6 +5,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 import { submitApplication, generateStudentPdf } from '../api/userService';
+import { getSchoolById } from '../api/adminService';
 import { FileText, User, Users, Home, BookOpen, PlusCircle, Trash2, Shield } from 'lucide-react';
 
 const FormField = ({ label, name, type = 'text', value, onChange, required = false, options = null, checked }) => {
@@ -71,6 +72,7 @@ const StudentApplicationPage = () => {
     const [loading, setLoading] = useState(true);
     const [step, setStep] = useState(1);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitted, setSubmitted] = useState(false);
     const [formData, setFormData] = useState({
         name: '', location: '', dob: '', age: '', gender: '', motherTongue: '',
         placeOfBirth: '', speciallyAbled: false, speciallyAbledType: '',
@@ -169,17 +171,9 @@ const StudentApplicationPage = () => {
                     applicationId: 'pending' // Will be updated when we get the response
                 }));
             }
-            try {
-                console.log('Generating PDF...');
-                await generateStudentPdf(currentUser._id);
-                console.log('PDF generated successfully!');
-            } catch (pdfError) {
-                console.log('PDF generation failed:', pdfError);
-            }
-            console.log('Showing success message...');
-            toast.success("Application submitted successfully! PDF is ready to download.");
-            console.log('Navigating to application status page...');
-            navigate('/application-status');
+            // Do not navigate away immediately; show success with buttons below
+            toast.success("Application submitted successfully!");
+            setSubmitted(true);
         } catch (error) {
             console.error("Submission Error:", error);
             toast.error(`Submission failed: ${error.message || 'Please ensure all required fields are filled.'}`);
@@ -250,6 +244,14 @@ const StudentApplicationPage = () => {
         );
     }
 
+    const handleGenerateAndOpenPdf = async () => {
+        try {
+            await generateStudentPdf(currentUser._id);
+        } catch (_) {}
+        // Use relative path so dev proxy/axios base routes to the correct backend
+        window.open(`/api/users/pdf/view/${currentUser._id}`, '_blank');
+    };
+
     return (
         <div className="bg-gray-100 min-h-screen py-12">
             <div className="container mx-auto max-w-4xl px-4">
@@ -259,6 +261,30 @@ const StudentApplicationPage = () => {
                         <h1 className="text-3xl font-bold text-gray-800">Student Application Form</h1>
                         <p className="text-gray-500 mt-2">Step {step} of 4</p>
                     </div>
+
+                    {submitted && (
+                        <div className="mb-8 p-4 rounded-lg bg-green-50 border border-green-200 text-green-800">
+                            <div className="flex items-center justify-between flex-col md:flex-row gap-3">
+                                <span>Your application has been submitted successfully.</span>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={handleGenerateAndOpenPdf}
+                                        className="px-4 py-2 font-semibold text-white bg-green-600 rounded-md hover:bg-green-700"
+                                    >
+                                        Generate PDF
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => navigate('/application-status')}
+                                        className="px-4 py-2 font-semibold text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300"
+                                    >
+                                        Go to Application Status
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {step === 1 && (
                         <section className="space-y-6">
@@ -435,7 +461,7 @@ const StudentApplicationPage = () => {
                                 disabled={isSubmitting}
                                 className="px-6 py-2 font-semibold text-white bg-green-600 rounded-md ml-auto disabled:bg-gray-400"
                             >
-                                {isSubmitting ? 'Submitting...' : 'Submit Application'}
+                                {isSubmitting ? 'Submitting...' : (submitted ? 'Submitted' : 'Submit Application')}
                             </button>
                         )}
                     </div>

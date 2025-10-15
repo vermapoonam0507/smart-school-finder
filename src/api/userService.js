@@ -264,6 +264,9 @@ export const getFormsByStudent = async (studId) => {
   const candidates = [
     `/api/form/student/${studId}`,        // some deployments
     `/api/applications/${studId}`,        // application-routes get by student
+    `/api/forms/student/${studId}`,       // alternate plural path
+    `/api/users/forms/${studId}`,         // users namespaced
+    `/api/form/${studId}`                 // fallback legacy
   ];
 
   let all = [];
@@ -281,11 +284,14 @@ export const getFormsByStudent = async (studId) => {
           : Array.isArray(raw?.forms) ? raw.forms
           : (raw && typeof raw === 'object') ? [raw?.data || raw] : []);
 
-      // Merge and dedupe by _id if present
+      // Merge and dedupe; be careful not to collapse distinct items lacking strong ids
       const map = new Map();
-      [...all, ...normalizedArray].forEach((item) => {
-        const key = item?._id || item?.id || `${item?.schoolId || ''}-${item?.createdAt || ''}`;
-        if (key) map.set(key, item);
+      [...all, ...normalizedArray].forEach((item, idx) => {
+        const schoolKey = (typeof item?.schoolId === 'object' ? (item?.schoolId?._id || item?.schoolId?.id) : item?.schoolId) || item?.school || 'unknown';
+        const timeKey = item?.createdAt || item?.updatedAt || '';
+        const fallbackKey = `${schoolKey}-${timeKey}-${idx}`;
+        const key = item?._id || item?.id || fallbackKey;
+        map.set(String(key), item);
       });
       all = Array.from(map.values());
     } catch (e) {

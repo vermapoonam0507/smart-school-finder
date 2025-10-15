@@ -12,7 +12,8 @@ import {
   updateUserPreferences,
   createUserPreferences,
   saveUserPreferences,
-  getUserPreferences
+  getUserPreferences,
+  getFormsByStudent
 } from '../api/userService';
 import { getSchoolById } from '../api/adminService';
 import { Download } from 'lucide-react';
@@ -25,6 +26,7 @@ const UserDashboard = ({ shortlist, comparisonList, onCompareToggle, onShortlist
   const [applications, setApplications] = useState([]);
   const [schoolNameById, setSchoolNameById] = useState({});
   const [forms, setForms] = useState([]);
+  const [displayForms, setDisplayForms] = useState([]);
   const [isEditingProfile, setIsEditingProfile] = useState(() => !currentUser?.contactNo);
 
   // Ensure student profile exists and load preferences
@@ -96,10 +98,74 @@ const UserDashboard = ({ shortlist, comparisonList, onCompareToggle, onShortlist
     ensureStudentProfile();
   }, [currentUser, updateUserContext]);
 
-  // Load school names for applications
+  // Fetch forms once when user changes
+  useEffect(() => {
+    const loadForms = async () => {
+      try {
+        if (!currentUser?._id) return;
+        const res = await getFormsByStudent(currentUser._id);
+        const list = Array.isArray(res?.data) ? res.data : [];
+        setForms(list);
+        setApplications(list);
+        setApplicationExists(list.length > 0);
+      } catch (err) {
+        console.error('Failed to load applications:', err);
+        setForms([]);
+        setApplications([]);
+        setApplicationExists(false);
+      }
+    };
+    loadForms();
+  }, [currentUser]);
+
+  // Merge API forms with locally cached applications (no network)
+  useEffect(() => {
+    try {
+      const userId = currentUser?._id;
+      const cached = [];
+      if (typeof localStorage !== 'undefined' && userId) {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.startsWith(`schoolInfo:${userId}:`)) {
+            const raw = localStorage.getItem(k);
+            try {
+              const parsed = JSON.parse(raw || '{}');
+              if (parsed && (parsed.schoolId || parsed.schoolName)) {
+                cached.push(parsed);
+              }
+            } catch (_) {}
+          }
+        }
+      }
+
+      const synthesizedFromCache = cached.map((c) => ({
+        _synthetic: true,
+        schoolName: c.schoolName,
+        schoolId: c.schoolId,
+        status: 'Submitted',
+        createdAt: c.createdAt || null,
+      }));
+
+      const merged = [...(forms || []), ...synthesizedFromCache];
+      const map = new Map();
+      merged.forEach((item, idx) => {
+        const strong = item?._id || item?.id;
+        const sId = typeof item?.schoolId === 'object' ? (item?.schoolId?._id || item?.schoolId?.id) : item?.schoolId;
+        const sName = item?.schoolName || item?.school?.name || '';
+        const when = item?.createdAt || item?.updatedAt || '';
+        const key = strong || `${sId || 'noid'}-${when || 'notime'}-${sName || 'noname'}-${idx}`;
+        map.set(String(key), item);
+      });
+      setDisplayForms(Array.from(map.values()));
+    } catch (e) {
+      setDisplayForms(forms || []);
+    }
+  }, [forms, currentUser]);
+
+  // Load school names for applications (only based on current display list)
   useEffect(() => {
     const loadSchoolNames = async () => {
-      const ids = applications
+      const ids = (displayForms.length ? displayForms : forms)
         .map(app =>
           typeof (app.schoolId || app.school) === 'object'
             ? (app.schoolId || app.school)?._id
@@ -128,7 +194,7 @@ const UserDashboard = ({ shortlist, comparisonList, onCompareToggle, onShortlist
     };
 
     loadSchoolNames();
-  }, [applications, schoolNameById]);
+  }, [displayForms, forms]);
 
   // Handle profile update
   const handleProfileUpdate = async (profileData) => {
@@ -315,12 +381,13 @@ const UserDashboard = ({ shortlist, comparisonList, onCompareToggle, onShortlist
                 <thead>
                   <tr className="text-left text-gray-600 border-b">
                     <th className="py-2 pr-4">School</th>
+                    <th className="py-2 pr-4">Status</th>
                     <th className="py-2 pr-4">Application ID</th>
                     <th className="py-2 pr-4">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {(forms.length ? forms : applications).map(row => {
+                  {(displayForms.length ? displayForms : (forms.length ? forms : applications)).map(row => {
                     const schoolRef = row.schoolId || row.school;
                     let schoolIdStr =
                       typeof schoolRef === 'object' ? schoolRef?._id : schoolRef;
@@ -328,13 +395,22 @@ const UserDashboard = ({ shortlist, comparisonList, onCompareToggle, onShortlist
                       schoolIdStr = localStorage.getItem('lastAppliedSchoolId') || null;
                     const displayName =
                       typeof schoolRef === 'object'
-                        ? schoolRef?.name
-                        : schoolNameById[schoolIdStr] || schoolIdStr || '—';
+                        ? (schoolRef?.name || schoolRef?.schoolName)
+                        : (row.schoolName || schoolNameById[schoolIdStr] || schoolIdStr || '—');
+                    const rawStatus = (row.status || row.applicationStatus || row.formStatus || row.decision || 'Pending');
+                    const status = String(rawStatus).toLowerCase().includes('submit') ? 'Submitted' : (
+                      String(rawStatus).charAt(0).toUpperCase() + String(rawStatus).slice(1)
+                    );
                     const idToShow = row._id || row.applicationId || '—';
 
                     return (
                       <tr key={row._id || row.applicationId} className="border-b last:border-0">
                         <td className="py-2 pr-4">{displayName}</td>
+                        <td className="py-2 pr-4">
+                          <span className={status.toLowerCase().includes('accept') ? 'text-green-700' : status.toLowerCase().includes('reject') ? 'text-red-600' : 'text-amber-600'}>
+                            {status}
+                          </span>
+                        </td>
                         <td className="py-2 pr-4">{idToShow}</td>
                         <td className="py-2 pr-4">
                           {schoolIdStr && (
@@ -348,7 +424,7 @@ const UserDashboard = ({ shortlist, comparisonList, onCompareToggle, onShortlist
                           )}
                           {/* View PDF */}
                           <a
-                            href={`${import.meta.env.VITE_API_BASE_URL || 'https://backend-tc-sa-v2.onrender.com'}/api/users/pdf/view/${currentUser._id}`}
+                            href={`/api/users/pdf/view/${currentUser._id}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center bg-white text-gray-700 font-semibold px-3 py-1.5 rounded-md border border-gray-300 hover:bg-gray-50 mr-2"
@@ -359,7 +435,7 @@ const UserDashboard = ({ shortlist, comparisonList, onCompareToggle, onShortlist
 
                           {/* Download PDF */}
                           <a
-                            href={`${import.meta.env.VITE_API_BASE_URL || 'https://backend-tc-sa-v2.onrender.com'}/api/users/pdf/download/${currentUser._id}`}
+                            href={`/api/users/pdf/download/${currentUser._id}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center bg-green-600 text-white font-semibold px-3 py-1.5 rounded-md hover:bg-green-700"

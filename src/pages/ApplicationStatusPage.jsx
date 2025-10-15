@@ -9,17 +9,18 @@ const ApplicationStatusPage = () => {
   const { user: currentUser } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [forms, setForms] = useState([]);
+  const [displayForms, setDisplayForms] = useState([]);
   const [error, setError] = useState('');
   const [schoolNameById, setSchoolNameById] = useState({});
+  const [cachedAppliedSchools, setCachedAppliedSchools] = useState([]);
 
   const handleViewPdf = async () => {
     try {
       // make sure a fresh PDF exists
       await generateStudentPdf(currentUser._id);
     } catch (_) {}
-    const base = import.meta.env.VITE_API_BASE_URL || 'https://backend-tc-sa-v2.onrender.com';
-    const url = `${base}/api/users/pdf/view/${currentUser._id}`;
-    window.open(url, '_blank');
+    // Use relative path so dev proxy/axios base routes to the correct backend
+    window.open(`/api/users/pdf/view/${currentUser._id}`, '_blank');
   };
 
   useEffect(() => {
@@ -41,6 +42,27 @@ const ApplicationStatusPage = () => {
 
   // Resolve school names for any ids returned in forms
   useEffect(() => {
+    // Load any locally cached school info saved during apply flow
+    try {
+      const userId = currentUser?._id;
+      if (typeof localStorage !== 'undefined' && userId) {
+        const cached = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.startsWith(`schoolInfo:${userId}:`)) {
+            const raw = localStorage.getItem(k);
+            try {
+              const parsed = JSON.parse(raw || '{}');
+              if (parsed && (parsed.schoolId || parsed.schoolName)) {
+                cached.push(parsed);
+              }
+            } catch (_) {}
+          }
+        }
+        setCachedAppliedSchools(cached);
+      }
+    } catch (_) {}
+
     const fetchNames = async () => {
       const ids = forms
         .map(f => {
@@ -75,7 +97,51 @@ const ApplicationStatusPage = () => {
       }
     };
     if (forms?.length) fetchNames();
-  }, [forms, schoolNameById]);
+  }, [forms, schoolNameById, currentUser]);
+
+  // Merge API forms with locally cached applications to ensure all applied schools appear
+  useEffect(() => {
+    try {
+      const userId = currentUser?._id;
+      const cached = [];
+      if (typeof localStorage !== 'undefined' && userId) {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.startsWith(`schoolInfo:${userId}:`)) {
+            const raw = localStorage.getItem(k);
+            try {
+              const parsed = JSON.parse(raw || '{}');
+              if (parsed && (parsed.schoolId || parsed.schoolName)) {
+                cached.push(parsed);
+              }
+            } catch (_) {}
+          }
+        }
+      }
+
+      const synthesizedFromCache = cached.map((c) => ({
+        _synthetic: true,
+        schoolName: c.schoolName,
+        schoolId: c.schoolId,
+        status: 'Submitted',
+        createdAt: c.createdAt || null,
+      }));
+
+      // Dedupe by strong id or schoolId+createdAt+schoolName
+      const map = new Map();
+      [...forms, ...synthesizedFromCache].forEach((item, idx) => {
+        const strong = item?._id || item?.id;
+        const sId = typeof item?.schoolId === 'object' ? (item?.schoolId?._id || item?.schoolId?.id) : item?.schoolId;
+        const sName = item?.schoolName || item?.school?.name || '';
+        const when = item?.createdAt || item?.updatedAt || '';
+        const key = strong || `${sId || 'noid'}-${when || 'notime'}-${sName || 'noname'}-${idx}`;
+        map.set(String(key), item);
+      });
+      setDisplayForms(Array.from(map.values()));
+    } catch (e) {
+      setDisplayForms(forms);
+    }
+  }, [forms, currentUser]);
 
   if (!currentUser) {
     return (
@@ -97,11 +163,11 @@ const ApplicationStatusPage = () => {
           <div className="bg-white rounded-xl shadow p-8 text-center">Loading...</div>
         ) : error ? (
           <div className="bg-red-50 text-red-700 border border-red-200 rounded p-4">{error}</div>
-        ) : forms.length === 0 ? (
+        ) : displayForms.length === 0 ? (
           <div className="bg-white rounded-xl shadow p-8 text-center">No applications yet.</div>
         ) : (
           <div className="space-y-4">
-            {forms.map((f) => {
+            {displayForms.map((f) => {
               const submitted = f.createdAt ? new Date(f.createdAt).toLocaleDateString() : '-';
 
               // Comprehensive debug logging to see full application structure
@@ -112,13 +178,13 @@ const ApplicationStatusPage = () => {
               const schoolRef = f.schoolId || f.school;
               const idStr = typeof schoolRef === 'object' ? (schoolRef?._id || schoolRef?.id) : schoolRef;
 
-              // Enhanced school name resolution - prioritize localStorage since backend isn't saving school info
+              // Enhanced school name resolution - includes local cache fallbacks when ids are missing
               let schoolName = 'Loading...';
 
               if (f.schoolName) {
-                schoolName = f.schoolName; // Primary source if backend is fixed
+                schoolName = f.schoolName;
               } else if (idStr && typeof localStorage !== 'undefined' && localStorage.getItem(`schoolName:${idStr}`)) {
-                schoolName = localStorage.getItem(`schoolName:${idStr}`); // Use cached school name
+                schoolName = localStorage.getItem(`schoolName:${idStr}`);
               } else if (typeof schoolRef === 'object' && (schoolRef?.name || schoolRef?.schoolName)) {
                 schoolName = schoolRef.name || schoolRef.schoolName;
               } else if (idStr && schoolNameById[idStr] && schoolNameById[idStr] !== 'School') {
@@ -126,11 +192,23 @@ const ApplicationStatusPage = () => {
               } else if (f.school && typeof f.school === 'object' && f.school.name) {
                 schoolName = f.school.name;
               } else if (idStr && schoolNameById[idStr]) {
-                schoolName = schoolNameById[idStr]; // API fallback
-              } else if (idStr) {
-                schoolName = `School ID: ${idStr.slice(-8)}...`;
+                schoolName = schoolNameById[idStr];
               } else {
-                schoolName = 'Unknown School';
+                // No IDs present → try last applied and cached mappings
+                let fallbackName = null;
+                try {
+                  if (typeof localStorage !== 'undefined') {
+                    const lastId = localStorage.getItem('lastAppliedSchoolId');
+                    if (lastId) {
+                      const n = localStorage.getItem(`schoolName:${lastId}`);
+                      if (n) fallbackName = n;
+                    }
+                    if (!fallbackName && cachedAppliedSchools?.length) {
+                      fallbackName = cachedAppliedSchools[0]?.schoolName || null;
+                    }
+                  }
+                } catch (_) {}
+                schoolName = fallbackName || 'Unknown School';
               }
 
               // Debug logging for school name resolution
