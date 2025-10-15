@@ -7,13 +7,21 @@ import { toast } from 'react-toastify';
 import { submitApplication, generateStudentPdf } from '../api/userService';
 import { FileText, User, Users, Home, BookOpen, PlusCircle, Trash2, Shield } from 'lucide-react';
 
-
 const FormField = ({ label, name, type = 'text', value, onChange, required = false, options = null, checked }) => {
     if (type === 'select') {
         return (
             <div>
-                <label htmlFor={name} className="block text-sm font-medium text-gray-700">{label}{required && <span className="text-red-500">*</span>}</label>
-                <select id={name} name={name} value={value || ''} onChange={onChange} required={required} className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md">
+                <label htmlFor={name} className="block text-sm font-medium text-gray-700">
+                    {label}{required && <span className="text-red-500">*</span>}
+                </label>
+                <select
+                    id={name}
+                    name={name}
+                    value={value || ''}
+                    onChange={onChange}
+                    required={required}
+                    className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md"
+                >
                     <option value="">Select...</option>
                     {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                 </select>
@@ -22,15 +30,26 @@ const FormField = ({ label, name, type = 'text', value, onChange, required = fal
     }
     if (type === 'checkbox') {
         return (
-             <div className="flex items-center pt-6">
-                <input id={name} name={name} type="checkbox" checked={checked} onChange={onChange} className="h-4 w-4 text-indigo-600 border-gray-300 rounded"/>
-                <label htmlFor={name} className="ml-2 block text-sm font-medium text-gray-900">{label}</label>
+            <div className="flex items-center pt-6">
+                <input
+                    id={name}
+                    name={name}
+                    type="checkbox"
+                    checked={checked}
+                    onChange={onChange}
+                    className="h-4 w-4 text-indigo-600 border-gray-300 rounded"
+                />
+                <label htmlFor={name} className="ml-2 block text-sm font-medium text-gray-900">
+                    {label}
+                </label>
             </div>
-        )
+        );
     }
     return (
         <div>
-            <label htmlFor={name} className="block text-sm font-medium text-gray-700">{label}{required && <span className="text-red-500">*</span>}</label>
+            <label htmlFor={name} className="block text-sm font-medium text-gray-700">
+                {label}{required && <span className="text-red-500">*</span>}
+            </label>
             <input
                 type={type}
                 id={name}
@@ -48,18 +67,10 @@ const StudentApplicationPage = () => {
     const { schoolId } = useParams();
     const { user: currentUser } = useAuth();
     const navigate = useNavigate();
+    const [school, setSchool] = useState(null);
+    const [loading, setLoading] = useState(true);
     const [step, setStep] = useState(1);
     const [isSubmitting, setIsSubmitting] = useState(false);
-
-    // Prevent school users from accessing student application form
-    useEffect(() => {
-        if (currentUser && currentUser.userType === 'school') {
-            toast.error('School accounts cannot submit student applications.');
-            navigate('/school-portal');
-        }
-    }, [currentUser, navigate]);
-
-    // Initial state with ALL fields from the schema
     const [formData, setFormData] = useState({
         name: '', location: '', dob: '', age: '', gender: '', motherTongue: '',
         placeOfBirth: '', speciallyAbled: false, speciallyAbledType: '',
@@ -77,7 +88,6 @@ const StudentApplicationPage = () => {
         presentAddress: '', permanentAddress: '',
         homeLanguage: '', yearlyBudget: '',
     });
-
     const [siblings, setSiblings] = useState([]);
 
     const handleInputChange = (e) => {
@@ -104,10 +114,10 @@ const StudentApplicationPage = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
+
         // Validate only the most essential required fields
         const requiredFields = [
-            'name', 'location', 'dob', 'gender', 'motherTongue', 'nationality', 
+            'name', 'location', 'dob', 'gender', 'motherTongue', 'nationality',
             'religion', 'caste', 'aadharNo', 'bloodGroup', 'interest',
             'fatherName', 'fatherAge', 'fatherQualification', 'fatherProfession',
             'fatherAnnualIncome', 'fatherPhoneNo', 'fatherAadharNo', 'fatherEmail',
@@ -115,21 +125,23 @@ const StudentApplicationPage = () => {
             'motherAnnualIncome', 'motherPhoneNo', 'motherAadharNo', 'motherEmail',
             'relationshipStatus', 'presentAddress', 'permanentAddress', 'homeLanguage', 'yearlyBudget'
         ];
-        
+
         // Check if any essential fields are missing
         const essentialFields = ['name', 'gender', 'dob', 'fatherName', 'motherName'];
-        const missingEssential = essentialFields.filter(field => !formData[field] || formData[field].toString().trim() === '');
-        
+        const missingEssential = essentialFields.filter(field =>
+            !formData[field] || formData[field].toString().trim() === ''
+        );
+
         if (missingEssential.length > 0) {
             console.log('Missing essential fields:', missingEssential);
             toast.error(`Please fill in essential fields: ${missingEssential.join(', ')}`);
             return;
         }
-        
+
         // Log all form data for debugging
         console.log('All form data:', formData);
         console.log('Siblings data:', siblings);
-        
+
         console.log('Starting submission process...');
         setIsSubmitting(true);
         try {
@@ -141,11 +153,22 @@ const StudentApplicationPage = () => {
                 siblings,
                 studId: currentUser._id,
                 schoolId: schoolId,
+                schoolName: school.name, // Add school name to payload
             };
             console.log('Application payload:', payload);
             console.log('Calling submitApplication...');
             await submitApplication(payload);
             console.log('Application submitted successfully!');
+
+            // Store school information in localStorage as backup
+            if (school && school._id) {
+                localStorage.setItem(`schoolName:${school._id}`, school.name);
+                localStorage.setItem(`schoolInfo:${currentUser._id}:${school._id}`, JSON.stringify({
+                    schoolName: school.name,
+                    schoolId: school._id,
+                    applicationId: 'pending' // Will be updated when we get the response
+                }));
+            }
             try {
                 console.log('Generating PDF...');
                 await generateStudentPdf(currentUser._id);
@@ -165,11 +188,67 @@ const StudentApplicationPage = () => {
             setIsSubmitting(false);
         }
     };
-    
+
+    const showGuardianFields = ['Divorced', 'Single Mother', 'Single Father', 'Widowed', 'Other'].includes(formData.relationshipStatus);
+
     const nextStep = () => setStep(prev => prev + 1);
     const prevStep = () => setStep(prev => prev - 1);
 
-    const showGuardianFields = ['Divorced', 'Single Mother', 'Single Father', 'Widowed', 'Other'].includes(formData.relationshipStatus);
+    // Prevent school users from accessing student application form
+    useEffect(() => {
+        if (currentUser && currentUser.userType === 'school') {
+            toast.error('School accounts cannot submit student applications.');
+            navigate('/school-portal');
+        }
+    }, [currentUser, navigate]);
+
+    // Fetch school details to get school name
+    useEffect(() => {
+        const fetchSchool = async () => {
+            if (!schoolId) return;
+
+            try {
+                const response = await getSchoolById(schoolId);
+                const schoolData = response?.data?.data || response?.data;
+                setSchool(schoolData);
+            } catch (error) {
+                console.error('Error fetching school details:', error);
+                toast.error('Could not load school details');
+                navigate('/schools');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchSchool();
+    }, [schoolId, navigate]);
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading school details...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (!school) {
+        return (
+            <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+                <div className="text-center">
+                    <p className="text-gray-600 mb-4">Could not load school details.</p>
+                    <button
+                        onClick={() => navigate('/schools')}
+                        className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700"
+                    >
+                        Back to Schools
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="bg-gray-100 min-h-screen py-12">
@@ -183,12 +262,14 @@ const StudentApplicationPage = () => {
 
                     {step === 1 && (
                         <section className="space-y-6">
-                            <h2 className="text-xl font-semibold text-gray-700 border-b pb-3 flex items-center"><User className="mr-2" />Student's Personal Details</h2>
+                            <h2 className="text-xl font-semibold text-gray-700 border-b pb-3 flex items-center">
+                                <User className="mr-2" />Student's Personal Details
+                            </h2>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <FormField label="Full Name" name="name" value={formData.name} onChange={handleInputChange} required />
                                 <FormField label="Location" name="location" value={formData.location} onChange={handleInputChange} required />
                                 <FormField label="Date of Birth" name="dob" type="date" value={formData.dob} onChange={handleInputChange} required />
-                                <FormField label="Age" name="age" type="number" value={formData.age} onChange={handleInputChange} required/>
+                                <FormField label="Age" name="age" type="number" value={formData.age} onChange={handleInputChange} required />
                                 <FormField label="Gender" name="gender" type="select" options={['Male', 'Female', 'Other']} value={formData.gender} onChange={handleInputChange} required />
                                 <FormField label="Mother Tongue" name="motherTongue" value={formData.motherTongue} onChange={handleInputChange} required />
                                 <FormField label="Place of Birth" name="placeOfBirth" value={formData.placeOfBirth} onChange={handleInputChange} />
@@ -212,20 +293,24 @@ const StudentApplicationPage = () => {
 
                     {step === 2 && (
                         <section className="space-y-6">
-                           <h2 className="text-xl font-semibold text-gray-700 border-b pb-3 flex items-center"><BookOpen className="mr-2" />Previous School Details (if any)</h2>
+                            <h2 className="text-xl font-semibold text-gray-700 border-b pb-3 flex items-center">
+                                <BookOpen className="mr-2" />Previous School Details (if any)
+                            </h2>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <FormField label="Last School Name" name="lastSchoolName" value={formData.lastSchoolName} onChange={handleInputChange} />
                                 <FormField label="Class Completed" name="classCompleted" value={formData.classCompleted} onChange={handleInputChange} />
                                 <FormField label="Last Academic Year" name="lastAcademicYear" value={formData.lastAcademicYear} onChange={handleInputChange} />
                                 <FormField label="Reason For Leaving" name="reasonForLeaving" value={formData.reasonForLeaving} onChange={handleInputChange} />
                                 <FormField label="Board" name="board" value={formData.board} onChange={handleInputChange} />
-                           </div>
+                            </div>
                         </section>
                     )}
 
                     {step === 3 && (
                         <section className="space-y-8">
-                            <h2 className="text-xl font-semibold text-gray-700 border-b pb-3 flex items-center"><Users className="mr-2" />Parents' & Guardian's Details</h2>
+                            <h2 className="text-xl font-semibold text-gray-700 border-b pb-3 flex items-center">
+                                <Users className="mr-2" />Parents' & Guardian's Details
+                            </h2>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <FormField label="Father's Name" name="fatherName" value={formData.fatherName} onChange={handleInputChange} required />
                                 <FormField label="Father's Age" name="fatherAge" type="number" value={formData.fatherAge} onChange={handleInputChange} required />
@@ -236,7 +321,7 @@ const StudentApplicationPage = () => {
                                 <FormField label="Father's Aadhar No" name="fatherAadharNo" value={formData.fatherAadharNo} onChange={handleInputChange} required />
                                 <FormField label="Father's Email" name="fatherEmail" type="email" value={formData.fatherEmail} onChange={handleInputChange} required />
                             </div>
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t">
                                 <FormField label="Mother's Name" name="motherName" value={formData.motherName} onChange={handleInputChange} required />
                                 <FormField label="Mother's Age" name="motherAge" type="number" value={formData.motherAge} onChange={handleInputChange} required />
                                 <FormField label="Mother's Qualification" name="motherQualification" value={formData.motherQualification} onChange={handleInputChange} required />
@@ -246,11 +331,21 @@ const StudentApplicationPage = () => {
                                 <FormField label="Mother's Aadhar No" name="motherAadharNo" value={formData.motherAadharNo} onChange={handleInputChange} required />
                                 <FormField label="Mother's Email" name="motherEmail" type="email" value={formData.motherEmail} onChange={handleInputChange} required />
                             </div>
-                            <FormField label="Parents' Relationship Status" name="relationshipStatus" type="select" options={['Married', 'Divorced', 'Single Mother', 'Single Father', 'Widowed', 'Other']} value={formData.relationshipStatus} onChange={handleInputChange} required />
-                            
+                            <FormField
+                                label="Parents' Relationship Status"
+                                name="relationshipStatus"
+                                type="select"
+                                options={['Married', 'Divorced', 'Single Mother', 'Single Father', 'Widowed', 'Other']}
+                                value={formData.relationshipStatus}
+                                onChange={handleInputChange}
+                                required
+                            />
+
                             {showGuardianFields && (
                                 <div className="pt-6 border-t">
-                                    <h3 className="text-lg font-medium text-gray-700 mb-4 flex items-center"><Shield className="mr-2" />Guardian's Details</h3>
+                                    <h3 className="text-lg font-medium text-gray-700 mb-4 flex items-center">
+                                        <Shield className="mr-2" />Guardian's Details
+                                    </h3>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <FormField label="Guardian's Name" name="guardianName" value={formData.guardianName} onChange={handleInputChange} />
                                         <FormField label="Guardian's Contact" name="guardianContactNo" value={formData.guardianContactNo} onChange={handleInputChange} />
@@ -264,10 +359,12 @@ const StudentApplicationPage = () => {
                             )}
                         </section>
                     )}
-                    
+
                     {step === 4 && (
-                         <section className="space-y-6">
-                            <h2 className="text-xl font-semibold text-gray-700 border-b pb-3 flex items-center"><Home className="mr-2" />Address & Sibling Details</h2>
+                        <section className="space-y-6">
+                            <h2 className="text-xl font-semibold text-gray-700 border-b pb-3 flex items-center">
+                                <Home className="mr-2" />Address & Sibling Details
+                            </h2>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <FormField label="Present Address" name="presentAddress" value={formData.presentAddress} onChange={handleInputChange} required />
                                 <FormField label="Permanent Address" name="permanentAddress" value={formData.permanentAddress} onChange={handleInputChange} required />
@@ -278,15 +375,35 @@ const StudentApplicationPage = () => {
                                 <h3 className="text-lg font-medium text-gray-700 mb-2">Sibling Information (if any)</h3>
                                 {siblings.map((sibling, index) => (
                                     <div key={index} className="grid grid-cols-2 md:grid-cols-6 gap-4 items-end bg-gray-50 p-4 rounded-md mb-4 relative">
-                                        <div className="col-span-2 md:col-span-1"><FormField label="Name" name="name" value={sibling.name} onChange={e => handleSiblingChange(index, e)} /></div>
-                                        <div><FormField label="Age" name="age" type="number" value={sibling.age} onChange={e => handleSiblingChange(index, e)} /></div>
-                                        <div><FormField label="Sex" name="sex" value={sibling.sex} onChange={e => handleSiblingChange(index, e)} /></div>
-                                        <div className="col-span-2"><FormField label="Institute" name="nameOfInstitute" value={sibling.nameOfInstitute} onChange={e => handleSiblingChange(index, e)} /></div>
-                                        <div className="md:col-span-1"><FormField label="Class" name="className" value={sibling.className} onChange={e => handleSiblingChange(index, e)} /></div>
-                                        <button type="button" onClick={() => removeSibling(index)} className="text-red-500 hover:text-red-700 absolute top-1 right-2"><Trash2 size={18} /></button>
+                                        <div className="col-span-2 md:col-span-1">
+                                            <FormField label="Name" name="name" value={sibling.name} onChange={e => handleSiblingChange(index, e)} />
+                                        </div>
+                                        <div>
+                                            <FormField label="Age" name="age" type="number" value={sibling.age} onChange={e => handleSiblingChange(index, e)} />
+                                        </div>
+                                        <div>
+                                            <FormField label="Sex" name="sex" value={sibling.sex} onChange={e => handleSiblingChange(index, e)} />
+                                        </div>
+                                        <div className="col-span-2">
+                                            <FormField label="Institute" name="nameOfInstitute" value={sibling.nameOfInstitute} onChange={e => handleSiblingChange(index, e)} />
+                                        </div>
+                                        <div className="md:col-span-1">
+                                            <FormField label="Class" name="className" value={sibling.className} onChange={e => handleSiblingChange(index, e)} />
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => removeSibling(index)}
+                                            className="text-red-500 hover:text-red-700 absolute top-1 right-2"
+                                        >
+                                            <Trash2 size={18} />
+                                        </button>
                                     </div>
                                 ))}
-                                <button type="button" onClick={addSibling} className="flex items-center text-sm text-indigo-600 hover:text-indigo-800 mt-2">
+                                <button
+                                    type="button"
+                                    onClick={addSibling}
+                                    className="flex items-center text-sm text-indigo-600 hover:text-indigo-800 mt-2"
+                                >
                                     <PlusCircle size={16} className="mr-1" /> Add Sibling
                                 </button>
                             </div>
@@ -294,11 +411,33 @@ const StudentApplicationPage = () => {
                     )}
 
                     <div className="flex justify-between mt-10 border-t pt-6">
-                        {step > 1 && <button type="button" onClick={prevStep} className="px-6 py-2 font-semibold text-gray-700 bg-gray-200 rounded-md">Previous</button>}
-                        {step < 4 && <button type="button" onClick={nextStep} className="px-6 py-2 font-semibold text-white bg-indigo-600 rounded-md ml-auto">Next</button>}
-                        {step === 4 && <button type="submit" disabled={isSubmitting} className="px-6 py-2 font-semibold text-white bg-green-600 rounded-md ml-auto disabled:bg-gray-400">
-                            {isSubmitting ? 'Submitting...' : 'Submit Application'}
-                        </button>}
+                        {step > 1 && (
+                            <button
+                                type="button"
+                                onClick={prevStep}
+                                className="px-6 py-2 font-semibold text-gray-700 bg-gray-200 rounded-md"
+                            >
+                                Previous
+                            </button>
+                        )}
+                        {step < 4 && (
+                            <button
+                                type="button"
+                                onClick={nextStep}
+                                className="px-6 py-2 font-semibold text-white bg-indigo-600 rounded-md ml-auto"
+                            >
+                                Next
+                            </button>
+                        )}
+                        {step === 4 && (
+                            <button
+                                type="submit"
+                                disabled={isSubmitting}
+                                className="px-6 py-2 font-semibold text-white bg-green-600 rounded-md ml-auto disabled:bg-gray-400"
+                            >
+                                {isSubmitting ? 'Submitting...' : 'Submit Application'}
+                            </button>
+                        )}
                     </div>
                 </form>
             </div>

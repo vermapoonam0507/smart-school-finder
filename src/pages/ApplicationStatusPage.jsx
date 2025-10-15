@@ -55,12 +55,24 @@ const ApplicationStatusPage = () => {
         const map = {};
         results.forEach((res, i) => {
           const id = unique[i];
-          map[id] = res.status === 'fulfilled'
-            ? (res.value?.data?.data?.name || res.value?.data?.name || 'School')
-            : 'School';
+          if (res.status === 'fulfilled') {
+            const schoolData = res.value?.data?.data || res.value?.data;
+            map[id] = schoolData?.name || schoolData?.schoolName || `School ID: ${id.slice(-8)}...`;
+          } else {
+            console.warn(`Failed to fetch school name for ID: ${id}`, res.reason);
+            map[id] = `School ID: ${id.slice(-8)}...`;
+          }
         });
         setSchoolNameById(prev => ({ ...prev, ...map }));
-      } catch (_) {}
+      } catch (error) {
+        console.error('Error fetching school names:', error);
+        // Set fallback names for all IDs
+        const map = {};
+        unique.forEach(id => {
+          map[id] = `School ID: ${id.slice(-8)}...`;
+        });
+        setSchoolNameById(prev => ({ ...prev, ...map }));
+      }
     };
     if (forms?.length) fetchNames();
   }, [forms, schoolNameById]);
@@ -91,12 +103,46 @@ const ApplicationStatusPage = () => {
           <div className="space-y-4">
             {forms.map((f) => {
               const submitted = f.createdAt ? new Date(f.createdAt).toLocaleDateString() : '-';
+
+              // Comprehensive debug logging to see full application structure
+              console.log('Full application data:', f);
+              console.log('Application keys:', Object.keys(f));
+              console.log('Application values:', Object.values(f));
+
               const schoolRef = f.schoolId || f.school;
               const idStr = typeof schoolRef === 'object' ? (schoolRef?._id || schoolRef?.id) : schoolRef;
-              const schoolName = f.schoolName
-                || (typeof schoolRef === 'object' ? (schoolRef?.name || schoolRef?.schoolName) : undefined)
-                || (idStr ? (schoolNameById[idStr] || (typeof localStorage !== 'undefined' ? localStorage.getItem(`schoolName:${idStr}`) : undefined)) : undefined)
-                || '-';
+
+              // Enhanced school name resolution - prioritize localStorage since backend isn't saving school info
+              let schoolName = 'Loading...';
+
+              if (f.schoolName) {
+                schoolName = f.schoolName; // Primary source if backend is fixed
+              } else if (idStr && typeof localStorage !== 'undefined' && localStorage.getItem(`schoolName:${idStr}`)) {
+                schoolName = localStorage.getItem(`schoolName:${idStr}`); // Use cached school name
+              } else if (typeof schoolRef === 'object' && (schoolRef?.name || schoolRef?.schoolName)) {
+                schoolName = schoolRef.name || schoolRef.schoolName;
+              } else if (idStr && schoolNameById[idStr] && schoolNameById[idStr] !== 'School') {
+                schoolName = schoolNameById[idStr];
+              } else if (f.school && typeof f.school === 'object' && f.school.name) {
+                schoolName = f.school.name;
+              } else if (idStr && schoolNameById[idStr]) {
+                schoolName = schoolNameById[idStr]; // API fallback
+              } else if (idStr) {
+                schoolName = `School ID: ${idStr.slice(-8)}...`;
+              } else {
+                schoolName = 'Unknown School';
+              }
+
+              // Debug logging for school name resolution
+              console.log('School name resolution for application:', f._id, {
+                fSchoolName: f.schoolName,
+                schoolRef: schoolRef,
+                idStr: idStr,
+                schoolNameById: schoolNameById[idStr],
+                localStorageName: typeof localStorage !== 'undefined' ? localStorage.getItem(`schoolName:${idStr}`) : undefined,
+                fSchool: f.school,
+                finalSchoolName: schoolName
+              });
               const rawStatus = (f.status || f.applicationStatus || f.formStatus || f.decision || 'pending');
               const status = String(rawStatus).toLowerCase().includes('submit') ? 'submitted' : (String(rawStatus).toLowerCase());
 
