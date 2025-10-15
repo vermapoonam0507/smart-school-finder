@@ -22,6 +22,8 @@ import {
   Twitter,
   Instagram,
   Linkedin,
+  X,
+  Check
 } from "lucide-react";
 import ReviewSection from "../components/ReviewSection";
 
@@ -76,42 +78,14 @@ const SchoolDetailsPage = ({ shortlist, onShortlistToggle }) => {
       try {
         setLoading(true);
         const response = await getSchoolById(schoolId);
-        const raw = response?.data;
-        const schoolData = raw?.data || raw; // support {data: {...}} or direct {...}
-        
+        const schoolData = response?.data?.data || response?.data;
+
         if (schoolData) {
-          console.log('School data received:', schoolData);
-          console.log('Location fields:', {
-            location: schoolData.location,
-            city: schoolData.city,
-            state: schoolData.state,
-            area: schoolData.area
-          });
-          console.log('🔍 Available Image Fields:', {
-            photos: schoolData.photos,
-            profilePhoto: schoolData.profilePhoto,
-            image: schoolData.image,
-            logo: schoolData.logo,
-            profileImage: schoolData.profileImage,
-            schoolLogo: schoolData.schoolLogo,
-            schoolImage: schoolData.schoolImage,
-            schoolPhoto: schoolData.schoolPhoto,
-            avatar: schoolData.avatar,
-            picture: schoolData.picture,
-            thumbnail: schoolData.thumbnail
-          });
-          console.log('🔍 All school keys containing "image", "photo", "logo", "avatar":', 
-            Object.keys(schoolData).filter(key => 
-              key.toLowerCase().includes('image') || 
-              key.toLowerCase().includes('photo') || 
-              key.toLowerCase().includes('logo') || 
-              key.toLowerCase().includes('avatar') ||
-              key.toLowerCase().includes('picture')
-            )
-          );
           setSchool(schoolData);
         } else {
           console.warn(`No school data returned for ID: ${schoolId}`);
+          toast.error("School not found.");
+          navigate("/schools");
         }
       } catch (error) {
         toast.error("Could not load school details.");
@@ -157,211 +131,93 @@ const SchoolDetailsPage = ({ shortlist, onShortlistToggle }) => {
 
     const fetchAdditionalDetails = async () => {
       try {
-        const [
-          infrastructureRes,
-          feesRes,
-          academicsRes,
-          otherDetailsRes,
-          facultyRes,
-          admissionRes,
-          technologyRes,
-          safetyRes,
-          internationalRes
-        ] = await Promise.allSettled([
-          getInfrastructureById(schoolId).catch(err => {
-            if (err.response?.status === 404) {
-              console.log('ℹ️ Infrastructure details not added for this school yet');
-            } else {
-              console.warn('Infrastructure fetch failed:', err.response?.status);
-            }
-            return { data: null };
-          }),
-          getFeesAndScholarshipsById(schoolId).catch(err => {
-            if (err.response?.status === 404) {
-              console.log('ℹ️ Fees details not added for this school yet');
-            } else {
-              console.warn('Fees fetch failed:', err.response?.status);
-            }
-            return { data: null };
-          }),
-          getAcademicsById(schoolId).catch(err => {
-            if (err.response?.status === 404) {
-              console.log('ℹ️ Academics details not added for this school yet');
-            } else {
-              console.warn('Academics fetch failed:', err.response?.status);
-            }
-            return { data: null };
-          }),
-          getOtherDetailsById(schoolId).catch(err => {
-            if (err.response?.status === 404) {
-              console.log('ℹ️ Other details not added for this school yet');
-            } else {
-              console.warn('Other details fetch failed:', err.response?.status);
-            }
-            return { data: null };
-          }),
-          getFacultyById(schoolId).catch(err => {
-            if (err.response?.status === 404) {
-              console.log('ℹ️ Faculty details not added for this school yet');
-            } else {
-              console.warn('Faculty fetch failed:', err.response?.status);
-            }
-            return { data: null };
-          }),
-          getAdmissionTimelineById(schoolId).catch(err => {
-            if (err.response?.status === 404) {
-              console.log('ℹ️ Admission timeline not added for this school yet');
-            } else {
-              console.warn('Admission timeline fetch failed:', err.response?.status);
-            }
-            return { data: null };
-          }),
-          getTechnologyAdoptionById(schoolId).catch(err => {
-            if (err.response?.status === 404) {
-              console.log('ℹ️ Technology adoption details not added for this school yet');
-            } else {
-              console.warn('Technology adoption fetch failed:', err.response?.status);
-            }
-            return { data: null };
-          }),
-          getSafetyAndSecurityById(schoolId).catch(err => {
-            if (err.response?.status === 404) {
-              console.log('ℹ️ Safety & security details not added for this school yet');
-            } else {
-              console.warn('Safety and security fetch failed:', err.response?.status);
-            }
-            return { data: null };
-          }),
-          getInternationalExposureById(schoolId).catch(err => {
-            if (err.response?.status === 404) {
-              console.log('ℹ️ International exposure details not added for this school yet');
-            } else {
-              console.warn('International exposure fetch failed:', err.response?.status);
-            }
-            return { data: null };
-          })
+        // Group related API calls to reduce network overhead
+        const [amenitiesAndActivities, infrastructureAndAcademics, feesAndFaculty] = await Promise.all([
+          // Group 1: Amenities & Activities (2 calls)
+          Promise.allSettled([
+            getAmenitiesById(schoolId).catch(() => ({ data: null })),
+            getActivitiesById(schoolId).catch(() => ({ data: null }))
+          ]),
+          // Group 2: Infrastructure & Academics (2 calls)
+          Promise.allSettled([
+            getInfrastructureById(schoolId).catch(() => ({ data: null })),
+            getAcademicsById(schoolId).catch(() => ({ data: null }))
+          ]),
+          // Group 3: Fees & Faculty (2 calls)
+          Promise.allSettled([
+            getFeesAndScholarshipsById(schoolId).catch(() => ({ data: null })),
+            getFacultyById(schoolId).catch(() => ({ data: null }))
+          ])
         ]);
 
-        // Extract data safely with null fallbacks
-        const infrastructureData = infrastructureRes?.value?.data?.data || infrastructureRes?.value?.data || null;
-        const feesData = feesRes?.value?.data?.data || feesRes?.value?.data || null;
-        const academicsData = academicsRes?.value?.data?.data || academicsRes?.value?.data || null;
-        const otherDetailsData = otherDetailsRes?.value?.data?.data || otherDetailsRes?.value?.data || null;
-        const facultyData = facultyRes?.value?.data?.data || facultyRes?.value?.data || null;
-        const admissionData = admissionRes?.value?.data?.data || admissionRes?.value?.data || null;
-        const technologyData = technologyRes?.value?.data?.data || technologyRes?.value?.data || null;
-        const safetyData = safetyRes?.value?.data?.data || safetyRes?.value?.data || null;
-        const internationalData = internationalRes?.value?.data?.data || internationalRes?.value?.data || null;
+        // Process amenities and activities
+        const amenitiesRes = amenitiesAndActivities[0];
+        const activitiesRes = amenitiesAndActivities[1];
 
-        // Debug logging
-        console.log('🔍 Student Page API Response Debug:');
-        console.log('Infrastructure:', infrastructureData);
-        console.log('Fees:', feesData);
-        console.log('Academics:', academicsData);
-        console.log('Admission Timeline:', admissionData);
-        console.log('Safety & Security:', safetyData);
-        console.log('Technology Adoption:', technologyData);
-        console.log('International Exposure:', internationalData);
-        
-        // Log the structure of successful API calls
-        if (technologyData) {
-          console.log('🔍 Technology Adoption structure:', Object.keys(technologyData));
-        }
-        if (internationalData) {
-          console.log('🔍 International Exposure structure:', Object.keys(internationalData));
-        }
+        const amenitiesData = amenitiesRes?.value?.data?.data || amenitiesRes?.value?.data;
+        const allAmenities = [
+          ...(amenitiesData?.predefinedAmenities || []),
+          ...(amenitiesData?.customAmenities || [])
+        ];
 
-        // Check if we have school data with embedded details
-        if (school) {
-          console.log('🔍 Checking school object for embedded data...');
-          console.log('🔍 School object keys:', Object.keys(school));
-          console.log('🔍 Full school object:', school);
-          
-          // Check for any fields that might contain the data we need
-          const allKeys = Object.keys(school);
-          const relevantKeys = allKeys.filter(key => 
-            key.toLowerCase().includes('infrastructure') ||
-            key.toLowerCase().includes('fees') ||
-            key.toLowerCase().includes('academic') ||
-            key.toLowerCase().includes('admission') ||
-            key.toLowerCase().includes('safety') ||
-            key.toLowerCase().includes('security') ||
-            key.toLowerCase().includes('technology') ||
-            key.toLowerCase().includes('international')
-          );
-          console.log('🔍 Relevant keys in school object:', relevantKeys);
-          
-          // Try to extract data from school object if API endpoints failed
-          // Check multiple possible field names for each data type
-          const infrastructureFromSchool = school.infrastructure || school.infrastructureDetails || school.infrastructureData;
-          if (!infrastructureData && infrastructureFromSchool) {
-            console.log('📦 Found infrastructure in school object:', infrastructureFromSchool);
-            setInfrastructure(infrastructureFromSchool);
-          } else {
-            setInfrastructure(infrastructureData);
+        const activitiesData = activitiesRes?.value?.data?.data || activitiesRes?.value?.data;
+        const allActivities = [
+          ...(activitiesData?.activities || []),
+          ...(activitiesData?.customActivities || [])
+        ];
+
+        setAmenities(allAmenities);
+        setActivities(allActivities);
+
+        // Process infrastructure and academics
+        const infrastructureRes = infrastructureAndAcademics[0];
+        const academicsRes = infrastructureAndAcademics[1];
+
+        const infrastructureData = infrastructureRes?.value?.data?.data || infrastructureRes?.value?.data;
+        const academicsData = academicsRes?.value?.data?.data || academicsRes?.value?.data;
+
+        setInfrastructure(infrastructureData);
+        setAcademics(academicsData);
+
+        // Process fees and faculty
+        const feesRes = feesAndFaculty[0];
+        const facultyRes = feesAndFaculty[1];
+
+        const feesData = feesRes?.value?.data?.data || feesRes?.value?.data;
+        const facultyData = facultyRes?.value?.data?.data || facultyRes?.value?.data;
+
+        setFeesAndScholarships(feesData);
+        setFaculty(facultyData);
+
+        // Load remaining details after initial render (lazy loading)
+        setTimeout(async () => {
+          try {
+            const remainingDetails = await Promise.allSettled([
+              getOtherDetailsById(schoolId).catch(() => ({ data: null })),
+              getAdmissionTimelineById(schoolId).catch(() => ({ data: null })),
+              getTechnologyAdoptionById(schoolId).catch(() => ({ data: null })),
+              getSafetyAndSecurityById(schoolId).catch(() => ({ data: null })),
+              getInternationalExposureById(schoolId).catch(() => ({ data: null }))
+            ]);
+
+            const otherDetailsRes = remainingDetails[0];
+            const admissionRes = remainingDetails[1];
+            const technologyRes = remainingDetails[2];
+            const safetyRes = remainingDetails[3];
+            const internationalRes = remainingDetails[4];
+
+            setOtherDetails(otherDetailsRes?.value?.data?.data || otherDetailsRes?.value?.data);
+            setAdmissionTimeline(admissionRes?.value?.data?.data || admissionRes?.value?.data);
+            setTechnologyAdoption(technologyRes?.value?.data?.data || technologyRes?.value?.data);
+            setSafetyAndSecurity(safetyRes?.value?.data?.data || safetyRes?.value?.data);
+            setInternationalExposure(internationalRes?.value?.data?.data || internationalRes?.value?.data);
+          } catch (e) {
+            console.error("Error loading additional details:", e);
           }
-          
-          const feesFromSchool = school.feesAndScholarships || school.fees || school.feesData || school.scholarships;
-          if (!feesData && feesFromSchool) {
-            console.log('📦 Found fees in school object:', feesFromSchool);
-            setFeesAndScholarships(feesFromSchool);
-          } else {
-            setFeesAndScholarships(feesData);
-          }
-          
-          const academicsFromSchool = school.academics || school.academicDetails || school.academicData;
-          if (!academicsData && academicsFromSchool) {
-            console.log('📦 Found academics in school object:', academicsFromSchool);
-            setAcademics(academicsFromSchool);
-          } else {
-            setAcademics(academicsData);
-          }
-          
-          const admissionFromSchool = school.admissionTimeline || school.admissionDetails || school.admissionData || school.admissionProcess;
-          if (!admissionData && admissionFromSchool) {
-            console.log('📦 Found admission timeline in school object:', admissionFromSchool);
-            setAdmissionTimeline(admissionFromSchool);
-          } else {
-            setAdmissionTimeline(admissionData);
-          }
-          
-          const safetyFromSchool = school.safetyAndSecurity || school.safetyDetails || school.safetyData || school.security;
-          if (!safetyData && safetyFromSchool) {
-            console.log('📦 Found safety & security in school object:', safetyFromSchool);
-            setSafetyAndSecurity(safetyFromSchool);
-          } else {
-            setSafetyAndSecurity(safetyData);
-          }
-          
-          const technologyFromSchool = school.technologyAdoption || school.technologyDetails || school.technologyData || school.technology;
-          if (!technologyData && technologyFromSchool) {
-            console.log('📦 Found technology adoption in school object:', technologyFromSchool);
-            setTechnologyAdoption(technologyFromSchool);
-          } else {
-            setTechnologyAdoption(technologyData);
-          }
-          
-          const internationalFromSchool = school.internationalExposure || school.internationalDetails || school.internationalData || school.international;
-          if (!internationalData && internationalFromSchool) {
-            console.log('📦 Found international exposure in school object:', internationalFromSchool);
-            setInternationalExposure(internationalFromSchool);
-          } else {
-            setInternationalExposure(internationalData);
-          }
-        } else {
-          // Fallback to API data
-          setInfrastructure(infrastructureData);
-          setFeesAndScholarships(feesData);
-          setAcademics(academicsData);
-          setOtherDetails(otherDetailsData);
-          setFaculty(facultyData);
-          setAdmissionTimeline(admissionData);
-          setTechnologyAdoption(technologyData);
-          setSafetyAndSecurity(safetyData);
-          setInternationalExposure(internationalData);
-        }
+        }, 100);
+
       } catch (e) {
-        console.error("Error fetching additional details:", e);
+        console.error("Error fetching grouped details:", e);
       }
     };
 
@@ -386,8 +242,45 @@ const SchoolDetailsPage = ({ shortlist, onShortlistToggle }) => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        Loading school details...
+      <div className="min-h-screen bg-gray-100">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="bg-white shadow-lg rounded-lg p-6">
+            {/* Header Skeleton */}
+            <div className="flex flex-col md:flex-row items-start md:items-center gap-6 mb-6">
+              <div className="w-32 h-32 md:w-40 md:h-40 bg-gray-200 rounded-lg animate-pulse"></div>
+              <div className="flex-1 space-y-4">
+                <div className="h-8 bg-gray-200 rounded animate-pulse w-3/4"></div>
+                <div className="h-4 bg-gray-200 rounded animate-pulse w-1/2"></div>
+                <div className="h-16 bg-gray-200 rounded animate-pulse w-full"></div>
+                <div className="flex gap-4">
+                  <div className="h-4 bg-gray-200 rounded animate-pulse w-20"></div>
+                  <div className="h-4 bg-gray-200 rounded animate-pulse w-24"></div>
+                  <div className="h-4 bg-gray-200 rounded animate-pulse w-28"></div>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons Skeleton */}
+            <div className="flex gap-3">
+              <div className="h-10 bg-gray-200 rounded animate-pulse w-32"></div>
+              <div className="h-10 bg-gray-200 rounded animate-pulse w-24"></div>
+              <div className="h-10 bg-gray-200 rounded animate-pulse w-20"></div>
+            </div>
+          </div>
+
+          {/* Content Sections Skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="bg-white rounded-lg p-6">
+                <div className="h-6 bg-gray-200 rounded animate-pulse mb-4"></div>
+                <div className="space-y-2">
+                  <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="h-4 bg-gray-200 rounded animate-pulse w-5/6"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -436,44 +329,30 @@ const SchoolDetailsPage = ({ shortlist, onShortlistToggle }) => {
           
           {/* School Header with Profile Photo and Details */}
           <div className="flex flex-col md:flex-row items-start md:items-center gap-6 mb-6">
-            {/* School Profile Photo */}
+            {/* School Profile Photo - Optimized */}
             <div className="flex-shrink-0">
               <img
                 src={(() => {
+                  // Simplified image source selection - check only essential fields
                   const imageSources = [
-                    school.photos && school.photos.length > 0 ? school.photos[0] : null,
+                    school.photos?.[0],
                     school.profilePhoto,
                     school.image,
                     school.logo,
                     school.profileImage,
-                    school.schoolLogo,
-                    school.schoolImage,
-                    school.schoolPhoto,
-                    school.avatar,
-                    school.picture,
-                    school.thumbnail
+                    school.schoolLogo
                   ].filter(Boolean);
-                  
-                  const selectedSource = imageSources[0] || "/api/placeholder/200/200";
-                  console.log('🖼️ Available image sources:', imageSources);
-                  console.log('🖼️ Selected image source:', selectedSource);
-                  return selectedSource;
+
+                  return imageSources[0] || "/api/placeholder/200/200";
                 })()}
                 alt={`${school.name} profile`}
                 className="w-32 h-32 md:w-40 md:h-40 rounded-lg object-cover border-4 border-gray-200 shadow-lg"
+                loading="lazy"
                 onError={(e) => {
-                  console.log('🖼️ Image failed to load:', e.target.src);
-                  // Prevent infinite loop by checking if we're already on a fallback
-                  if (e.target.src.includes('/api/placeholder/') || e.target.src.includes('data:image/svg+xml')) {
-                    console.log('🖼️ Fallback image also failed, using SVG placeholder');
-                    e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjNmNGY2Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5YTNhZiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPk5vIEltYWdlPC90ZXh0Pjwvc3ZnPg==';
-                  } else {
-                    console.log('🖼️ Trying fallback to placeholder...');
+                  // Simplified error handling
+                  if (!e.target.src.includes('placeholder')) {
                     e.target.src = "/api/placeholder/200/200";
                   }
-                }}
-                onLoad={(e) => {
-                  console.log('🖼️ Image loaded successfully:', e.target.src);
                 }}
               />
             </div>
