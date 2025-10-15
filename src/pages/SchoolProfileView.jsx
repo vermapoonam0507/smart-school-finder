@@ -11,7 +11,7 @@ const Row = ({ label, value }) => (
 );
 
 const Section = ({ title, children }) => (
-  <div className="bg-white rounded-lg shadow p-6">
+  <div className="bg-white rounded-lg shadow p-6 ring-1 ring-gray-200">
     <h3 className="text-lg font-semibold text-gray-800 mb-4">{title}</h3>
     {children}
   </div>
@@ -20,6 +20,7 @@ const Section = ({ title, children }) => (
 const SchoolProfileView = () => {
   const { user: currentUser } = useAuth();
   const [school, setSchool] = useState(null);
+  const [resolvedSchoolId, setResolvedSchoolId] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -42,6 +43,8 @@ const SchoolProfileView = () => {
         const res = await getSchoolById(id);
         const s = res?.data?.data || res?.data || {};
         setSchool(s);
+        // Remember the actual school id we should use for updates
+        setResolvedSchoolId(s?._id || id);
       } catch (e) {
         setError(e?.response?.data?.message || "Failed to load school profile");
       } finally {
@@ -67,6 +70,7 @@ const SchoolProfileView = () => {
     ? school.languageMedium.join(", ")
     : school.languageMedium;
   const shifts = Array.isArray(school.shifts) ? school.shifts.join(", ") : school.shifts;
+  const teacherStudentRatio = school.TeacherToStudentRatio || school.teacherStudentRatio || school.teacherToStudentRatio || "";
 
   const onChange = (e) => {
     const { name, value } = e.target;
@@ -76,7 +80,7 @@ const SchoolProfileView = () => {
   const onSave = async () => {
     try {
       setSaving(true);
-      const id = currentUser?.schoolId || currentUser?._id || currentUser?.authId;
+      const id = resolvedSchoolId || currentUser?.schoolId || currentUser?._id || currentUser?.authId;
       if (!id) throw new Error("Missing school id");
       const payload = { ...school };
       if (typeof payload.languageMedium === 'string') {
@@ -87,6 +91,13 @@ const SchoolProfileView = () => {
       }
       if (payload.shifts && !Array.isArray(payload.shifts)) {
         payload.shifts = String(payload.shifts).split(',').map(s=>s.trim()).filter(Boolean);
+      }
+      // Normalize teacher-student ratio key casing for backend
+      if (payload.TeacherToStudentRatio && !payload.teacherStudentRatio) {
+        payload.teacherStudentRatio = payload.TeacherToStudentRatio;
+      }
+      if (payload.teacherToStudentRatio && !payload.teacherStudentRatio) {
+        payload.teacherStudentRatio = payload.teacherToStudentRatio;
       }
       await updateSchoolInfo(id, payload);
       toast.success("School profile updated");
@@ -99,8 +110,8 @@ const SchoolProfileView = () => {
   };
 
   return (
-    <div className="p-8 space-y-8">
-      <div className="bg-white rounded-lg shadow p-6">
+    <div className="p-8 space-y-8 bg-gray-50 min-h-[70vh]">
+      <div className="bg-white rounded-lg shadow p-6 ring-1 ring-gray-200">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold text-gray-800">School Profile</h2>
           <div className="flex items-center gap-3">
@@ -149,7 +160,7 @@ const SchoolProfileView = () => {
               <input name="schoolMode" value={school.schoolMode || ''} onChange={onChange} className="border p-2 rounded" placeholder="School Mode" />
               <input name="shifts" value={shifts || ''} onChange={(e) => setSchool(prev => ({ ...prev, shifts: e.target.value }))} className="border p-2 rounded" placeholder="Shifts (comma separated)" />
               <input name="languageMedium" value={languageMedium || ''} onChange={onChange} className="border p-2 rounded md:col-span-2" placeholder="Language Medium (comma separated)" />
-              <input name="TeacherToStudentRatio" value={school.TeacherToStudentRatio || school.teacherStudentRatio || ''} onChange={(e) => setSchool(prev => ({ ...prev, TeacherToStudentRatio: e.target.value }))} className="border p-2 rounded" placeholder="Teacher:Student Ratio" />
+              <input name="TeacherToStudentRatio" value={teacherStudentRatio} onChange={(e) => setSchool(prev => ({ ...prev, TeacherToStudentRatio: e.target.value }))} className="border p-2 rounded" placeholder="Teacher:Student Ratio" />
             </div>
           ) : (
             <>
@@ -160,7 +171,7 @@ const SchoolProfileView = () => {
               <Row label="School Mode" value={school.schoolMode} />
               <Row label="Shifts" value={shifts} />
               <Row label="Language Medium" value={languageMedium} />
-              <Row label="Teacher:Student Ratio" value={school.TeacherToStudentRatio || school.teacherStudentRatio} />
+              <Row label="Teacher:Student Ratio" value={teacherStudentRatio} />
             </>
           )}
         </div>

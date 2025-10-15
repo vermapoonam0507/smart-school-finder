@@ -39,10 +39,10 @@ export const fetchStudentApplications = async (schoolIdOrEmail) => {
     const identityRaw = String(schoolIdOrEmail || '');
     const identity = encodeURIComponent(identityRaw);
     const candidates = [
+        `/api/applications`, // fetch all, filter client-side first to avoid 404 spam
+        `/api/applications?schoolId=${identity}`,
         `/api/applications/school/${identity}`,
         `/api/applications/by-school/${identity}`,
-    `/api/applications?schoolId=${identity}`,
-        `/api/applications`, // fetch all, filter on client as last resort
     ];
 
     let lastErr = null;
@@ -90,15 +90,16 @@ export const fetchStudentApplications = async (schoolIdOrEmail) => {
 // Update an application's status (accept/reject/shortlist)
 export const updateApplicationStatus = async (applicationId, newStatus) => {
     const body = { status: newStatus };
-    const candidates = [
-        `/api/applications/${encodeURIComponent(applicationId)}/status`,
-        `/api/applications/${encodeURIComponent(applicationId)}`,
+    const id = encodeURIComponent(applicationId);
+    const attempts = [
+        { url: `/api/applications/${id}/status`, method: 'put' },
+        { url: `/api/applications/${id}`, method: 'put' }, // backend expects PUT /:studId
+        { url: `/api/applications/${id}`, method: 'patch' },
     ];
     let lastErr;
-    for (const path of candidates) {
+    for (const attempt of attempts) {
         try {
-            const method = path.endsWith('/status') ? 'put' : 'patch';
-            const res = await apiClient[method](path, body);
+            const res = await apiClient.request({ method: attempt.method, url: attempt.url, data: body });
             return res?.data || { ok: true };
         } catch (e) {
             lastErr = e;
