@@ -1,367 +1,408 @@
 import React, { useState } from 'react';
-import { ArrowLeft, ChevronDown } from 'lucide-react';
+import { ArrowLeft, ChevronDown, User, MapPin, Building, Navigation, Heart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { predictSchools } from '../api/predictorService';
 import SchoolCard from '../components/SchoolCard';
+import { toast } from 'react-toastify';
 
-const feeRanges = [
-  '1000 - 10000',
-  '10000 - 25000', 
-  '25000 - 50000',
-  '50000 - 75000',
-  '75000 - 100000',
-  '1 Lakh - 2 Lakh',
-  '2 Lakh - 3 Lakh',
-  '3 Lakh - 4 Lakh',
-  '4 Lakh - 5 Lakh',
-  'More than 5 Lakh'
+const schoolTypes = [
+  'Day School', 'Boarding School', 'Day-cum-Boarding', 'International School',
+  'Convent School', 'Private School', 'Government School'
 ];
 
-const educationBoards = [
-  'CBSE', 'ICSE', 'CISCE', 'NIOS', 'SSC', 'IGCSE',
-  'IB', 'KVS', 'JNV', 'DBSE', 'MSBSHSE', 'UPMSP',
-  'KSEEB', 'WBBSE', 'GSEB', 'RBSE', 'BSEB', 'PSEB',
-  'BSE', 'SEBA', 'MPBSE', 'STATE', 'OTHER'
+const shiftOptions = [
+  'Morning Shift', 'Afternoon Shift', 'Evening Shift', 'Full Day',
+  'morning', 'afternoon', 'night school'
 ];
 
-const schoolModes = ['convent', 'private', 'government'];
-
-const genderTypes = ['boy', 'girl', 'co-ed'];
-
-const activitiesOptions = [
-  'Focusing on Academics',
-  'Focuses on Practical Learning',
-  'Focuses on Theoretical Learning',
-  'Empowering in Sports',
-  'Empowering in Arts',
-  'Special Focus on Mathematics',
-  'Special Focus on Science',
-  'Special Focus on Physical Education',
-  'Leadership Development',
-  'STEM Activities',
-  'Cultural Education',
-  'Technology Integration',
-  'Environmental Awareness'
+const genderOptions = [
+  'Male', 'Female', 'Co-educational', 'boy', 'girl', 'co-ed'
 ];
 
-const shiftOptions = ['morning', 'afternoon', 'night school'];
+const stateOptions = [
+  'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
+  'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka',
+  'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram',
+  'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu',
+  'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
+  'Delhi', 'Chandigarh', 'Puducherry', 'Jammu and Kashmir', 'Ladakh'
+];
+
+const cityOptions = [
+  'Mumbai', 'Delhi', 'Bangalore', 'Hyderabad', 'Chennai', 'Kolkata', 'Pune',
+  'Ahmedabad', 'Jaipur', 'Surat', 'Lucknow', 'Kanpur', 'Nagpur', 'Indore',
+  'Thane', 'Bhopal', 'Visakhapatnam', 'Pimpri-Chinchwad', 'Patna', 'Vadodara'
+];
+
+const areaOptions = [
+  'Central', 'North', 'South', 'East', 'West', 'Downtown', 'Suburbs',
+  'Industrial Area', 'Residential Area', 'Commercial Area'
+];
+
+const interestsOptions = [
+  'Sports', 'Music', 'Dance', 'Art & Craft', 'Science', 'Mathematics', 
+  'Literature', 'Technology', 'Debate', 'Theater', 'Photography', 'Chess',
+  'Focusing on Academics', 'Focuses on Practical Learning', 'Focuses on Theoretical Learning',
+  'Empowering in Sports', 'Empowering in Arts', 'Special Focus on Mathematics',
+  'Special Focus on Science', 'Special Focus on Physical Education',
+  'Leadership Development', 'STEM Activities', 'Cultural Education',
+  'Technology Integration', 'Environmental Awareness'
+];
 
 const PredictorPage = () => {
   const navigate = useNavigate();
-  const [selectedFeeRange, setSelectedFeeRange] = useState('');
-  const [selectedBoard, setSelectedBoard] = useState('');
-  const [selectedSchoolMode, setSelectedSchoolMode] = useState('');
-  const [selectedGenderType, setSelectedGenderType] = useState('');
-  const [selectedState, setSelectedState] = useState('');
-  const [selectedCity, setSelectedCity] = useState('');
-  const [selectedShifts, setSelectedShifts] = useState([]); // array
-  const [selectedUpto, setSelectedUpto] = useState('');
-  const [specialistText, setSpecialistText] = useState(''); // comma-separated -> array
-  const [languageMediumText, setLanguageMediumText] = useState(''); // comma-separated -> array
-  const [transportAvailable, setTransportAvailable] = useState(''); // 'yes' | 'no'
-  const [selectedActivities, setSelectedActivities] = useState([]); // array
+  const [formData, setFormData] = useState({
+    schoolType: '',
+    preferredShifts: '',
+    gender: '',
+    state: '',
+    city: '',
+    area: '',
+    interests: ''
+  });
+
+  const [errors, setErrors] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
 
-  const handleGetSchools = async () => {
-    // Check if at least one field is selected
-    if (
-      !selectedFeeRange && !selectedBoard && !selectedSchoolMode && !selectedGenderType &&
-      !selectedState && !selectedCity && selectedShifts.length === 0 && !selectedUpto &&
-      !specialistText && !languageMediumText && !transportAvailable && selectedActivities.length === 0
-    ) {
-      alert('Please select at least one preference to get school predictions.');
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({
+        ...prev,
+        [field]: ''
+      }));
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    
+    if (!formData.gender) {
+      newErrors.gender = 'Gender is required';
+    }
+    
+    if (!formData.state) {
+      newErrors.state = 'State is required';
+    }
+    
+    if (!formData.city) {
+      newErrors.city = 'City is required';
+    }
+    
+    if (!formData.area) {
+      newErrors.area = 'Area is required';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleGoogleLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported by this browser.');
       return;
     }
 
-    setLoading(true);
+    setIsLoading(true);
+    
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          
+          // Use reverse geocoding to get address
+          const response = await fetch(
+            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+          );
+          
+          const data = await response.json();
+          
+          if (data.countryName === 'India') {
+            setFormData(prev => ({
+              ...prev,
+              state: data.principalSubdivision || '',
+              city: data.city || data.locality || '',
+              area: data.localityInfo?.administrative?.[2]?.name || ''
+            }));
+            
+            toast.success('Location fetched successfully!');
+          } else {
+            toast.error('Location service is only available in India.');
+          }
+        } catch (error) {
+          console.error('Error fetching location:', error);
+          toast.error('Failed to fetch location. Please try again.');
+        } finally {
+          setIsLoading(false);
+        }
+      },
+      (error) => {
+        console.error('Geolocation error:', error);
+        toast.error('Unable to access your location. Please enable location services.');
+        setIsLoading(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 300000
+      }
+    );
+  };
+
+  const handleGetSchools = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsLoading(true);
     setHasSearched(true);
 
     try {
-      // Build backend filters per service contract
-      const payload = {};
-      if (selectedFeeRange) payload.feeRange = selectedFeeRange;
-      if (selectedBoard) payload.board = selectedBoard;
-      if (selectedSchoolMode) payload.schoolMode = selectedSchoolMode;
-      if (selectedGenderType) payload.genderType = selectedGenderType;
-      if (selectedState) payload.state = selectedState;
-      if (selectedCity) payload.city = selectedCity;
-      if (selectedShifts.length > 0) payload.shifts = selectedShifts;
-      if (selectedUpto) payload.upto = selectedUpto;
-      if (specialistText.trim()) payload.specialist = specialistText.split(',').map(s => s.trim()).filter(Boolean);
-      if (languageMediumText.trim()) payload.languageMedium = languageMediumText.split(',').map(s => s.trim()).filter(Boolean);
-      if (transportAvailable) payload.transportAvailable = transportAvailable;
-      if (selectedActivities.length > 0) payload.activities = selectedActivities;
+      // Map frontend field names to backend field names
+      const payload = {
+        schoolMode: formData.schoolType === 'Convent School' ? 'convent' :
+                   formData.schoolType === 'Private School' ? 'private' :
+                   formData.schoolType === 'Government School' ? 'government' : formData.schoolType,
+        genderType: formData.gender === 'Male' ? 'boy' :
+                   formData.gender === 'Female' ? 'girl' :
+                   formData.gender === 'Co-educational' ? 'co-ed' : formData.gender,
+        shifts: formData.preferredShifts === 'Morning Shift' ? 'morning' :
+                formData.preferredShifts === 'Afternoon Shift' ? 'afternoon' :
+                formData.preferredShifts === 'Evening Shift' ? 'night school' : formData.preferredShifts,
+        state: formData.state,
+        city: formData.city,
+        area: formData.area,
+        activities: formData.interests ? [formData.interests] : []
+      };
 
       const resp = await predictSchools(payload);
       const list = Array.isArray(resp?.data) ? resp.data : Array.isArray(resp) ? resp : [];
       setSearchResults(list);
     } catch (error) {
       console.error('Prediction error:', error);
+      toast.error('Failed to fetch school predictions');
       setSearchResults([]);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   const clearAll = () => {
-    setSelectedFeeRange('');
-    setSelectedBoard('');
-    setSelectedSchoolMode('');
-    setSelectedGenderType('');
-    setSelectedState('');
-    setSelectedCity('');
-    setSelectedShifts([]);
-    setSelectedUpto('');
-    setSpecialistText('');
-    setLanguageMediumText('');
-    setTransportAvailable('');
-    setSelectedActivities([]);
+    setFormData({
+      schoolType: '',
+      preferredShifts: '',
+      gender: '',
+      state: '',
+      city: '',
+      area: '',
+      interests: ''
+    });
+    setErrors({});
     setSearchResults([]);
     setHasSearched(false);
   };
 
-  const Dropdown = ({ label, value, onChange, options, placeholder }) => (
-    <div className="space-y-2">
-      <label className="block text-sm font-medium text-gray-700">{label}</label>
+  const DropdownField = ({ label, field, icon, required = false }) => (
+    <div className="mb-6">
+      <label className="block text-sm font-semibold text-gray-700 mb-2">
+        {required && <span className="text-red-500">*</span>}
+        {label}
+      </label>
       <div className="relative">
+        {icon && (
+          <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+            {icon}
+          </div>
+        )}
         <select
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full appearance-none bg-white border border-gray-300 rounded-lg px-4 py-3 pr-10 text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          value={formData[field]}
+          onChange={(e) => handleInputChange(field, e.target.value)}
+          className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+            icon ? 'pl-10' : ''
+          } ${errors[field] ? 'border-red-500' : ''}`}
         >
-          <option value="">{placeholder}</option>
-          {options.map((option) => (
-            <option key={option} value={option}>
+          <option value="">
+            {field === 'schoolType' ? 'Select School Type' :
+             field === 'preferredShifts' ? 'Select Shift' :
+             field === 'gender' ? 'Select' :
+             field === 'state' ? 'Select' :
+             field === 'city' ? 'Select' :
+             field === 'area' ? 'Select' :
+             field === 'interests' ? 'Select Interest' : 'Select'}
+          </option>
+          {field === 'schoolType' && schoolTypes.map((option) => (
+            <option key={`schoolType-${option}`} value={option}>
+              {option}
+            </option>
+          ))}
+          {field === 'preferredShifts' && shiftOptions.map((option) => (
+            <option key={`preferredShifts-${option}`} value={option}>
+              {option}
+            </option>
+          ))}
+          {field === 'gender' && genderOptions.map((option) => (
+            <option key={`gender-${option}`} value={option}>
+              {option}
+            </option>
+          ))}
+          {field === 'state' && stateOptions.map((option) => (
+            <option key={`state-${option}`} value={option}>
+              {option}
+            </option>
+          ))}
+          {field === 'city' && cityOptions.map((option) => (
+            <option key={`city-${option}`} value={option}>
+              {option}
+            </option>
+          ))}
+          {field === 'area' && areaOptions.map((option) => (
+            <option key={`area-${option}`} value={option}>
+              {option}
+            </option>
+          ))}
+          {field === 'interests' && interestsOptions.map((option) => (
+            <option key={`interests-${option}`} value={option}>
               {option}
             </option>
           ))}
         </select>
-        <ChevronDown size={20} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
+        <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
+        {errors[field] && (
+          <p className="text-red-500 text-sm mt-1">{errors[field]}</p>
+        )}
       </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={() => navigate(-1)}
-              className="p-2 hover:bg-gray-100 rounded-full"
-            >
-              <ArrowLeft size={20} className="text-gray-600" />
-            </button>
-            <h1 className="text-xl font-semibold text-gray-900">Predict Schools</h1>
-          </div>
-        </div>
-      </div>
-
-      <div className="container mx-auto px-4 py-8 max-w-2xl">
-        {/* Title Section */}
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Your Options. Your School.</h2>
-          <h3 className="text-4xl font-bold text-gray-900 mb-4">School Predictor</h3>
-          <p className="text-lg text-gray-600">
-            Discover the schools that match the exact requirements for your kid.
-          </p>
-        </div>
-
-        {/* Prediction Form */}
-        <div className="bg-white rounded-lg shadow-sm p-8 mb-8">
-          <div className="space-y-6">
-            <Dropdown
-              label="Select your preferred fee-range"
-              value={selectedFeeRange}
-              onChange={setSelectedFeeRange}
-              options={feeRanges}
-              placeholder="Select fee range"
-            />
-
-            <Dropdown
-              label="Select your preferred board"
-              value={selectedBoard}
-              onChange={setSelectedBoard}
-              options={educationBoards}
-              placeholder="Select board"
-            />
-
-            {/* Location filters */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">State</label>
-                <input
-                  type="text"
-                  value={selectedState}
-                  onChange={(e) => setSelectedState(e.target.value)}
-                  placeholder="Enter state"
-                  className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
-                <input
-                  type="text"
-                  value={selectedCity}
-                  onChange={(e) => setSelectedCity(e.target.value)}
-                  placeholder="Enter city"
-                  className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-            </div>
-
-            <Dropdown
-              label="Select your Preferred SchoolMode"
-              value={selectedSchoolMode}
-              onChange={setSelectedSchoolMode}
-              options={schoolModes}
-              placeholder="Select Modes"
-            />
-
-            <Dropdown
-              label="Select your Preferred Gender Type for School"
-              value={selectedGenderType}
-              onChange={setSelectedGenderType}
-              options={genderTypes}
-              placeholder="Select Gender"
-            />
-
-            {/* Shifts */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Shifts</label>
-              <div className="grid grid-cols-2 gap-3">
-                {shiftOptions.map((opt) => (
-                  <label key={opt} className="flex items-center">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 text-blue-600 border-gray-300 rounded"
-                      checked={selectedShifts.includes(opt)}
-                      onChange={(e) => {
-                        const next = e.target.checked
-                          ? [...selectedShifts, opt]
-                          : selectedShifts.filter((s) => s !== opt);
-                        setSelectedShifts(next);
-                      }}
-                    />
-                    <span className="ml-2 text-gray-700">{opt}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* Upto class */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Class Upto</label>
-              <input
-                type="text"
-                value={selectedUpto}
-                onChange={(e) => setSelectedUpto(e.target.value)}
-                placeholder="e.g., 10th, 12th"
-                className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            {/* Specialist and Language Medium (comma separated) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Specialist Tags</label>
-                <input
-                  type="text"
-                  value={specialistText}
-                  onChange={(e) => setSpecialistText(e.target.value)}
-                  placeholder="Comma separated (e.g., Sports, Music)"
-                  className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Language Medium</label>
-                <input
-                  type="text"
-                  value={languageMediumText}
-                  onChange={(e) => setLanguageMediumText(e.target.value)}
-                  placeholder="Comma separated (e.g., English, Hindi)"
-                  className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-            </div>
-
-            {/* Transport */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Transport Available</label>
-                <select
-                  value={transportAvailable}
-                  onChange={(e) => setTransportAvailable(e.target.value)}
-                  className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">Any</option>
-                  <option value="yes">Yes</option>
-                  <option value="no">No</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Activities */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Activities</label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {activitiesOptions.map((opt) => (
-                  <label key={opt} className="flex items-center">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 text-blue-600 border-gray-300 rounded"
-                      checked={selectedActivities.includes(opt)}
-                      onChange={(e) => {
-                        const next = e.target.checked
-                          ? [...selectedActivities, opt]
-                          : selectedActivities.filter((a) => a !== opt);
-                        setSelectedActivities(next);
-                      }}
-                    />
-                    <span className="ml-2 text-gray-700">{opt}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
+    <div className="min-h-screen bg-gray-50 py-4 sm:py-8">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 lg:p-8">
+          <div className="text-center mb-6 sm:mb-8">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">
+              Find Your Perfect School
+            </h1>
+            <p className="text-sm sm:text-base text-gray-600">
+              Fill in your preferences to discover schools that match your needs.
+            </p>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex gap-4 mt-8">
-            <button
-              onClick={clearAll}
-              className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
-            >
-              Clear All
-            </button>
-            <button
-              onClick={handleGetSchools}
-              disabled={loading}
-              className="flex-1 px-6 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 font-medium disabled:opacity-50"
-            >
-              {loading ? 'Getting Schools...' : 'Get Schools'}
-            </button>
+          <form onSubmit={(e) => { e.preventDefault(); handleGetSchools(); }} className="space-y-6">
+            <DropdownField
+              label="Select School Type"
+              field="schoolType"
+            />
+            
+            <DropdownField
+              label="Preferred Shifts"
+              field="preferredShifts"
+            />
+            
+            <DropdownField
+              label="Gender"
+              field="gender"
+              icon={<User className="w-5 h-5" />}
+              required={true}
+            />
+            
+            <DropdownField
+              label="State"
+              field="state"
+              icon={<MapPin className="w-5 h-5" />}
+              required={true}
+            />
+            
+            <DropdownField
+              label="City"
+              field="city"
+              icon={<Building className="w-5 h-5" />}
+              required={true}
+            />
+            
+            <DropdownField
+              label="Area"
+              field="area"
+              icon={<Navigation className="w-5 h-5" />}
+              required={true}
+            />
+            
+            <DropdownField
+              label="Interests"
+              field="interests"
+              icon={<Heart className="w-5 h-5" />}
+            />
+
+            <div className="pt-4">
+              <button
+                type="button"
+                onClick={handleGoogleLocation}
+                disabled={isLoading}
+                className="w-full bg-gray-800 text-white py-3 px-6 rounded-lg font-semibold hover:bg-gray-900 transition-colors focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+              >
+                {isLoading ? (
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    Fetching Location...
+                  </div>
+                ) : (
+                  <>
+                    <Navigation className="inline-block w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                    <span className="block sm:inline">Fetch from Google Location</span>
+                    <br className="hidden sm:block" />
+                    <span className="text-xs sm:text-sm opacity-90 block sm:inline">(to see schools near you)</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            <div className="pt-4 sm:pt-6">
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 transition-colors focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm sm:text-base disabled:opacity-50"
+              >
+                {isLoading ? 'Finding Schools...' : 'Submit'}
+              </button>
+            </div>
+          </form>
+
+          <div className="mt-4 sm:mt-6 text-center">
+            <p className="text-sm sm:text-base text-gray-600">
+              Want to save your preferences?{' '}
+              <button
+                onClick={() => navigate('/signup')}
+                className="text-blue-600 hover:text-blue-700 font-medium"
+              >
+                Create Account
+              </button>
+            </p>
           </div>
         </div>
 
         {/* Search Results */}
         {hasSearched && (
-          <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 lg:p-8 mt-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">
               Predicted Schools ({searchResults.length} schools found)
             </h2>
             
-            {loading ? (
+            {isLoading ? (
               <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
                 <div className="text-gray-500">Analyzing your preferences...</div>
               </div>
             ) : searchResults.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {searchResults.map((school) => (
+                {searchResults.map((school, index) => (
                   <SchoolCard
-                    key={school._id || school.id}
+                    key={school._id || school.id || `school-${index}`}
                     school={school}
                     onCardClick={() => navigate(`/school/${school._id || school.id}`)}
                     onCompareToggle={() => {}}
@@ -386,13 +427,6 @@ const PredictorPage = () => {
             )}
           </div>
         )}
-
-        {/* Disclaimer */}
-        <div className="mt-8 text-center">
-          <p className="text-sm text-gray-500">
-            Predictions are based on available data and may not reflect actual outcomes
-          </p>
-        </div>
       </div>
     </div>
   );

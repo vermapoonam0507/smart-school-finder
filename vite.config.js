@@ -20,6 +20,15 @@ export default defineConfig({
   },
   server: {
     historyApiFallback: true,
+    proxy: {
+      '/api': {
+        target: 'https://backend-tc-sa-v2.onrender.com',
+        changeOrigin: true,
+        secure: true,
+        // keep '/api' prefix so routes match backend
+        rewrite: (path) => path.replace(/^\/api/, '/api'),
+      },
+    },
   },
   preview: {
     port: 3000,

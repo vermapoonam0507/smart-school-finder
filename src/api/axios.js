@@ -1,13 +1,15 @@
 import axios from 'axios';
 
-// Remove /api from base URL to avoid double prefix
-// Force production backend for now
-const apiBaseURL = 'https://backend-tc-sa-v2.onrender.com';
+// Use dev proxy (Vite) in development; direct base URL in production builds
+const apiBaseURL = import.meta.env.DEV ? '' : 'https://backend-tc-sa-v2.onrender.com';
 
 console.log('🔧 Axios Base URL:', apiBaseURL);
 
 const apiClient = axios.create({
   baseURL: apiBaseURL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
 apiClient.interceptors.request.use(
@@ -21,6 +23,8 @@ apiClient.interceptors.request.use(
     if (!config.url.startsWith('/api/')) {
       config.url = `/api${config.url.startsWith('/') ? '' : '/'}${config.url}`;
     }
+    
+    // CORS is handled by the proxy
     
     // Optional silent flag to reduce console noise for internal retries
     const isSilent = config.headers && (config.headers['X-Silent-Request'] === '1');

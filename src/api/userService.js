@@ -260,11 +260,42 @@ export const generateStudentPdf = async (studId) => {
 // =============================================================================
 
 export const getFormsByStudent = async (studId) => {
-  try {
-    const response = await apiClient.get(`/api/form/student/${studId}`);
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching forms by student:", error.response?.data || error.message);
-    throw error.response?.data || error;
+  // Try multiple known endpoints and normalize into an array of applications
+  const candidates = [
+    `/api/form/student/${studId}`,        // some deployments
+    `/api/applications/${studId}`,        // application-routes get by student
+  ];
+
+  let all = [];
+  let lastErr = null;
+  for (const path of candidates) {
+    try {
+      const res = await apiClient.get(path, { headers: { 'X-Silent-Request': '1' } });
+      const raw = res?.data;
+
+      // If the endpoint returns a single object, wrap it
+      const normalizedArray = Array.isArray(raw)
+        ? raw
+        : (Array.isArray(raw?.data) ? raw.data
+          : Array.isArray(raw?.data?.forms) ? raw.data.forms
+          : Array.isArray(raw?.forms) ? raw.forms
+          : (raw && typeof raw === 'object') ? [raw?.data || raw] : []);
+
+      // Merge and dedupe by _id if present
+      const map = new Map();
+      [...all, ...normalizedArray].forEach((item) => {
+        const key = item?._id || item?.id || `${item?.schoolId || ''}-${item?.createdAt || ''}`;
+        if (key) map.set(key, item);
+      });
+      all = Array.from(map.values());
+    } catch (e) {
+      lastErr = e;
+    }
   }
+
+  if (!all.length && lastErr) {
+    // Surface last error only if no data from any endpoint
+    console.error('Error fetching forms by student:', lastErr.response?.data || lastErr.message);
+  }
+  return { data: all };
 };

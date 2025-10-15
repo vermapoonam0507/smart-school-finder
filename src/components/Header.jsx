@@ -47,14 +47,9 @@ const Header = ({ isMobileMenuOpen, setMobileMenuOpen, compareCount, shortlistCo
             </>
         )}
 
-        {/* {currentUser && currentUser.userType === 'parent' && (
-            <Link to="/dashboard" className="text-gray-600 hover:text-blue-600">Dashboard</Link>
-        )} */}
-
-
          {currentUser && (currentUser.userType === 'parent' || currentUser.userType === 'student') && (
-                        <Link to="/dashboard" className="text-gray-600 hover:text-blue-600">Profile</Link>
-                    )}
+            <Link to="/application-status" className="text-gray-600 hover:text-blue-600">Application Status</Link>
+          )}
 
       </div>
       <div className="hidden md:flex items-center space-x-4">
@@ -97,13 +92,9 @@ const Header = ({ isMobileMenuOpen, setMobileMenuOpen, compareCount, shortlistCo
           </>
         )}
 
-        {/* {currentUser && currentUser.userType === 'parent' && (
-            <Link to="/dashboard" className="block py-2 px-6 text-gray-600 hover:bg-gray-100" onClick={() => setMobileMenuOpen(false)}>Dashboard</Link>
-        )} */}
-
         {currentUser && (currentUser.userType === 'parent' || currentUser.userType === 'student') && (
-                        <Link to="/dashboard" className="block py-2 px-6 text-gray-600 hover:bg-gray-100" onClick={() => setMobileMenuOpen(false)}>Profile</Link>
-                    )}
+          <Link to="/application-status" className="block py-2 px-6 text-gray-600 hover:bg-gray-100" onClick={() => setMobileMenuOpen(false)}>Application Status</Link>
+        )}
                     
 
         <div className="px-6 py-4 border-t">

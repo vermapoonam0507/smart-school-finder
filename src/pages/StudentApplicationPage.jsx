@@ -104,9 +104,38 @@ const StudentApplicationPage = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        // Validate only the most essential required fields
+        const requiredFields = [
+            'name', 'location', 'dob', 'gender', 'motherTongue', 'nationality', 
+            'religion', 'caste', 'aadharNo', 'bloodGroup', 'interest',
+            'fatherName', 'fatherAge', 'fatherQualification', 'fatherProfession',
+            'fatherAnnualIncome', 'fatherPhoneNo', 'fatherAadharNo', 'fatherEmail',
+            'motherName', 'motherAge', 'motherQualification', 'motherProfession',
+            'motherAnnualIncome', 'motherPhoneNo', 'motherAadharNo', 'motherEmail',
+            'relationshipStatus', 'presentAddress', 'permanentAddress', 'homeLanguage', 'yearlyBudget'
+        ];
+        
+        // Check if any essential fields are missing
+        const essentialFields = ['name', 'gender', 'dob', 'fatherName', 'motherName'];
+        const missingEssential = essentialFields.filter(field => !formData[field] || formData[field].toString().trim() === '');
+        
+        if (missingEssential.length > 0) {
+            console.log('Missing essential fields:', missingEssential);
+            toast.error(`Please fill in essential fields: ${missingEssential.join(', ')}`);
+            return;
+        }
+        
+        // Log all form data for debugging
+        console.log('All form data:', formData);
+        console.log('Siblings data:', siblings);
+        
+        console.log('Starting submission process...');
         setIsSubmitting(true);
         try {
             console.log('Submitting application with schoolId:', schoolId, 'and student:', currentUser?._id);
+            console.log('Form data before submission:', formData);
+            console.log('Gender value:', formData.gender);
             const payload = {
                 ...formData,
                 siblings,
@@ -114,16 +143,25 @@ const StudentApplicationPage = () => {
                 schoolId: schoolId,
             };
             console.log('Application payload:', payload);
+            console.log('Calling submitApplication...');
             await submitApplication(payload);
+            console.log('Application submitted successfully!');
             try {
+                console.log('Generating PDF...');
                 await generateStudentPdf(currentUser._id);
-            } catch (_) {}
-            toast.success("Application submitted successfully! PDF is ready to download on Dashboard.");
-            navigate('/dashboard');
+                console.log('PDF generated successfully!');
+            } catch (pdfError) {
+                console.log('PDF generation failed:', pdfError);
+            }
+            console.log('Showing success message...');
+            toast.success("Application submitted successfully! PDF is ready to download.");
+            console.log('Navigating to application status page...');
+            navigate('/application-status');
         } catch (error) {
-            toast.error("Submission failed. Please ensure all required fields are filled.");
             console.error("Submission Error:", error);
+            toast.error(`Submission failed: ${error.message || 'Please ensure all required fields are filled.'}`);
         } finally {
+            console.log('Setting isSubmitting to false...');
             setIsSubmitting(false);
         }
     };

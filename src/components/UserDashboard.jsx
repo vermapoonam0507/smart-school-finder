@@ -185,6 +185,10 @@ const UserDashboard = ({ shortlist, comparisonList, onCompareToggle, onShortlist
     const schoolId = school._id || school.schoolId;
     if (!schoolId) return;
     localStorage.setItem('lastAppliedSchoolId', String(schoolId));
+    const displayName = school.name || school.schoolName || school.title || school.instituteName;
+    if (displayName) {
+      try { localStorage.setItem(`schoolName:${schoolId}`, displayName); } catch (_) {}
+    }
     navigate(`/apply/${schoolId}`);
   };
 
@@ -342,8 +346,20 @@ const UserDashboard = ({ shortlist, comparisonList, onCompareToggle, onShortlist
                               View School
                             </button>
                           )}
+                          {/* View PDF */}
                           <a
-                            href={`${import.meta.env.VITE_API_BASE_URL}/users/pdf/download/${currentUser._id}`}
+                            href={`${import.meta.env.VITE_API_BASE_URL || 'https://backend-tc-sa-v2.onrender.com'}/api/users/pdf/view/${currentUser._id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center bg-white text-gray-700 font-semibold px-3 py-1.5 rounded-md border border-gray-300 hover:bg-gray-50 mr-2"
+                          >
+                            {/* Eye icon replacement with simple text to avoid extra imports */}
+                            View PDF
+                          </a>
+
+                          {/* Download PDF */}
+                          <a
+                            href={`${import.meta.env.VITE_API_BASE_URL || 'https://backend-tc-sa-v2.onrender.com'}/api/users/pdf/download/${currentUser._id}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center bg-green-600 text-white font-semibold px-3 py-1.5 rounded-md hover:bg-green-700"

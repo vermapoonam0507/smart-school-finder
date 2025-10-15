@@ -29,7 +29,10 @@ import AdminProtectedRoute from "./components/AdminProtectedRoute";
 import BlogPage from "./pages/BlogPage";
 import GuestSearchPage from "./pages/GuestSearchPage";
 import GuestResultsPage from "./pages/GuestResultsPage";
+import ApplicationStatusPage from "./pages/ApplicationStatusPage";
 import BlogDetailsPage from "./pages/BlogDetailsPage";
+import ApplicationSummaryPage from "./pages/ApplicationSummaryPage";
+import ApplicationConfirmationPage from "./pages/ApplicationConfirmationPage";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useAuth } from "./context/AuthContext";
@@ -224,6 +227,9 @@ useEffect(() => {
           <Route path="/guest-search" element={<GuestSearchPage />} />
           <Route path="/guest-results" element={<GuestResultsPage />} />
           <Route path="/blog/:id" element={<BlogDetailsPage />} />
+          <Route path="/application-status" element={<ApplicationStatusPage />} />
+          <Route path="/application-summary" element={<ApplicationSummaryPage />} />
+          <Route path="/application-confirmation" element={<ApplicationConfirmationPage />} />
           <Route
             path="/school/:id"
             element={
