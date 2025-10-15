@@ -1,6 +1,7 @@
 ///hardcoded data when I used at that time i wasn't api end point///
 
 import axios from 'axios';
+import apiClient from './axios';
 
 const API = axios.create();
 
@@ -33,11 +34,53 @@ export const fetchSchools = async () => {
     return { data: schoolsData };
 };
 
-export const fetchStudentApplications = async (schoolEmail) => {
-    console.log(`API: Fetching applications for ${schoolEmail}...`);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const applications = studentApplicationsData.filter(app => app.schoolEmail === schoolEmail);
-    console.log("API: Applications fetched!", applications);
+// Try real backend for school applications; fallback to mock if all fail
+export const fetchStudentApplications = async (schoolIdOrEmail) => {
+    const identityRaw = String(schoolIdOrEmail || '');
+    const identity = encodeURIComponent(identityRaw);
+    const candidates = [
+        `/api/applications/school/${identity}`,
+        `/api/applications/by-school/${identity}`,
+        `/api/applications?schoolId=${identity}`,
+        `/api/applications`, // fetch all, filter on client as last resort
+    ];
+
+    let lastErr = null;
+    for (const path of candidates) {
+        try {
+            const res = await apiClient.get(path, { headers: { 'X-Silent-Request': '1' } });
+            const raw = res?.data;
+            let list = Array.isArray(raw)
+                ? raw
+                : (Array.isArray(raw?.data) ? raw.data
+                  : Array.isArray(raw?.applications) ? raw.applications
+                  : (raw && typeof raw === 'object') ? [raw?.data || raw] : []);
+            // If we hit the generic list endpoint, filter by school id/email if present in items
+            if (res?.config?.url?.endsWith('/api/applications') && identityRaw) {
+                list = list.filter((it) => {
+                    const sId = typeof it?.schoolId === 'object' ? (it?.schoolId?._id || it?.schoolId?.id) : it?.schoolId;
+                    const sEmail = it?.schoolEmail || it?.school?.email;
+                    return String(sId) === identityRaw || String(sEmail) === identityRaw;
+                });
+            }
+            // normalize a subset of fields used by SchoolPortalPage
+            const normalized = list.map((it, idx) => ({
+                id: it?._id || it?.id || `${it?.studId || ''}-${it?.schoolId || ''}-${idx}`,
+                studentName: it?.name || it?.studentName || it?.student?.name || '—',
+                class: it?.class || it?.className || it?.appliedClass || '—',
+                date: it?.createdAt ? new Date(it.createdAt).toISOString().slice(0,10) : (it?.date || '—'),
+                status: it?.status || it?.applicationStatus || 'Pending',
+            }));
+            return { data: normalized };
+        } catch (e) {
+            lastErr = e;
+        }
+    }
+
+    // Fallback to mock if backend endpoints unavailable
+    console.warn('Falling back to mock applications for school:', schoolIdOrEmail, lastErr?.message);
+    await new Promise(resolve => setTimeout(resolve, 200));
+    const applications = studentApplicationsData.filter(app => app.schoolEmail === schoolIdOrEmail);
     return { data: applications };
 };
 

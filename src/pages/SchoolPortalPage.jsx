@@ -345,9 +345,10 @@ const SchoolPortalPage = ({ currentUser, onLogout, onRegister }) => {
 
   useEffect(() => {
     const loadCount = async () => {
-      if (!currentUser?.email) return;
+      const identity = currentUser?.schoolId || currentUser?._id || currentUser?.email;
+      if (!identity) return;
       try {
-        const res = await fetchStudentApplications(currentUser.email);
+        const res = await fetchStudentApplications(identity);
         const apps = res?.data || [];
         setApplicationsCount(Array.isArray(apps) ? apps.length : 0);
       } catch (_) {
@@ -355,7 +356,7 @@ const SchoolPortalPage = ({ currentUser, onLogout, onRegister }) => {
       }
     };
     loadCount();
-  }, [currentUser?.email]);
+  }, [currentUser?.schoolId, currentUser?._id, currentUser?.email]);
 
   if (!currentUser || currentUser.userType !== "school") {
     return (
@@ -371,7 +372,7 @@ const SchoolPortalPage = ({ currentUser, onLogout, onRegister }) => {
       <Routes>
         <Route
           path="shortlisted"
-          element={<ViewShortlistedApplications schoolEmail={currentUser?.email} />}
+          element={<ViewShortlistedApplications schoolEmail={currentUser?.schoolId || currentUser?._id || currentUser?.email} />}
         />
         <Route
           path="status"
@@ -379,7 +380,7 @@ const SchoolPortalPage = ({ currentUser, onLogout, onRegister }) => {
         />
         <Route
           path="applications"
-          element={<ViewStudentApplications schoolEmail={currentUser?.email} />}
+          element={<ViewStudentApplications schoolEmail={currentUser?.schoolId || currentUser?._id || currentUser?.email} />}
         />
         <Route
           path="register"
@@ -397,7 +398,7 @@ const SchoolPortalPage = ({ currentUser, onLogout, onRegister }) => {
         
         <Route
           index
-          element={<ViewStudentApplications schoolEmail={currentUser?.email} />}
+          element={<ViewStudentApplications schoolEmail={currentUser?.schoolId || currentUser?._id || currentUser?.email} />}
         />
       </Routes>
     </div>

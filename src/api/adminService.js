@@ -73,7 +73,23 @@ export const getSchoolsByStatus = (status) =>
   apiClient.get(`/admin/schools/status/${encodeURIComponent(status)}`);
 
 export const getAllSchools = () => apiClient.get('/admin/schools/status/all');
-export const getPendingSchools = () => apiClient.get('/admin/schools/admin/pending');
+export const getPendingSchools = async () => {
+  const candidates = [
+    '/admin/schools/admin/pending',
+    '/admin/schools/pending',
+    '/admin/schools/status/pending',
+  ];
+  let lastErr;
+  for (const path of candidates) {
+    try {
+      const res = await apiClient.get(path, { headers: { 'X-Silent-Request': '1' } });
+      return res;
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr || new Error('Failed to fetch pending schools');
+};
 
 /**
  * ============================
