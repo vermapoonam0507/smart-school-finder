@@ -58,6 +58,19 @@ const SchoolDetailsPage = ({ shortlist, onShortlistToggle }) => {
   const [safetyAndSecurity, setSafetyAndSecurity] = useState(null);
   const [internationalExposure, setInternationalExposure] = useState(null);
 
+  const handleCompare = () => {
+    if (!school?._id) return;
+    // seed comparison list with current school for convenience
+    try {
+      const saved = JSON.parse(localStorage.getItem('comparisonList') || '[]');
+      const exists = saved.some((s) => (s.schoolId || s._id) === (school._id));
+      const toSave = exists ? saved : [...saved, { ...school, schoolId: school._id }];
+      localStorage.setItem('comparisonList', JSON.stringify(toSave));
+      window.dispatchEvent(new CustomEvent('comparisonListUpdated', { detail: toSave }));
+    } catch (_) {}
+    navigate('/compare/select');
+  };
+
   useEffect(() => {
     if (!schoolId) return;
 
@@ -837,6 +850,12 @@ const SchoolDetailsPage = ({ shortlist, onShortlistToggle }) => {
               className="border border-indigo-600 text-indigo-600 px-6 py-2 rounded-lg hover:bg-indigo-50 transition-colors"
             >
               Apply Now
+            </button>
+            <button
+              onClick={handleCompare}
+              className="border border-gray-300 text-gray-800 px-6 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Compare
             </button>
           </div>
         </div>
