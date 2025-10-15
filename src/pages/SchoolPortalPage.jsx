@@ -29,12 +29,7 @@ const SchoolHeader = ({ schoolName, onLogout, applicationsCount }) => (
         >
           <FileText size={18} className="mr-2" /> School Profile
         </Link>
-        <Link
-          to="/school-portal/status"
-          className="text-gray-600 hover:text-blue-600 flex items-center"
-        >
-          <Clock size={18} className="mr-2" /> Approval Status
-        </Link>
+        {/* Approval Status removed per request */}
         <Link
           to="/school-portal/shortlisted"
           className="text-gray-600 hover:text-blue-600 flex items-center"
@@ -75,98 +70,7 @@ const StatusBadge = ({ status }) => {
   return <span className={`px-2 py-1 rounded text-xs font-semibold ${cls}`}>{label}</span>;
 };
 
-const ApprovalStatus = ({ currentUser }) => {
-  const [ownSchool, setOwnSchool] = useState(null);
-  const [pendingSchools, setPendingSchools] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const load = async () => {
-      try {
-        setLoading(true);
-        if (currentUser?._id) {
-          let found = null;
-          try {
-            const byAuth = await checkSchoolProfileExists(currentUser._id);
-            found = byAuth?.data?.data || byAuth?.data || null;
-          } catch (_) {}
-          if (!found && (currentUser?.schoolId || currentUser?._id)) {
-            try {
-              const byId = await getSchoolById(currentUser.schoolId || currentUser._id);
-              found = byId?.data?.data || byId?.data || null;
-            } catch (_) {}
-          }
-          setOwnSchool(found);
-        }
-        try {
-          const pend = await getPendingSchools();
-          setPendingSchools(pend.data?.data || []);
-        } catch (_) {
-          setPendingSchools([]);
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, [currentUser?._id, currentUser?.schoolId]);
-
-  if (loading) {
-    return <div className="p-8 text-center">Loading status...</div>;
-  }
-
-  return (
-    <div className="p-8 space-y-8">
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-2xl font-bold text-gray-800 mb-4">Your School Approval</h2>
-        {ownSchool ? (
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <span className="text-lg font-semibold text-gray-900">{ownSchool.name || currentUser?.name}</span>
-              <StatusBadge status={ownSchool.status} />
-            </div>
-            <p className="text-gray-600">Email: {ownSchool.email || currentUser?.email}</p>
-            {ownSchool.reason && ownSchool.status === 'rejected' && (
-              <p className="text-red-600 mt-2">Reason: {ownSchool.reason}</p>
-            )}
-          </div>
-        ) : (
-          <p className="text-gray-700">No school profile found yet. Please complete "My School Profile" to submit for approval.</p>
-        )}
-      </div>
-
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-xl font-semibold text-gray-800 mb-4">Schools Awaiting Approval</h3>
-        {pendingSchools.length === 0 ? (
-          <p className="text-gray-600">No schools are currently pending approval.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="p-3 text-left text-sm font-semibold text-gray-600">Name</th>
-                  <th className="p-3 text-left text-sm font-semibold text-gray-600">City</th>
-                  <th className="p-3 text-left text-sm font-semibold text-gray-600">Board</th>
-                  <th className="p-3 text-left text-sm font-semibold text-gray-600">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pendingSchools.map((s) => (
-                  <tr key={s._id} className="border-b last:border-b-0">
-                    <td className="p-3 text-gray-800">{s.name}</td>
-                    <td className="p-3 text-gray-700">{s.city}</td>
-                    <td className="p-3 text-gray-700">{s.board}</td>
-                    <td className="p-3"><StatusBadge status={s.status} /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
+// Approval Status section removed per request
 
 
 const ViewStudentApplications = ({ schoolEmail }) => {
@@ -403,10 +307,7 @@ const SchoolPortalPage = ({ currentUser, onLogout, onRegister }) => {
           path="shortlisted"
           element={<ViewShortlistedApplications schoolEmail={currentUser?.email} />}
         />
-        <Route
-          path="status"
-          element={<ApprovalStatus currentUser={currentUser} />}
-        />
+        {/* Approval Status route removed */}
         <Route
           path="applications"
           element={<ViewStudentApplications schoolEmail={currentUser?.email} />}

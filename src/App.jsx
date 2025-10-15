@@ -33,6 +33,7 @@ import ApplicationStatusPage from "./pages/ApplicationStatusPage";
 import BlogDetailsPage from "./pages/BlogDetailsPage";
 import ApplicationSummaryPage from "./pages/ApplicationSummaryPage";
 import ApplicationConfirmationPage from "./pages/ApplicationConfirmationPage";
+import CompareSelectPage from "./pages/CompareSelectPage";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useAuth } from "./context/AuthContext";
@@ -65,6 +66,22 @@ function App() {
   useEffect(() => {
     localStorage.setItem("comparisonList", JSON.stringify(comparisonList));
   }, [comparisonList]);
+
+  // Keep comparison count in sync when other pages update localStorage
+  useEffect(() => {
+    const onComparisonListUpdated = (e) => {
+      try {
+        if (e?.detail && Array.isArray(e.detail)) {
+          setComparisonList(e.detail);
+        } else {
+          const saved = localStorage.getItem("comparisonList");
+          setComparisonList(saved ? JSON.parse(saved) : []);
+        }
+      } catch (_) {}
+    };
+    window.addEventListener('comparisonListUpdated', onComparisonListUpdated);
+    return () => window.removeEventListener('comparisonListUpdated', onComparisonListUpdated);
+  }, []);
 
 
 useEffect(() => {
@@ -230,6 +247,7 @@ useEffect(() => {
           <Route path="/application-status" element={<ApplicationStatusPage />} />
           <Route path="/application-summary" element={<ApplicationSummaryPage />} />
           <Route path="/application-confirmation" element={<ApplicationConfirmationPage />} />
+          <Route path="/compare/select" element={<CompareSelectPage />} />
           <Route
             path="/school/:id"
             element={
