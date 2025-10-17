@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Routes, Route, Link, useNavigate, Navigate } from "react-router-dom";
-import { School, LogOut, FileText, Eye, Check, X, Clock } from "lucide-react";
+import { School, LogOut, FileText, Eye, Check, X, Clock, Star } from "lucide-react";
 import {
   getSchoolById,
   getPendingSchools,
