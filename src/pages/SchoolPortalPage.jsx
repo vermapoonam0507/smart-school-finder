@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Routes, Route, Link, useNavigate, Navigate } from "react-router-dom";
-import { School, LogOut, FileText, Eye, Check, X, Clock } from "lucide-react";
+import { School, LogOut, FileText, Eye, Check, X, Clock, Star } from "lucide-react";
 import {
   getSchoolById,
   getPendingSchools,
@@ -9,6 +9,7 @@ import {
 import RegistrationPage from "./RegistrationPage";
 import SchoolProfileView from "./SchoolProfileView";
 import { fetchStudentApplications, updateApplicationStatus } from "../api/apiService";
+import { useAuth } from "../context/AuthContext";
 
 const SchoolHeader = ({ schoolName, onLogout, applicationsCount, hasProfile }) => (
   <header className="bg-white shadow-md">
@@ -79,12 +80,16 @@ const ViewStudentApplications = ({ schoolId }) => {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
 
   useEffect(() => {
     const getApps = async () => {
       try {
         setLoading(true);
+        console.log("Fetching applications for schoolId:", schoolId);
+        console.log("Current user:", currentUser);
         const response = await fetchStudentApplications(schoolId);
+        console.log("Applications response:", response);
         setApplications(response.data); 
       } catch (error) {
         console.error("Error fetching applications:", error);
@@ -98,22 +103,53 @@ const ViewStudentApplications = ({ schoolId }) => {
 
   const handleStatusChange = async (idOrApp, newStatus) => {
     const isObj = typeof idOrApp === 'object' && idOrApp !== null;
-    const targetId = isObj ? (idOrApp.studId || idOrApp.id || idOrApp._raw?.studId || idOrApp._raw?._id) : idOrApp;
+    
+    // Extract the student ID (studId) which is what the backend expects
+    let targetId;
+    if (isObj) {
+      // Try to get studId from various possible locations
+      targetId = idOrApp.studId || 
+                 idOrApp._raw?.studId || 
+                 idOrApp._raw?.studentId || 
+                 idOrApp._raw?.student?._id ||
+                 idOrApp.id; // fallback to application id
+    } else {
+      targetId = idOrApp;
+    }
+    
+    console.log('Status change request:', { 
+      idOrApp, 
+      isObj, 
+      targetId, 
+      newStatus,
+      applicationData: isObj ? idOrApp : null 
+    });
+    
     // Optimistic UI update
     setApplications((prevApps) => prevApps.map((app) => (app.id === targetId || app.studId === targetId) ? { ...app, status: newStatus } : app));
+    
     if (!targetId) {
-      console.warn('No valid application id to update');
+      console.warn('No valid student ID to update');
       return;
     }
+    
     try {
       await updateApplicationStatus(targetId, newStatus);
+      console.log('Status update successful');
+      if (newStatus === 'Shortlisted') {
+        // Move to shortlisted tab so the user sees the item there immediately
+        navigate('/school-portal/shortlisted');
+        return;
+      }
     } catch (e) {
+      console.error('Failed to update status:', e);
       // Revert on failure by refetching
       try {
         const response = await fetchStudentApplications(schoolId);
         setApplications(response.data);
-      } catch (_) {}
-      console.error('Failed to update status', e);
+      } catch (refetchErr) {
+        console.error('Failed to refetch applications:', refetchErr);
+      }
     }
   };
 
@@ -127,97 +163,86 @@ const ViewStudentApplications = ({ schoolId }) => {
   if (loading)
     return <div className="p-8 text-center">Loading applications...</div>;
 
+  const statusToLower = (s) => (s || '').toString().toLowerCase();
+
+  const rows = applications;
+
   return (
     <div className="p-8">
-      <h2 className="text-3xl font-bold mb-6 text-gray-800">
-        Student Applications
-      </h2>
+      <h2 className="text-3xl font-bold mb-6 text-gray-800">Student Applications</h2>
       <div className="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
         <table className="min-w-full table-auto">
           <thead className="bg-gray-50">
             <tr>
-              <th className="p-4 text-left text-sm font-semibold text-gray-600">
-                Student Name
-              </th>
-              <th className="p-4 text-left text-sm font-semibold text-gray-600">
-                Class
-              </th>
-              <th className="p-4 text-left text-sm font-semibold text-gray-600">
-                Date
-              </th>
+              <th className="p-4 text-left text-sm font-semibold text-gray-600">Student Name</th>
+              <th className="p-4 text-left text-sm font-semibold text-gray-600">Class</th>
+              <th className="p-4 text-left text-sm font-semibold text-gray-600">Date</th>
+              <th className="p-4 text-left text-sm font-semibold text-gray-600">Accepted</th>
+              <th className="p-4 text-left text-sm font-semibold text-gray-600">Rejected</th>
               <th className="p-4 text-left text-sm font-semibold text-gray-600">Details</th>
-              <th className="p-4 text-left text-sm font-semibold text-gray-600">Status</th>
-              <th className="p-4 text-left text-sm font-semibold text-gray-600">
-                Actions
-              </th>
+              <th className="p-4 text-left text-sm font-semibold text-gray-600">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {(() => {
-              return applications.map((app) => {
-                const statusLower = (app.status || '').toString().toLowerCase();
-                const isAccepted = statusLower === 'accepted';
-                const isRejected = statusLower === 'rejected';
-                return (
-              <tr key={app.id} className="border-b last:border-b-0 hover:bg-gray-50">
-                <td className="p-4 align-top">{app.studentName}</td>
-                <td className="p-4 align-top">{app.class}</td>
-                <td className="p-4 align-top">{app.date}</td>
-                <td className="p-4 align-top">
-                  <button onClick={() => handleOpenDetails(app)} className="text-sm text-blue-600 hover:underline">
-                    View Details
-                  </button>
-                </td>
-                <td className="p-4 align-top">
-                  <span
-                    className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${
-                      isAccepted ? 'bg-green-100 text-green-800' : isRejected ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
-                    }`}
-                  >
-                    {isAccepted ? 'Accepted' : isRejected ? 'Rejected' : 'Pending'}
-                  </span>
-                </td>
-                <td className="p-4 flex flex-wrap gap-2 items-center">
-                  <button
-                    onClick={() => handleStatusChange(app, "Accepted")}
-                    className="p-2 text-green-600 bg-green-100 rounded-full hover:bg-green-200"
-                  >
-                    <Check size={16} />
-                  </button>
-                  <button
-                    onClick={() => handleStatusChange(app, "Rejected")}
-                    className="p-2 text-red-600 bg-red-100 rounded-full hover:bg-red-200"
-                  >
-                    <X size={16} />
-                  </button>
-                </td>
+            {rows.map((app) => {
+              const st = statusToLower(app.status);
+              const isAccepted = st === 'accepted';
+              const isRejected = st === 'rejected';
+              return (
+                <tr key={app.id} className="border-b last:border-b-0 hover:bg-gray-50">
+                  <td className="p-4 align-top">{app.studentName}</td>
+                  <td className="p-4 align-top">{app.class}</td>
+                  <td className="p-4 align-top">{app.date}</td>
+                  <td className="p-4 align-top">
+                    {isAccepted ? (
+                      <span className="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Yes</span>
+                    ) : (
+                      <span className="text-gray-400">—</span>
+                    )}
+                  </td>
+                  <td className="p-4 align-top">
+                    {isRejected ? (
+                      <span className="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Yes</span>
+                    ) : (
+                      <span className="text-gray-400">—</span>
+                    )}
+                  </td>
+                  <td className="p-4 align-top">
+                    <button onClick={() => handleOpenDetails(app)} className="text-sm text-blue-600 hover:underline">View Details</button>
+                  </td>
+                  <td className="p-4 flex flex-wrap gap-2 items-center">
+                    <button
+                      onClick={() => handleStatusChange(app, "Accepted")}
+                      className="p-2 text-green-600 bg-green-100 rounded-full hover:bg-green-200"
+                      title="Accept"
+                    >
+                      <Check size={16} />
+                    </button>
+                    <button
+                      onClick={() => handleStatusChange(app, "Rejected")}
+                      className="p-2 text-red-600 bg-red-100 rounded-full hover:bg-red-200"
+                      title="Reject"
+                    >
+                      <X size={16} />
+                    </button>
+                    <button
+                      onClick={() => handleStatusChange(app, "Shortlisted")}
+                      className="px-2 py-1 text-xs font-medium text-indigo-700 bg-indigo-100 rounded hover:bg-indigo-200"
+                      title="Shortlist"
+                    >
+                      Shortlist
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+            {rows.length === 0 && (
+              <tr>
+                <td className="p-8 text-center text-gray-500" colSpan="7">No student applications received yet.</td>
               </tr>
-                );
-              });
-            })()}
+            )}
           </tbody>
         </table>
-        {applications.length === 0 && (
-          <p className="p-8 text-center text-gray-500">
-            No student applications received yet.
-          </p>
-        )}
-        {applications.length > 0 && (() => {
-          const total = applications.length;
-          const pending = applications.filter(a => (a.status || '').toString().toLowerCase() === 'pending').length;
-          const accepted = applications.filter(a => (a.status || '').toString().toLowerCase() === 'accepted').length;
-          const rejected = applications.filter(a => (a.status || '').toString().toLowerCase() === 'rejected').length;
-          return (
-            <div className="px-4 py-3 bg-white flex items-center justify-between text-sm text-gray-700">
-              <span>Total Applications: <span className="font-semibold">{total}</span></span>
-              <div className="flex items-center gap-6">
-                <span>Pending: <span className="font-semibold">{pending}</span></span>
-                <span>Accepted: <span className="font-semibold">{accepted}</span></span>
-                <span>Rejected: <span className="font-semibold">{rejected}</span></span>
-              </div>
-            </div>
-          );
-        })()}
       </div>
     </div>
   );
@@ -233,10 +258,10 @@ const ViewShortlistedApplications = ({ schoolId }) => {
         setLoading(true);
         const response = await fetchStudentApplications(schoolId);
         const all = response.data || [];
-        // Treat Accepted as shortlisted as per new rule
+        // Only show explicit 'Shortlisted'
         const shortlisted = all.filter((a) => {
           const st = (a.status || '').toString().toLowerCase();
-          return st === 'shortlisted' || st === 'accepted';
+          return st === 'shortlisted';
         });
         setApplications(shortlisted);
       } catch (error) {
