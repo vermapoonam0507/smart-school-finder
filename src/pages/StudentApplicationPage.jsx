@@ -5,6 +5,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 import { submitApplication, generateStudentPdf } from '../api/userService';
+import eventEmitter from '../utils/eventEmitter';
 import { getSchoolById } from '../api/adminService';
 import { FileText, User, Users, Home, BookOpen, PlusCircle, Trash2, Shield } from 'lucide-react';
 
@@ -147,38 +148,37 @@ const StudentApplicationPage = () => {
         console.log('Starting submission process...');
         setIsSubmitting(true);
         try {
-            console.log('Submitting application with schoolId:', schoolId, 'and student:', currentUser?._id);
-            console.log('Form data before submission:', formData);
-            console.log('Gender value:', formData.gender);
             const payload = {
                 ...formData,
                 siblings,
                 studId: currentUser._id,
                 schoolId: schoolId,
-                schoolName: school.name, // Add school name to payload
+                schoolName: school.name,
+                schoolEmail: school.email,  // MAKE SURE THIS IS INCLUDED
             };
-            console.log('Application payload:', payload);
-            console.log('Calling submitApplication...');
+            
+            console.log('📦 Application payload:', payload);
+            console.log('🏫 School info:', {
+                id: schoolId,
+                name: school.name,
+                email: school.email
+            });
+            
             await submitApplication(payload);
-            console.log('Application submitted successfully!');
-
-            // Store school information in localStorage as backup
-            if (school && school._id) {
-                localStorage.setItem(`schoolName:${school._id}`, school.name);
-                localStorage.setItem(`schoolInfo:${currentUser._id}:${school._id}`, JSON.stringify({
-                    schoolName: school.name,
-                    schoolId: school._id,
-                    applicationId: 'pending' // Will be updated when we get the response
-                }));
-            }
-            // Do not navigate away immediately; show success with buttons below
+            
+            // Emit event to notify school portal of new application
+            eventEmitter.emit('applicationAdded', {
+              schoolId: schoolId,
+              schoolEmail: school.email,
+              applicationData: payload
+            });
+            
             toast.success("Application submitted successfully!");
             setSubmitted(true);
         } catch (error) {
             console.error("Submission Error:", error);
             toast.error(`Submission failed: ${error.message || 'Please ensure all required fields are filled.'}`);
         } finally {
-            console.log('Setting isSubmitting to false...');
             setIsSubmitting(false);
         }
     };
