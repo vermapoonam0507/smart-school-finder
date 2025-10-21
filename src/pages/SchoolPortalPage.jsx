@@ -9,6 +9,8 @@ import {
 import RegistrationPage from "./RegistrationPage";
 import SchoolProfileView from "./SchoolProfileView";
 import { fetchStudentApplications, updateApplicationStatus } from "../api/apiService";
+import { useAuth } from "../context/AuthContext";
+import ErrorBoundary from "../components/ErrorBoundary";
 
 const SchoolHeader = ({ schoolName, onLogout, applicationsCount, hasProfile }) => (
   <header className="bg-white shadow-md">
@@ -410,7 +412,11 @@ const SchoolPortalPage = ({ currentUser, onLogout, onRegister }) => {
         {/* Approval Status route removed */}
         <Route
           path="applications"
-          element={<ViewStudentApplications schoolId={currentUser?.schoolId || currentUser?._id} />}
+          element={
+            <ErrorBoundary>
+              <ViewStudentApplications schoolId={currentUser?.schoolId || currentUser?._id} />
+            </ErrorBoundary>
+          }
         />
         {!hasProfile && (
           <Route
@@ -433,7 +439,11 @@ const SchoolPortalPage = ({ currentUser, onLogout, onRegister }) => {
         
         <Route
           index
-          element={<ViewStudentApplications schoolId={currentUser?.schoolId || currentUser?._id} />}
+          element={
+            <ErrorBoundary>
+              <ViewStudentApplications schoolId={currentUser?.schoolId || currentUser?._id} />
+            </ErrorBoundary>
+          }
         />
       </Routes>
     </div>
