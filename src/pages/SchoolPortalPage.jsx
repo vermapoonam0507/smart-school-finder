@@ -10,7 +10,6 @@ import RegistrationPage from "./RegistrationPage";
 import SchoolProfileView from "./SchoolProfileView";
 import { fetchStudentApplications, updateApplicationStatus } from "../api/apiService";
 
-
 const SchoolHeader = ({ schoolName, onLogout, applicationsCount, hasProfile }) => (
   <header className="bg-white shadow-md">
     <nav className="container mx-auto px-6 py-4 flex justify-between items-center">
@@ -81,33 +80,14 @@ const ViewStudentApplications = ({ schoolId }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
 
   useEffect(() => {
     const getApps = async () => {
       try {
         setLoading(true);
-        setError(null);
-        
-        console.log("🔍 Fetching applications for schoolId:", schoolId);
-        
         const response = await fetchStudentApplications(schoolId);
-        console.log("📦 Applications API response:", response);
-        
-        // Handle various response structures
-        let appsData = [];
-        if (Array.isArray(response)) {
-          appsData = response;
-        } else if (Array.isArray(response?.data)) {
-          appsData = response.data;
-        } else if (Array.isArray(response?.applications)) {
-          appsData = response.applications;
-        } else if (response?.data?.data && Array.isArray(response.data.data)) {
-          appsData = response.data.data;
-        }
-        
-        console.log("✅ Processed applications:", appsData.length, appsData);
-        setApplications(appsData);
-        
+        setApplications(response.data); 
       } catch (error) {
         console.error("❌ Error fetching applications:", error);
         setError(error.message || "Failed to fetch applications");
@@ -125,28 +105,24 @@ const ViewStudentApplications = ({ schoolId }) => {
     }
   }, [schoolId]);
 
-  const handleStatusChange = async (app, newStatus) => {
-    const targetId = app._id || app.id || app._raw?._id;
-    const studId = app.studId || app._raw?.studId || app._raw?.studentId || app._raw?.student?._id;
-    if (!targetId && !studId) return;
-
-    // Optimistic UI
-    setApplications((prev) => prev.map((a) => ( (a._id || a.id) === targetId ? { ...a, status: newStatus } : a )));
-
+  const handleStatusChange = async (idOrApp, newStatus) => {
+    const isObj = typeof idOrApp === 'object' && idOrApp !== null;
+    const targetId = isObj ? (idOrApp.studId || idOrApp.id || idOrApp._raw?.studId || idOrApp._raw?._id) : idOrApp;
+    // Optimistic UI update
+    setApplications((prevApps) => prevApps.map((app) => (app.id === targetId || app.studId === targetId) ? { ...app, status: newStatus } : app));
+    if (!targetId) {
+      console.warn('No valid application id to update');
+      return;
+    }
     try {
-      await updateApplicationStatus(targetId, newStatus, studId);
-      try {
-        const refreshed = await fetchStudentApplications(schoolId);
-        const appsData = Array.isArray(refreshed?.data) ? refreshed.data : (Array.isArray(refreshed) ? refreshed : []);
-        setApplications(appsData);
-      } catch (_) {}
-    } catch (err) {
-      // Revert by refetching
+      await updateApplicationStatus(targetId, newStatus);
+    } catch (e) {
+      // Revert on failure by refetching
       try {
         const response = await fetchStudentApplications(schoolId);
-        const appsData = Array.isArray(response?.data) ? response.data : (Array.isArray(response) ? response : []);
-        setApplications(appsData);
+        setApplications(response.data);
       } catch (_) {}
+      console.error('Failed to update status', e);
     }
   };
 
@@ -184,102 +160,88 @@ const ViewStudentApplications = ({ schoolId }) => {
     );
   }
 
+  const statusToLower = (s) => (s || '').toString().toLowerCase();
+
+  const rows = applications;
+
   return (
     <div className="p-8">
       <h2 className="text-3xl font-bold mb-6 text-gray-800">
         Student Applications
       </h2>
-      
-      {/* Debug info - remove in production */}
-      <div className="mb-4 p-3 bg-gray-100 rounded text-sm">
-        <p>School ID: {schoolId}</p>
-        <p>Applications found: {applications.length}</p>
-      </div>
-      
       <div className="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
         <table className="min-w-full table-auto">
           <thead className="bg-gray-50">
             <tr>
-              <th className="p-4 text-left text-sm font-semibold text-gray-600">
-                Student Name
-              </th>
-              <th className="p-4 text-left text-sm font-semibold text-gray-600">
-                Class
-              </th>
-              <th className="p-4 text-left text-sm font-semibold text-gray-600">
-                Date
-              </th>
+              <th className="p-4 text-left text-sm font-semibold text-gray-600">Student Name</th>
+              <th className="p-4 text-left text-sm font-semibold text-gray-600">Class</th>
+              <th className="p-4 text-left text-sm font-semibold text-gray-600">Date</th>
+              <th className="p-4 text-left text-sm font-semibold text-gray-600">Accepted</th>
+              <th className="p-4 text-left text-sm font-semibold text-gray-600">Rejected</th>
               <th className="p-4 text-left text-sm font-semibold text-gray-600">Details</th>
               <th className="p-4 text-left text-sm font-semibold text-gray-600">Status</th>
-              <th className="p-4 text-left text-sm font-semibold text-gray-600">Actions</th>
+              <th className="p-4 text-left text-sm font-semibold text-gray-600">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody>
-            {applications.map((app) => {
-              const statusLower = (app.status || '').toString().toLowerCase();
-              return (
-                <tr key={app._id || app.id} className="border-b last:border-b-0 hover:bg-gray-50">
-                  <td className="p-4 align-top">{app.studentName || 'Unknown'}</td>
-                  <td className="p-4 align-top">{app.class || 'N/A'}</td>
-                  <td className="p-4 align-top">{app.date || 'N/A'}</td>
-                  <td className="p-4 align-top">
-                    <button 
-                      onClick={() => handleOpenDetails(app)} 
-                      className="text-sm text-blue-600 hover:underline"
-                    >
-                      View Details
-                    </button>
-                  </td>
-                  <td className="p-4 align-top"><StatusBadge status={statusLower} /></td>
-                  <td className="p-4 flex flex-wrap gap-2 items-center">
-                    <button
-                      onClick={() => handleStatusChange(app, "Accepted")}
-                      className="p-2 text-green-600 bg-green-100 rounded-full hover:bg-green-200"
-                      title="Accept Application"
-                    >
-                      <Check size={16} />
-                    </button>
-                    <button
-                      onClick={() => handleStatusChange(app, "Shortlisted")}
-                      className="p-2 text-yellow-600 bg-yellow-100 rounded-full hover:bg-yellow-200"
-                      title="Shortlist Application"
-                    >
-                      <Star size={16} />
-                    </button>
-                    <button
-                      onClick={() => handleStatusChange(app, "Rejected")}
-                      className="p-2 text-red-600 bg-red-100 rounded-full hover:bg-red-200"
-                      title="Reject Application"
-                    >
-                      <X size={16} />
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
+            {(() => {
+              return applications.map((app) => {
+                const statusLower = (app.status || '').toString().toLowerCase();
+                const isAccepted = statusLower === 'accepted';
+                const isRejected = statusLower === 'rejected';
+                return (
+              <tr key={app.id} className="border-b last:border-b-0 hover:bg-gray-50">
+                <td className="p-4 align-top">{app.studentName}</td>
+                <td className="p-4 align-top">{app.class}</td>
+                <td className="p-4 align-top">{app.date}</td>
+                <td className="p-4 align-top">
+                  <button onClick={() => handleOpenDetails(app)} className="text-sm text-blue-600 hover:underline">
+                    View Details
+                  </button>
+                </td>
+                <td className="p-4 align-top">
+                  <span
+                    className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${
+                      isAccepted ? 'bg-green-100 text-green-800' : isRejected ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
+                    }`}
+                  >
+                    {isAccepted ? 'Accepted' : isRejected ? 'Rejected' : 'Pending'}
+                  </span>
+                </td>
+                <td className="p-4 flex flex-wrap gap-2 items-center">
+                  <button
+                    onClick={() => handleStatusChange(app, "Accepted")}
+                    className="p-2 text-green-600 bg-green-100 rounded-full hover:bg-green-200"
+                  >
+                    <Check size={16} />
+                  </button>
+                  <button
+                    onClick={() => handleStatusChange(app, "Rejected")}
+                    className="p-2 text-red-600 bg-red-100 rounded-full hover:bg-red-200"
+                  >
+                    <X size={16} />
+                  </button>
+                </td>
+              </tr>
+                );
+              });
+            })()}
           </tbody>
         </table>
-        
         {applications.length === 0 && (
           <p className="p-8 text-center text-gray-500">
             No student applications received yet.
           </p>
         )}
-        
         {applications.length > 0 && (() => {
           const total = applications.length;
-          const pending = applications.filter(a => {
-            const st = (a.status || '').toString().toLowerCase();
-            return st !== 'accepted' && st !== 'rejected';
-          }).length;
-          const accepted = applications.filter(a => 
-            (a.status || '').toString().toLowerCase() === 'accepted'
-          ).length;
-          const rejected = applications.filter(a => 
-            (a.status || '').toString().toLowerCase() === 'rejected'
-          ).length;
+          const pending = applications.filter(a => (a.status || '').toString().toLowerCase() === 'pending').length;
+          const accepted = applications.filter(a => (a.status || '').toString().toLowerCase() === 'accepted').length;
+          const rejected = applications.filter(a => (a.status || '').toString().toLowerCase() === 'rejected').length;
           return (
-            <div className="px-4 py-3 bg-white flex items-center justify-between text-sm text-gray-700 border-t">
+            <div className="px-4 py-3 bg-white flex items-center justify-between text-sm text-gray-700">
               <span>Total Applications: <span className="font-semibold">{total}</span></span>
               <div className="flex items-center gap-6">
                 <span>Pending: <span className="font-semibold">{pending}</span></span>
@@ -303,10 +265,10 @@ const ViewShortlistedApplications = ({ schoolId }) => {
         setLoading(true);
         const response = await fetchStudentApplications(schoolId);
         const all = response.data || [];
-        // Treat Accepted as shortlisted as per new rule
+        // Only show explicit 'Shortlisted'
         const shortlisted = all.filter((a) => {
           const st = (a.status || '').toString().toLowerCase();
-          return st === 'shortlisted' || st === 'accepted';
+          return st === 'shortlisted';
         });
         setApplications(shortlisted);
       } catch (error) {

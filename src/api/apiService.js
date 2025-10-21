@@ -41,143 +41,73 @@ export const fetchStudentApplications = async (schoolIdOrEmail) => {
     const identityRaw = String(schoolIdOrEmail || '');
     const identity = encodeURIComponent(identityRaw);
     const candidates = [
-        `/api/applications/school/${identity}`,
+        `/api/applications`, // fetch all, filter client-side first to avoid 404 spam
         `/api/applications?schoolId=${identity}`,
+        `/api/applications/school/${identity}`,
         `/api/applications/by-school/${identity}`,
-        `/api/applications`, // fetch all, filter client-side
     ];
-
-    console.log('🔍 Fetching student applications for:', identityRaw);
 
     let lastErr = null;
     for (const path of candidates) {
         try {
-            console.log('🔗 Trying:', path);
             const res = await apiClient.get(path, { headers: { 'X-Silent-Request': '1' } });
-            console.log('📦 Raw response from', path, ':', res);
-            
-            const raw = res?.data;
-            console.log('📊 Raw data structure:', raw);
-            
-            // Handle various response structures
-            let list = [];
-            
-            if (Array.isArray(raw)) {
-                list = raw;
-            } else if (raw && typeof raw === 'object') {
-                // Check for data property
-                if (Array.isArray(raw.data)) {
-                    list = raw.data;
-                } else if (Array.isArray(raw.applications)) {
-                    list = raw.applications;
-                } else if (raw.success && Array.isArray(raw.data?.applications)) {
-                    list = raw.data.applications;
-                } else if (raw.data && typeof raw.data === 'object' && !Array.isArray(raw.data)) {
-                    // Single object wrapped in data
-                    list = [raw.data];
-                }
-            }
-            
-            console.log('📋 Extracted list before filtering:', list.length, 'items');
-            
-            // If we hit the generic list endpoint, filter by school id/email
-            if (path.includes('/api/applications') && !path.includes('school') && !path.includes('by-school') && identityRaw && list.length > 0) {
-                console.log('🔍 Filtering applications for schoolId:', identityRaw);
+      const raw = res?.data;
+            let list = Array.isArray(raw)
+                ? raw
+                : (Array.isArray(raw?.data) ? raw.data
+                  : Array.isArray(raw?.applications) ? raw.applications
+                  : (raw && typeof raw === 'object') ? [raw?.data || raw] : []);
+            // If we hit the generic list endpoint, filter by school id/email if present in items
+      if (res?.config?.url?.endsWith('/api/applications') && identityRaw) {
                 list = list.filter((it) => {
-                    const sId = typeof it?.schoolId === 'object' 
-                        ? (it?.schoolId?._id || it?.schoolId?.id) 
-                        : it?.schoolId;
+                    const sId = typeof it?.schoolId === 'object' ? (it?.schoolId?._id || it?.schoolId?.id) : it?.schoolId;
                     const sEmail = it?.schoolEmail || it?.school?.email;
-                    const match = String(sId) === identityRaw || String(sEmail) === identityRaw;
-                    
-                    if (!match) {
-                        console.log('❌ No match:', { 
-                            itemSchoolId: sId, 
-                            itemSchoolEmail: sEmail, 
-                            searchFor: identityRaw 
-                        });
-                    }
-                    
-                    return match;
+          return String(sId) === identityRaw || String(sEmail) === identityRaw;
                 });
-                console.log('✅ After filtering:', list.length, 'applications');
             }
-            
-            // Normalize the applications
-            const normalized = list.map((it, idx) => {
-                const app = {
-                    _id: it?._id || it?.id || `${it?.studId || ''}-${it?.schoolId || ''}-${idx}`,
-                    id: it?._id || it?.id || `${it?.studId || ''}-${it?.schoolId || ''}-${idx}`,
-                    studentName: it?.name || it?.studentName || it?.student?.name || it?.studentDetails?.name || '—',
-                    class: it?.class || it?.className || it?.appliedClass || it?.classAppliedFor || '—',
-                    date: it?.createdAt 
-                        ? new Date(it.createdAt).toISOString().slice(0, 10) 
-                        : (it?.date || it?.appliedOn || '—'),
-                    status: it?.status || it?.applicationStatus || 'Pending',
-                    schoolId: (typeof it?.schoolId === 'object' 
-                        ? (it?.schoolId?._id || it?.schoolId?.id) 
-                        : it?.schoolId) || null,
-                    studId: it?.studId || it?.studentId || it?.student?._id || it?.student?.id || null,
-                    _raw: it,
-                };
-                return app;
-            });
-            
-            console.log('✅ Successfully processed', normalized.length, 'applications');
-            console.log('📄 Sample application:', normalized[0]);
-            
-            // Return the normalized data
+            // normalize a subset of fields used by SchoolPortalPage
+            const normalized = list.map((it, idx) => ({
+                id: it?._id || it?.id || `${it?.studId || ''}-${it?.schoolId || ''}-${idx}`,
+                studentName: it?.name || it?.studentName || it?.student?.name || '—',
+                class: it?.class || it?.className || it?.appliedClass || '—',
+                date: it?.createdAt ? new Date(it.createdAt).toISOString().slice(0,10) : (it?.date || '—'),
+                status: it?.status || it?.applicationStatus || 'Pending',
+                schoolId: (typeof it?.schoolId === 'object' ? (it?.schoolId?._id || it?.schoolId?.id) : it?.schoolId) || null,
+                studId: it?.studId || it?.studentId || it?.student?._id || null,
+                _raw: it,
+            }));
             return { data: normalized };
-            
         } catch (e) {
-            console.warn('❌ Failed:', path, e.message);
             lastErr = e;
         }
     }
 
-    // If we get here, all endpoints failed
-    console.error('❌ All API endpoints failed. Last error:', lastErr?.message);
-    
-    // Return empty array instead of throwing to prevent UI crash
-    console.warn('⚠️ Returning empty applications array');
-    return { data: [] };
+  // Fallback to mock if backend endpoints unavailable
+  console.warn('Falling back to mock applications for school:', schoolIdOrEmail, lastErr?.message);
+  await new Promise(resolve => setTimeout(resolve, 200));
+  const applications = studentApplicationsData.filter(app => app.schoolEmail === schoolIdOrEmail);
+  return { data: applications };
 };
 
 // Update an application's status (accept/reject/shortlist)
-export const updateApplicationStatus = async (applicationId, newStatus, fallbackStudId) => {
-    const payload = { status: newStatus };
-
-    const idRaw = applicationId != null ? String(applicationId) : '';
-    const studRaw = fallbackStudId != null ? String(fallbackStudId) : '';
-    const looksLikeObjectId = /^[a-f\d]{24}$/i.test(idRaw);
-
-    const id = idRaw ? encodeURIComponent(idRaw) : null;
-    const stud = studRaw ? encodeURIComponent(studRaw) : null;
-
-    // Prefer updating by student id if available; then fall back to application id
-    const attempts = [];
-    if (stud) {
-      attempts.push({ method: 'put', url: `/applications/${stud}` });
-    }
-    if (id && looksLikeObjectId) {
-      attempts.push({ method: 'put', url: `/applications/${id}/status` });
-      attempts.push({ method: 'put', url: `/applications/${id}` });
-    }
-
+export const updateApplicationStatus = async (applicationId, newStatus) => {
+    const body = { status: newStatus };
+    const id = encodeURIComponent(applicationId);
+    const attempts = [
+        { url: `/api/applications/${id}/status`, method: 'put' },
+        { url: `/api/applications/${id}`, method: 'put' }, // backend expects PUT /:studId
+        { url: `/api/applications/${id}`, method: 'patch' },
+    ];
     let lastErr;
     for (const attempt of attempts) {
-      try {
-        console.log('🔗 Updating via', attempt.method.toUpperCase(), attempt.url);
-        const res = await apiClient.request({ method: attempt.method, url: attempt.url, data: payload });
-        console.log('✅ Status updated:', res.data);
-        return res.data;
-      } catch (err) {
-        lastErr = err;
-        console.warn('❌ Update attempt failed:', attempt.method.toUpperCase(), attempt.url, err?.message);
-      }
+        try {
+            const res = await apiClient.request({ method: attempt.method, url: attempt.url, data: body });
+            return res?.data || { ok: true };
+        } catch (e) {
+            lastErr = e;
+        }
     }
-    console.error('❌ All status update attempts failed:', lastErr?.message);
-    throw lastErr || new Error('Failed to update application status');
+    throw lastErr || new Error('Failed to update application');
 };
   
 

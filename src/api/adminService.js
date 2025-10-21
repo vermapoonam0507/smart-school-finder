@@ -175,7 +175,21 @@ export const changeAdminPassword = (passwordData) =>
 export const deleteUser = (userId) => apiClient.delete(`/admin/users/${userId}`);
 export const deleteSchool = (schoolId) => apiClient.delete(`/admin/schools/${schoolId}`);
 
-export const checkSchoolProfileExists = (authId) => getSchoolById(authId);
+// More resilient existence check that won't crash the UI if the id isn't a school id
+export const checkSchoolProfileExists = async (authId) => {
+  if (!authId) return { data: null };
+  try {
+    const res = await getSchoolById(authId);
+    return res;
+  } catch (error) {
+    const status = error?.response?.status;
+    if (status === 404 || status === 400 || status === 500) {
+      // Treat as non-existent rather than throwing to callers
+      return { data: null };
+    }
+    throw error;
+  }
+};
 
 /**
  * ============================
@@ -195,3 +209,18 @@ export const getAcademicsById = (schoolId) =>
   apiClient.get(`/admin/schools/academics/${encodeURIComponent(schoolId)}`);
 export const getOtherDetailsById = (schoolId) =>
   apiClient.get(`/admin/schools/other-details/${encodeURIComponent(schoolId)}`);
+
+/**
+ * ============================
+ * Student Applications
+ * ============================
+ */
+
+export const getStudentApplicationsBySchool = (schoolId) =>
+  apiClient.get(`/api/applications?schoolId=${encodeURIComponent(schoolId)}`);
+
+export const getStudentApplicationsBySchoolEmail = (schoolEmail) =>
+  apiClient.get(`/api/applications?schoolEmail=${encodeURIComponent(schoolEmail)}`);
+
+export const getAllStudentApplications = () =>
+  apiClient.get('/api/applications');
