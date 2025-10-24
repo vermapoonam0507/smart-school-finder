@@ -30,6 +30,64 @@ export const getAllUsers = () => apiClient.get('/admin/users');
 
 /**
  * ============================
+ * APPLICATION FLOW FUNCTIONS
+ * ============================
+ */
+
+// Check if application exists for student
+export const checkApplicationExists = (studId) => apiClient.get(`/api/applications/${studId}`);
+
+// Create new application
+export const createApplication = (data) => apiClient.post('/api/applications/', data);
+
+// Get application by student ID
+export const getApplicationByStudentId = (studId) => apiClient.get(`/api/applications/${studId}`);
+
+// Update application
+export const updateApplication = (studId, data) => apiClient.put(`/api/applications/${studId}`, data);
+
+// Delete application
+export const deleteApplication = (studId) => apiClient.delete(`/api/applications/${studId}`);
+
+// Submit form to school
+export const submitFormToSchool = (schoolId, studId, formId) => 
+  apiClient.post(`/api/form/${schoolId}/${studId}/${formId}`);
+
+// Get forms by student
+export const getFormsByStudent = (studId) => apiClient.get(`/api/form/student/${studId}`);
+
+// Get forms by school
+export const getFormsBySchool = (schoolId) => apiClient.get(`/api/form/school/${schoolId}`);
+
+// Track form
+export const trackForm = (formId) => apiClient.get(`/api/form/track/${formId}`);
+
+// Update form status
+export const updateFormStatus = (formId, status) => 
+  apiClient.put(`/api/form/${formId}?status=${status}`);
+
+/**
+ * ============================
+ * ENHANCED APPLICATION FLOW
+ * ============================
+ */
+
+// Handle complete application flow with scenarios
+export const handleApplicationFlow = (studId, schoolId, applicationData = null) => {
+  return apiClient.post('/api/application-flow', {
+    studId,
+    schoolId,
+    applicationData
+  });
+};
+
+// Update existing application (Scenario C)
+export const updateExistingApplication = (studId, updateData) => {
+  return apiClient.put(`/api/applications/${studId}`, updateData);
+};
+
+/**
+ * ============================
  * School CRUD Operations
  * ============================
  */

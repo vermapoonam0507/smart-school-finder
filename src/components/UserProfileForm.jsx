@@ -30,26 +30,42 @@ useEffect(() => {
             const res = await getUserProfile(currentUser.authId || currentUser._id);
             const data = res.data;
             console.log("Profile data loaded:", data);
-            console.log("Preferences:", data.preferences);
             
-            // Form ko fetched data se bhar do
-            reset({
-                name: data.name || "",
-                email: data.email || "",
-                contactNo: data.contactNo || "",
-                dateOfBirth: data.dateOfBirth
-                    ? new Date(data.dateOfBirth).toISOString().split("T")[0]
-                    : "",
-                gender: data.gender || "",
-                state: data.state || "",
-                city: data.city || "",
-                userType: data.userType || "parent",
-                boards: data.preferences?.boards || "",
-                preferredStandard: data.preferences?.preferredStandard || "",
-                interests: data.preferences?.interests || "",
-                schoolType: data.preferences?.schoolType || "",
-                shift: data.preferences?.shift || "",
-            });
+            // Check if data exists before accessing properties
+            if (data) {
+                console.log("Preferences:", data.preferences);
+                
+                // Form ko fetched data se bhar do
+                reset({
+                    name: data.name || "",
+                    email: data.email || "",
+                    contactNo: data.contactNo || "",
+                    dateOfBirth: data.dateOfBirth
+                        ? new Date(data.dateOfBirth).toISOString().split("T")[0]
+                        : "",
+                    gender: data.gender || "",
+                    state: data.state || "",
+                    city: data.city || "",
+                    userType: data.userType || "parent",
+                    boards: data.preferences?.boards || "",
+                    preferredStandard: data.preferences?.preferredStandard || "",
+                    interests: data.preferences?.interests || "",
+                    schoolType: data.preferences?.schoolType || "",
+                    shift: data.preferences?.shift || "",
+                });
+            } else {
+                // No profile data found, reset with basic info and default preferences
+                console.log("No profile data found, using basic user info with defaults");
+                reset({ 
+                    email: currentUser.email,
+                    userType: "parent",
+                    boards: "CBSE", // Default board
+                    preferredStandard: "primary", // Default standard
+                    schoolType: "private", // Default school type
+                    shift: "morning", // Default shift
+                    interests: "Focusing on Academics" // Default interest
+                }); 
+            }
 
         } catch (error) {
             // Agar profile nahi milta (naya user), to form ko khaali rakho, sirf email bhar do
@@ -68,6 +84,18 @@ useEffect(() => {
 
   const onSubmit = async (data) => {
     console.log("Form data:", data);
+    
+    // Ensure all required preference fields have valid values
+    const preferencesData = {
+      state: data.state || 'Unknown',
+      city: data.city || 'Unknown',
+      boards: data.boards || 'CBSE',
+      preferredStandard: data.preferredStandard || 'primary',
+      interests: data.interests || 'Focusing on Academics',
+      schoolType: data.schoolType || 'private',
+      shift: data.shift || 'morning'
+    };
+    
     // Structure the data to include preferences
     const profileData = {
       name: data.name,
@@ -78,15 +106,7 @@ useEffect(() => {
       state: data.state,
       city: data.city,
       userType: data.userType,
-      preferences: {
-        state: data.state,
-        city: data.city,
-        boards: data.boards,
-        preferredStandard: data.preferredStandard,
-        interests: data.interests,
-        schoolType: data.schoolType,
-        shift: data.shift
-      }
+      preferences: preferencesData
     };
     console.log("Profile data to send:", profileData);
     
@@ -275,8 +295,8 @@ useEffect(() => {
                 id="boards"
                 {...register("boards", { required: "Board is required" })}
                 className="w-full p-2 border border-gray-300 rounded-md"
+                defaultValue="CBSE"
               >
-                <option value="">Select Board</option>
                 <option value="CBSE">CBSE</option>
                 <option value="ICSE">ICSE</option>
                 <option value="STATE">STATE</option>
@@ -300,8 +320,8 @@ useEffect(() => {
                 id="shift"
                 {...register("shift", { required: "Shift is required" })}
                 className="w-full p-2 border border-gray-300 rounded-md"
+                defaultValue="morning"
               >
-                <option value="">Select Shift</option>
                 <option value="morning">Morning</option>
                 <option value="afternoon">Afternoon</option>
                 <option value="night school">Night School</option>
@@ -326,8 +346,8 @@ useEffect(() => {
                   required: "School Type is required",
                 })}
                 className="w-full p-2 border border-gray-300 rounded-md"
+                defaultValue="private"
               >
-                <option value="">Select School Type</option>
                 <option value="convent">Convent</option>
                 <option value="private">Private</option>
                 <option value="government">Government</option>
@@ -352,8 +372,8 @@ useEffect(() => {
                   required: "Standard is required",
                 })}
                 className="w-full p-2 border border-gray-300 rounded-md"
+                defaultValue="primary"
               >
-                <option value="">Select Standard</option>
                 <option value="playSchool">Play School</option>
                 <option value="pre-primary">Pre-Primary</option>
                 <option value="primary">Primary</option>

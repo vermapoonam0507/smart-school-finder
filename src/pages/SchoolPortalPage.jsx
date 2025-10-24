@@ -81,30 +81,59 @@ const ViewStudentApplications = ({ schoolId }) => {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
 
-  useEffect(() => {
-    const getApps = async () => {
-      try {
+  const fetchApplications = async (isRefresh = false) => {
+    try {
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
         setLoading(true);
-        const response = await fetchStudentApplications(schoolId);
-        setApplications(response.data); 
-      } catch (error) {
-        console.error("❌ Error fetching applications:", error);
-        setError(error.message || "Failed to fetch applications");
-        setApplications([]);
-      } finally {
-        setLoading(false);
       }
-    };
-    
+      setError(null);
+      
+      console.log(`🔄 ${isRefresh ? 'Refreshing' : 'Fetching'} applications for school: ${schoolId}`);
+      const response = await fetchStudentApplications(schoolId);
+      console.log('✅ Applications fetched:', response.data?.length || 0, 'applications');
+      setApplications(response.data || []); 
+    } catch (error) {
+      console.error("❌ Error fetching applications:", error);
+      setError(error.message || "Failed to fetch applications");
+      setApplications([]);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
     if (schoolId) {
-      getApps();
+      fetchApplications();
     } else {
       console.warn("⚠️ No schoolId provided to ViewStudentApplications");
       setLoading(false);
     }
+  }, [schoolId]);
+
+  // Listen for new applications
+  useEffect(() => {
+    const handleNewApplication = (event) => {
+      console.log('📨 New application received:', event);
+      // Refresh applications when a new one is added
+      if (event.schoolId === schoolId) {
+        console.log('🔄 Refreshing applications due to new application');
+        fetchApplications(true);
+      }
+    };
+
+    // Listen for application events
+    window.addEventListener('applicationAdded', handleNewApplication);
+    
+    return () => {
+      window.removeEventListener('applicationAdded', handleNewApplication);
+    };
   }, [schoolId]);
 
  // Replace the handleStatusChange function in ViewStudentApplications component
@@ -182,9 +211,30 @@ const handleStatusChange = async (app, newStatus) => {
 
   return (
     <div className="p-8">
-      <h2 className="text-3xl font-bold mb-6 text-gray-800">
-        Student Applications
-      </h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-3xl font-bold text-gray-800">
+          Student Applications
+        </h2>
+        <button
+          onClick={() => fetchApplications(true)}
+          disabled={refreshing || loading}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+        >
+          {refreshing ? (
+            <>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+              Refreshing...
+            </>
+          ) : (
+            <>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Refresh
+            </>
+          )}
+        </button>
+      </div>
       <div className="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
         <table className="min-w-full table-auto">
           <thead className="bg-gray-50">
@@ -434,14 +484,14 @@ const SchoolPortalPage = ({ currentUser, onLogout, onRegister }) => {
           element={<ViewShortlistedApplications schoolId={currentUser?.schoolId || currentUser?._id} />}
         />
         {/* Approval Status route removed */}
-        <Route
-          path="applications"
-          element={
-            <ErrorBoundary>
-              
-            </ErrorBoundary>
-          }
-        />
+         <Route
+           path="applications"
+           element={
+             <ErrorBoundary>
+               <ViewStudentApplications schoolId={currentUser?.schoolId || currentUser?._id} />
+             </ErrorBoundary>
+           }
+         />
         {currentUser?.userType === 'school' && (
           <Route
             path="register"

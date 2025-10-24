@@ -103,8 +103,12 @@ const UserDashboard = ({ shortlist, comparisonList, onCompareToggle, onShortlist
     const loadForms = async () => {
       try {
         if (!currentUser?._id) return;
-        const res = await getFormsByStudent(currentUser._id);
+        // Use student profile ID if available, otherwise auth ID
+        const studentId = currentUser.studentId || currentUser._id;
+        console.log('🔍 Dashboard fetching applications for student ID:', studentId);
+        const res = await getFormsByStudent(studentId);
         const list = Array.isArray(res?.data) ? res.data : [];
+        console.log('📊 Dashboard applications data:', list);
         setForms(list);
         setApplications(list);
         setApplicationExists(list.length > 0);

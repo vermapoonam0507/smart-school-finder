@@ -45,11 +45,12 @@ apiClient.interceptors.response.use(
     return response;
   },
   (error) => {
-    // Don't log 404 errors for search endpoints as they're expected when no results found
+    // Don't log 404 errors for search endpoints and application checks as they're expected when no results found
     const isSearch404 = error.config?.url?.includes('/search') && error.response?.status === 404;
+    const isApplicationCheck404 = error.config?.url?.includes('/applications/') && error.response?.status === 404;
     const isSilent = error.config?.headers && (error.config.headers['X-Silent-Request'] === '1');
     
-    if (!isSearch404 && !isSilent) {
+    if (!isSearch404 && !isApplicationCheck404 && !isSilent) {
       console.error('❌ API Error:', error.config?.url, error.response?.status, error.response?.data);
     }
     

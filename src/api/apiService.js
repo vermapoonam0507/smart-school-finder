@@ -87,17 +87,60 @@ export const fetchStudentApplications = async (schoolIdOrEmail) => {
             return { data: [] };
         }
 
-        // Normalize and fetch PDF data for each form
-        const normalized = await Promise.all(
-            forms.map(async (form, idx) => {
-                const studId = form?.studId || form?.student?._id;
-                const pdfData = studId ? await fetchStudentPDF(studId) : null;
+         // Normalize and fetch PDF data for each form
+         const normalized = await Promise.all(
+             forms.map(async (form, idx) => {
+                 // Extract student ID properly - handle different data structures
+                 let studId = null;
+                 if (typeof form?.studId === 'string') {
+                     studId = form.studId;
+                 } else if (typeof form?.student?._id === 'string') {
+                     studId = form.student._id;
+                 } else if (typeof form?.student === 'string') {
+                     studId = form.student;
+                 } else if (form?.studId && typeof form.studId === 'object' && form.studId._id) {
+                     studId = form.studId._id;
+                 }
+                 
+                 console.log(`🔍 Form ${idx} - studId extracted:`, studId, 'from form:', form);
+                 
+                 // Try to fetch PDF data, but don't let it break the entire process
+                 let pdfData = null;
+                 if (studId) {
+                     try {
+                         pdfData = await fetchStudentPDF(studId);
+                     } catch (pdfError) {
+                         console.warn(`⚠️ Could not fetch PDF for student ${studId}:`, pdfError.message);
+                         pdfData = null;
+                     }
+                 }
+
+                 // Fetch student application data to get name and class
+                 let studentName = '—';
+                 let studentClass = '—';
+                 if (studId) {
+                     try {
+                         console.log(`🔍 Fetching application data for student: ${studId}`);
+                         const appResponse = await apiClient.get(`/applications/${studId}`);
+                         if (appResponse?.data?.data) {
+                             const appData = appResponse.data.data;
+                             studentName = appData.name || '—';
+                             studentClass = appData.classCompleted || appData.class || '—';
+                             console.log(`✅ Found student data: ${studentName}, Class: ${studentClass}`);
+                         }
+                     } catch (appError) {
+                         console.warn(`⚠️ Could not fetch application data for student ${studId}:`, appError.message);
+                         // Fallback to populated student data if available
+                         studentName = form?.studId?.name || form?.student?.name || '—';
+                         studentClass = form?.studId?.class || form?.student?.class || '—';
+                     }
+                 }
 
                 return {
                     id: form?._id || form?.id || `form-${idx}`,
                     formId: form?._id,
-                    studentName: form?.student?.name || form?.name || form?.studentName || '—',
-                    class: form?.student?.class || form?.class || form?.classCompleted || '—',
+                    studentName: studentName,
+                    class: studentClass,
                     date: form?.createdAt
                         ? new Date(form?.createdAt).toISOString().slice(0, 10)
                         : (form?.date || '—'),

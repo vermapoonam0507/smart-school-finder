@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import UserProfileForm from '../components/UserProfileForm';
 import { useAuth } from '../context/AuthContext';
-import { createStudentProfile, saveUserPreferences } from '../api/userService';
+import { createStudentProfile, saveUserPreferences, updateUserProfile } from '../api/userService';
 
 const CreateProfilePage = () => {
     const { user, updateUserContext } = useAuth();
@@ -20,6 +20,19 @@ const CreateProfilePage = () => {
 
     const handleProfileCreation = async (formData) => {
         try {
+            // Check if user is authenticated
+            if (!user || !user._id) {
+                toast.error("User not authenticated. Please log in first.");
+                return;
+            }
+
+            // Check if auth token exists
+            const token = localStorage.getItem('authToken');
+            if (!token) {
+                toast.error("Authentication token not found. Please log in again.");
+                return;
+            }
+
             // Backend ko bhejne ke liye aakhri data object (payload) taiyaar karein
             const payload = {
                 name: formData.name,
@@ -40,21 +53,42 @@ const CreateProfilePage = () => {
                 }
             };
 
-            const response = await createStudentProfile(payload);
+            console.log("Creating/Updating profile with payload:", payload);
+            
+            let response;
+            try {
+                // Try to create new profile first
+                response = await createStudentProfile(payload);
+                console.log("✅ New profile created successfully");
+            } catch (createError) {
+                // If student already exists, update the existing profile
+                if (createError.message === 'Student Already Exists' || 
+                    createError.response?.data?.message === 'Student Already Exists') {
+                    console.log("🔄 Student already exists, updating existing profile...");
+                    response = await updateUserProfile(user._id, payload);
+                    console.log("✅ Profile updated successfully");
+                } else {
+                    throw createError; // Re-throw if it's a different error
+                }
+            }
 
             // Save preferences against created student id
             const studentId = response.data?._id || response.data?.data?._id;
             if (studentId) {
-                await saveUserPreferences(studentId, {
+                // Ensure all required fields are provided with valid values
+                const preferencesData = {
                     studentId,
-                    state: formData.state,
-                    city: formData.city,
-                    boards: formData.boards,
-                    preferredStandard: formData.preferredStandard,
-                    interests: formData.interests,
-                    schoolType: formData.schoolType,
-                    shift: formData.shift,
-                });
+                    state: formData.state || 'Unknown',
+                    city: formData.city || 'Unknown',
+                    boards: formData.boards || 'CBSE', // Default to CBSE if not provided
+                    preferredStandard: formData.preferredStandard || 'primary', // Default to primary
+                    interests: formData.interests || 'Focusing on Academics', // Default interest
+                    schoolType: formData.schoolType || 'private', // Default to private
+                    shift: formData.shift || 'morning' // Default to morning
+                };
+                
+                console.log('Saving preferences with data:', preferencesData);
+                await saveUserPreferences(studentId, preferencesData);
             }
 
             // Enrich context with preferences so Dashboard pre-fills immediately
@@ -68,11 +102,12 @@ const CreateProfilePage = () => {
                 shift: formData.shift,
             }};
             updateUserContext(fullProfile);
-            toast.success("Profile created successfully! Welcome.");
+            toast.success("Profile updated successfully! Welcome.");
             navigate('/dashboard');
         } catch (error) {
-            console.error("Profile creation failed:", error);
-            toast.error(error.response?.data?.message || "Could not create your profile.");
+            console.error("Profile creation/update failed:", error);
+            const errorMessage = error.response?.data?.message || error.message || "Could not create/update your profile.";
+            toast.error(errorMessage);
         }
     };
 

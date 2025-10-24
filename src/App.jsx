@@ -34,6 +34,7 @@ import BlogDetailsPage from "./pages/BlogDetailsPage";
 import ApplicationSummaryPage from "./pages/ApplicationSummaryPage";
 import ApplicationConfirmationPage from "./pages/ApplicationConfirmationPage";
 import CompareSelectPage from "./pages/CompareSelectPage";
+import ApplicationFlowPage from "./pages/ApplicationFlowPage";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useAuth } from "./context/AuthContext";
@@ -108,9 +109,10 @@ useEffect(() => {
         const errorMessage = error.response?.data?.message;
 
         // Check karo ki kya error "Student not found" hai
-        if (errorMessage === "Student not found") {
-          console.log("Profile not found. Redirecting to /create-profile...");
-          navigate("/create-profile"); // User ko profile page par bhej do
+        if (errorMessage === "Student not found" || errorMessage === "Student Not Found") {
+          console.log("Student profile not found. User needs to create profile first.");
+          setShortlist([]); // Set empty shortlist instead of redirecting
+          // Don't redirect automatically - let user decide when to create profile
         } else {
           // Agar koi aur error hai, to use console mein dikhao
           console.error("Could not load shortlisted schools:", error.response?.data || error.message);
@@ -297,6 +299,10 @@ useEffect(() => {
             />
             <Route
               path="/apply/:schoolId"
+              element={<ApplicationFlowPage />}
+            />
+            <Route
+              path="/student-application/:schoolId"
               element={<StudentApplicationPage />}
             />
           </Route>

@@ -14,6 +14,13 @@ export const getShortlist = async (authId) => {
     const response = await apiClient.get(`users/shortlist/${authId}`);
     return response.data;
   } catch (error) {
+    // Handle "Student not found" error gracefully
+    if (error.response?.status === 400 && 
+        (error.response?.data?.message === "Student not found" || 
+         error.response?.data?.message === "Student Not Found")) {
+      console.log("Student profile not found, returning empty shortlist");
+      return { data: [] };
+    }
     console.error("Error fetching shortlist:", error.response?.data || error.message);
     throw error.response?.data || error;
   }
@@ -53,6 +60,17 @@ export const getShortlistCount = async (authId) => {
 // USER PROFILE FUNCTIONS
 // =============================================================================
 
+// Test backend connection
+export const testBackendConnection = async () => {
+  try {
+    const response = await apiClient.get('/auth/health');
+    return { success: true, data: response.data };
+  } catch (error) {
+    console.error('Backend connection test failed:', error);
+    return { success: false, error: error.message };
+  }
+};
+
 // Fetch user profile by authId
 export const getUserProfile = async (authId) => {
   // Only valid backend paths: /api/users/:authId mounted via axios base /api prefix
@@ -64,45 +82,53 @@ export const getUserProfile = async (authId) => {
   } catch (error) {
     // 400 -> Student Not Found (not an error for UI; means no profile yet)
     if (error.response?.status === 400) {
+      console.log('Student profile not found for authId:', authId);
       return { data: null, status: 'Not Found' };
     }
     // 404 -> endpoint not found should be rare; surface friendly message
     if (error.response?.status === 404) {
-      throw new Error('User endpoint not found');
+      console.log('User endpoint not found for authId:', authId);
+      return { data: null, status: 'Not Found' };
     }
+    console.error('Error fetching user profile:', error.response?.data || error.message);
     throw error;
   }
 };
 
 // Create student profile
 export const createStudentProfile = async (profileData) => {
-  const endpoints = [
-    '/api/users/add',
-    '/users/add',
-    '/admin/users/add'
-  ];
-
-  let lastError;
-  for (const endpoint of endpoints) {
-    try {
-      console.log(`🔄 Trying create user endpoint: ${endpoint}`);
-      const response = await apiClient.post(endpoint, profileData);
-      console.log(`✅ User profile created successfully`);
-      return response.data;
-    } catch (error) {
-      console.log(`❌ Failed with endpoint: ${endpoint} - ${error.response?.status}`);
-      lastError = error;
-      
-      // If it's not a 404, don't try other endpoints
-      if (error.response?.status !== 404) {
-        break;
-      }
+  try {
+    console.log(`🔄 Creating student profile with data:`, profileData);
+    
+    // Check if user is authenticated
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      throw new Error('User not authenticated. Please log in first.');
+    }
+    
+    const response = await apiClient.post('/users/', profileData);
+    console.log(`✅ User profile created successfully`);
+    return response.data;
+  } catch (error) {
+    console.error("Error creating student profile:", {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      message: error.message,
+      url: error.config?.url
+    });
+    
+    // Provide more specific error messages
+    if (error.response?.status === 403) {
+      throw new Error('Authentication failed. Please log in again.');
+    } else if (error.response?.status === 404) {
+      throw new Error('API endpoint not found. Please check if the backend server is running.');
+    } else if (error.response?.status === 400) {
+      throw new Error(error.response?.data?.message || 'Invalid data provided.');
+    } else {
+      throw error.response?.data || error;
     }
   }
-  
-  // If all endpoints failed, throw the last error
-  console.error("Error creating student profile:", lastError?.response?.data || lastError?.message);
-  throw lastError?.response?.data || lastError;
 };
 
 // Update student profile by authId
@@ -174,6 +200,13 @@ export const getUserPreferences = async (studentId) => {
     const response = await apiClient.get(`/users/preferences/${studentId}`);
     return response.data;
   } catch (error) {
+    // Handle "Preference not found" error gracefully
+    if (error.response?.status === 400 && 
+        (error.response?.data?.message === "Preference not found" || 
+         error.response?.data?.message === "Preference Not Found")) {
+      console.log("No preferences found for studentId:", studentId);
+      return { data: null, status: 'Not Found' };
+    }
     console.error("Error fetching user preferences:", error);
     throw error;
   }
@@ -260,6 +293,8 @@ export const generateStudentPdf = async (studId) => {
 // =============================================================================
 
 export const getFormsByStudent = async (studId) => {
+  console.log(`🔍 Fetching forms for student: ${studId}`);
+  
   // Try multiple known endpoints and normalize into an array of applications
   const candidates = [
     `/api/form/student/${studId}`,        // some deployments
@@ -273,8 +308,10 @@ export const getFormsByStudent = async (studId) => {
   let lastErr = null;
   for (const path of candidates) {
     try {
+      console.log(`🔍 Trying endpoint: ${path}`);
       const res = await apiClient.get(path, { headers: { 'X-Silent-Request': '1' } });
       const raw = res?.data;
+      console.log(`✅ Response from ${path}:`, raw);
 
       // If the endpoint returns a single object, wrap it
       const normalizedArray = Array.isArray(raw)
@@ -303,5 +340,7 @@ export const getFormsByStudent = async (studId) => {
     // Surface last error only if no data from any endpoint
     console.error('Error fetching forms by student:', lastErr.response?.data || lastErr.message);
   }
+  
+  console.log(`📊 Final result: Found ${all.length} forms for student ${studId}:`, all);
   return { data: all };
 };

@@ -132,7 +132,13 @@ export const AuthProvider = ({ children }) => {
       try {
         if (studentId) {
           const prefResponse = await getUserPreferences(studentId);
-          preferences = prefResponse?.data || prefResponse;
+          // Handle both success and "not found" responses
+          if (prefResponse?.data && prefResponse.status !== 'Not Found') {
+            preferences = prefResponse.data;
+          } else if (prefResponse && !prefResponse.status) {
+            // Direct data response
+            preferences = prefResponse;
+          }
         }
       } catch (_) {
         // Preferences are optional, continue without them
@@ -141,6 +147,7 @@ export const AuthProvider = ({ children }) => {
       const fullUserData = {
         ...basicAuthData,
         ...(profileResponse.data?.data || profileResponse.data),
+        studentId: studentId, // Store the student profile ID for consistent use
         ...(preferences ? { preferences } : {})
       };
 

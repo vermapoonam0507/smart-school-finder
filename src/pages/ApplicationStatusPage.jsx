@@ -28,10 +28,15 @@ const ApplicationStatusPage = () => {
       if (!currentUser?._id) return;
       try {
         setIsLoading(true);
-        const res = await getFormsByStudent(currentUser._id);
+        // Use student profile ID if available, otherwise auth ID
+        const studentId = currentUser.studentId || currentUser._id;
+        console.log('🔍 Fetching applications for student ID:', studentId, 'from user:', currentUser);
+        const res = await getFormsByStudent(studentId);
         const data = res?.data || [];
+        console.log('📊 Applications data received:', data);
         setForms(Array.isArray(data) ? data : []);
       } catch (err) {
+        console.error('❌ Error fetching applications:', err);
         setError(err?.message || 'Failed to load applications');
       } finally {
         setIsLoading(false);

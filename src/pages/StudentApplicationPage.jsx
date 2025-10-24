@@ -5,6 +5,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 import { submitApplication, generateStudentPdf } from '../api/userService';
+import { createApplication, checkApplicationExists, updateExistingApplication, submitFormToSchool } from '../api/applicationService';
 import eventEmitter from '../utils/eventEmitter';
 import { getSchoolById } from '../api/adminService';
 import { FileText, User, Users, Home, BookOpen, PlusCircle, Trash2, Shield } from 'lucide-react';
@@ -74,6 +75,8 @@ const StudentApplicationPage = () => {
     const [step, setStep] = useState(1);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
+    const [isUpdate, setIsUpdate] = useState(false);
+    const [existingApplication, setExistingApplication] = useState(null);
     const [formData, setFormData] = useState({
         name: '', location: '', dob: '', age: '', gender: '', motherTongue: '',
         placeOfBirth: '', speciallyAbled: false, speciallyAbledType: '',
@@ -148,10 +151,14 @@ const StudentApplicationPage = () => {
         console.log('Starting submission process...');
         setIsSubmitting(true);
         try {
+            // Get the correct student ID - use student profile ID if available, otherwise auth ID
+            const studentId = currentUser.studentId || currentUser._id;
+            console.log('🔍 Using student ID for application:', studentId, 'from user:', currentUser);
+            
             const payload = {
                 ...formData,
                 siblings,
-                studId: currentUser._id,
+                studId: studentId,
                 schoolId: schoolId,
                 schoolName: school.name,
                 schoolEmail: school.email,  // MAKE SURE THIS IS INCLUDED
@@ -164,17 +171,54 @@ const StudentApplicationPage = () => {
                 email: school.email
             });
             
-            await submitApplication(payload);
+            let result;
+            if (isUpdate && existingApplication) {
+                // Scenario C: Update existing application
+                result = await updateExistingApplication(currentUser._id, payload);
+                toast.success("Application updated successfully!");
+            } else {
+                // Scenario A: Create new application
+                result = await createApplication(payload);
+                toast.success("Application created successfully!");
+            }
+            
+            // CRITICAL: Submit the application to the school
+            console.log('📤 Submitting application to school...');
+            const applicationId = result.data?._id || result.data?.id || result._id;
+            if (applicationId) {
+                try {
+                    const formSubmission = await submitFormToSchool(schoolId, studentId, applicationId);
+                    console.log('✅ Application submitted to school:', formSubmission);
+                    
+                    if (formSubmission.alreadySubmitted) {
+                        toast.info("Application already submitted to this school!");
+                    } else {
+                        toast.success("Application submitted to school successfully!");
+                    }
+                } catch (submitError) {
+                    console.error('❌ Failed to submit to school:', submitError);
+                    toast.error("Application created but failed to submit to school. Please try again.");
+                    return; // Don't proceed if school submission fails
+                }
+            } else {
+                console.error('❌ No application ID found for school submission');
+                toast.error("Application created but could not submit to school.");
+                return;
+            }
             
             // Emit event to notify school portal of new application
             eventEmitter.emit('applicationAdded', {
               schoolId: schoolId,
               schoolEmail: school.email,
-              applicationData: payload
+              applicationData: result.data
             });
             
-            toast.success("Application submitted successfully!");
             setSubmitted(true);
+            
+            // Navigate back to application flow page to show updated status
+            setTimeout(() => {
+                navigate(`/apply/${schoolId}`);
+            }, 2000); // Give user time to see success message
         } catch (error) {
             console.error("Submission Error:", error);
             toast.error(`Submission failed: ${error.message || 'Please ensure all required fields are filled.'}`);
@@ -199,23 +243,81 @@ const StudentApplicationPage = () => {
     // Fetch school details to get school name
     useEffect(() => {
         const fetchSchool = async () => {
-            if (!schoolId) return;
+            if (!schoolId) {
+                console.error('❌ StudentApplicationPage: No schoolId provided');
+                toast.error('No school ID provided');
+                navigate('/schools');
+                return;
+            }
+            
+            console.log('🏫 StudentApplicationPage: Valid schoolId provided:', schoolId);
 
             try {
-                const response = await getSchoolById(schoolId);
+                setLoading(true);
+                console.log('🏫 StudentApplicationPage: Starting school fetch for schoolId:', schoolId);
+                console.log('🏫 StudentApplicationPage: Current loading state:', loading);
+                
+                // Add timeout to prevent hanging
+                const response = await Promise.race([
+                    getSchoolById(schoolId),
+                    new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('School details request timeout')), 10000)
+                    )
+                ]);
+                console.log('🏫 StudentApplicationPage: Raw API response:', response);
+                
                 const schoolData = response?.data?.data || response?.data;
+                console.log('✅ StudentApplicationPage: School details fetched:', schoolData);
+                
+                if (!schoolData) {
+                    console.error('❌ StudentApplicationPage: No school data in response');
+                    throw new Error('No school data received');
+                }
+                
                 setSchool(schoolData);
+                console.log('✅ StudentApplicationPage: School state set successfully');
             } catch (error) {
-                console.error('Error fetching school details:', error);
+                console.error('❌ StudentApplicationPage: Error fetching school details:', error);
+                console.error('❌ StudentApplicationPage: Error details:', error.response?.data || error.message);
                 toast.error('Could not load school details');
                 navigate('/schools');
             } finally {
+                console.log('🏁 StudentApplicationPage: School fetching completed, setting loading to false');
                 setLoading(false);
             }
         };
 
         fetchSchool();
     }, [schoolId, navigate]);
+
+    // Check for update mode and load existing application
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const updateMode = urlParams.get('update') === 'true';
+        setIsUpdate(updateMode);
+
+        if (updateMode && currentUser?._id) {
+            loadExistingApplication();
+        }
+    }, [currentUser]);
+
+    const loadExistingApplication = async () => {
+        try {
+            const response = await checkApplicationExists(currentUser._id);
+            if (response) {
+                setExistingApplication(response.data);
+                // Pre-populate form with existing data
+                setFormData(prevData => ({
+                    ...prevData,
+                    ...response.data
+                }));
+                toast.info('Existing application loaded. You can update the information.');
+            }
+        } catch (error) {
+            console.error('Error loading existing application:', error);
+            toast.error('Failed to load existing application');
+        }
+    };
 
     if (loading) {
         return (
