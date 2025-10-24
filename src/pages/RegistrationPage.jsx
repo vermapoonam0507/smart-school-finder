@@ -318,7 +318,7 @@ const DynamicElearningField = ({ label, value, onChange }) => {
 
 const RegistrationPage = () => {
   const navigate = useNavigate();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, updateUserContext } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // State with all the fields required by the backend schema
@@ -1097,6 +1097,12 @@ const RegistrationPage = () => {
       toast.success(
         "School Registration Successful! Your profile is pending approval."
       );
+
+      // Update user context to reflect school user type
+      if (currentUser && currentUser._id) {
+        updateUserContext({ userType: 'school', schoolId: schoolId });
+      }
+
       navigate("/school-portal/profile-view");
     } catch (error) {
       toast.error(error.response?.data?.message || "Registration failed.");
