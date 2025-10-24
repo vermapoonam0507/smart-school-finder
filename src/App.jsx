@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
+import { Routes, Route, useNavigate, useLocation, Navigate } from "react-router-dom";
 import Header from "./components/Header";
 import LandingPage from "./pages/LandingPage";
 import HomePage from "./pages/HomePage";
@@ -46,10 +46,13 @@ import {
 } from "./api/userService";
 import UserDashboard from "./components/UserDashboard";
 import ChatbotFab from "./components/ChatbotFab";
+import InterviewNotificationModal from "./components/InterviewNotificationModal";
+import { useInterviewNotifications } from "./hooks/useInterviewNotifications";
 
 
 function App() {
   const { user: currentUser, logout } = useAuth();
+  const { interviewNotification, dismissNotification } = useInterviewNotifications();
 
   const navigate = useNavigate();
 
@@ -308,7 +311,13 @@ useEffect(() => {
             />
             <Route
               path="/my-applications"
-              element={<StudentApplicationTrackingPage />}
+              element={
+                currentUser?.userType === 'student' || currentUser?.userType === 'parent' ? (
+                  <StudentApplicationTrackingPage />
+                ) : (
+                  <Navigate to="/dashboard" replace />
+                )
+              }
             />
           </Route>
           {/* Admin routes guarded separately so they aren't blocked by user onboarding */}
@@ -331,7 +340,18 @@ useEffect(() => {
         </Routes>
       </main>
       <ChatbotFab />
-      <ToastContainer position="top-right" autoClose={3000} theme="colored" /> 
+      
+      {/* Interview Notification Modal */}
+      {interviewNotification && (
+        <InterviewNotificationModal
+          isOpen={!!interviewNotification}
+          onClose={dismissNotification}
+          interviewData={interviewNotification.interviewData}
+          schoolName={interviewNotification.schoolName}
+        />
+      )}
+      
+      <ToastContainer position="top-right" autoClose={3000} theme="colored" /> 
     </>
   );
 }
