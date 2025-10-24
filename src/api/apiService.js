@@ -53,128 +53,103 @@ export const fetchStudentPDF = async (studId) => {
     return null;
   }
 };
+// CORRECTED: Properly fetch from Forms API with debugging
 
-// Enhanced: Fetch forms with PDF data
 export const fetchStudentApplications = async (schoolIdOrEmail) => {
     const identity = encodeURIComponent(schoolIdOrEmail || '');
 
-    const candidates = [
-        `/form/school/${identity}`,
-        `/applications?schoolId=${identity}`,
-    ];
-
-    let lastErr = null;
-    let forms = [];
-    let successfulPath = null;
-
-    for (const path of candidates) {
-        try {
-            console.log(`Attempting to fetch from: ${path}`);
-            const res = await apiClient.get(path, { headers: { 'X-Silent-Request': '1' } });
-            const raw = res?.data;
-
-            forms = Array.isArray(raw?.data) ? raw.data : [];
-
-            if (forms.length > 0) {
-                console.log(`✅ Successfully fetched ${forms.length} applications from ${path}`);
-                successfulPath = path;
-                break;
-            }
-        } catch (e) {
-            console.warn(`❌ Failed to fetch from ${path}:`, e.message);
-            console.error(`❌ API Error details:`, e.response?.data, e.response?.status);
-            lastErr = e;
+    // Only try the forms endpoint - no fallback to applications
+    try {
+        console.log(`🔍 Fetching forms for school: ${identity}`);
+        console.log(`📍 Full URL will be: /api/form/school/${identity}`);
+        
+        const res = await apiClient.get(`/form/school/${identity}`, { 
+            headers: { 'X-Silent-Request': '1' } 
+        });
+        
+        const raw = res?.data;
+        console.log(`📦 Raw response:`, raw);
+        
+        // Handle different response structures
+        let forms = [];
+        if (Array.isArray(raw)) {
+            forms = raw;
+        } else if (Array.isArray(raw?.data)) {
+            forms = raw.data;
+        } else if (Array.isArray(raw?.forms)) {
+            forms = raw.forms;
         }
-    }
 
-    if (forms.length === 0) {
-        throw lastErr || new Error('Failed to fetch applications');
-    }
+        console.log(`✅ Fetched ${forms.length} forms`);
 
-    const isFromApplicationsEndpoint = successfulPath && successfulPath.includes('/applications');
+        if (forms.length === 0) {
+            console.warn('⚠️ No forms found for this school');
+            return { data: [] };
+        }
 
-    // Normalize and fetch PDF data for each form
-    const normalized = await Promise.all(
-        forms.map(async (form, idx) => {
-            const studId = form?.studId;
+        // Normalize and fetch PDF data for each form
+        const normalized = await Promise.all(
+            forms.map(async (form, idx) => {
+                const studId = form?.studId || form?.student?._id;
+                const pdfData = studId ? await fetchStudentPDF(studId) : null;
 
-            // Fetch the PDF buffer for this student
-            const pdfData = await fetchStudentPDF(studId);
-
-            // Handle different data structures from forms vs applications endpoints
-            if (isFromApplicationsEndpoint) {
-                // Data from StudentApplication collection
                 return {
-                    id: form?._id || form?.id || `app-${idx}`,
+                    id: form?._id || form?.id || `form-${idx}`,
                     formId: form?._id,
-                    studentName: form?.name || '—',
-                    class: form?.classCompleted || form?.class || '—',
+                    studentName: form?.student?.name || form?.name || form?.studentName || '—',
+                    class: form?.student?.class || form?.class || form?.classCompleted || '—',
                     date: form?.createdAt
                         ? new Date(form?.createdAt).toISOString().slice(0, 10)
                         : (form?.date || '—'),
                     status: form?.status || 'Pending',
                     schoolId: form?.schoolId,
-                    schoolEmail: form?.schoolEmail,
                     studId: studId,
                     applicationData: form,
                     pdfUrl: pdfData?.url,
                     pdfBlob: pdfData?.blob,
                     _raw: form,
                 };
-            } else {
-                // Data from Forms collection
-                return {
-                    id: form?._id || form?.id || `app-${idx}`,
-                    formId: form?._id,
-                    studentName: form?.name || '—',
-                    class: form?.classCompleted || form?.class || '—',
-                    date: form?.createdAt
-                        ? new Date(form?.createdAt).toISOString().slice(0, 10)
-                        : (form?.date || '—'),
-                    status: form?.status || 'Pending',
-                    schoolId: form?.schoolId,
-                    schoolEmail: form?.schoolEmail,
-                    studId: studId,
-                    applicationData: form,
-                    pdfUrl: pdfData?.url,
-                    pdfBlob: pdfData?.blob,
-                    _raw: form,
-                };
-            }
-        })
-    );
+            })
+        );
 
-    console.log(`✅ Normalized ${normalized.length} applications with PDF data:`, normalized);
-    return { data: normalized };
+        console.log(`✅ Normalized ${normalized.length} forms`, normalized);
+        return { data: normalized };
+        
+    } catch (e) {
+        console.error(`❌ Error fetching forms:`, e);
+        console.error(`📍 Status: ${e?.response?.status}`);
+        console.error(`📝 Message: ${e?.response?.data?.message || e.message}`);
+        
+        // Check if it's a 404 - endpoint doesn't exist
+        if (e?.response?.status === 404) {
+            console.error('❌ Endpoint /api/form/school/:schoolId not found - check backend routes');
+        }
+        
+        throw e;
+    }
 };
 
 // Update form status
-export const updateApplicationStatus = async (applicationId, newStatus) => {
-    const body = { status: newStatus };
-    const id = encodeURIComponent(applicationId);
+export const updateApplicationStatus = async (formId, newStatus, schoolId) => {
+    const id = encodeURIComponent(formId);
     
-    const attempts = [
-        { url: `/form/${id}`, method: 'put' },
-        { url: `/forms/${id}`, method: 'put' },
-    ];
-    
-    let lastErr;
-    for (const attempt of attempts) {
-        try {
-            console.log(`Updating form ${id} to status: ${newStatus}`);
-            const res = await apiClient.request({ 
-                method: attempt.method, 
-                url: attempt.url, 
-                data: body 
-            });
-            console.log(`✅ Status updated:`, res?.data);
-            return res?.data || { ok: true };
-        } catch (e) {
-            console.warn(`❌ Failed to update via ${attempt.url}:`, e.message);
-            lastErr = e;
-        }
+    try {
+        console.log(`🔄 Updating form ${id} to status: ${newStatus}`);
+        
+        const res = await apiClient.put(
+            `/form/${id}`,
+            { status: newStatus }
+        );
+        
+        console.log(`✅ Form updated:`, res?.data);
+        return res?.data || { ok: true };
+        
+    } catch (e) {
+        console.error(`❌ Failed to update form:`, e.message);
+        console.error(`📍 Status: ${e?.response?.status}`);
+        console.error(`📝 Response:`, e?.response?.data);
+        throw e;
     }
-    throw lastErr || new Error('Failed to update form status');
 };
 
 // View PDF in new tab

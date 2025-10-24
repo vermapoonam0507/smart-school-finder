@@ -12,14 +12,14 @@ import { fetchStudentApplications, updateApplicationStatus } from "../api/apiSer
 import { useAuth } from "../context/AuthContext";
 import ErrorBoundary from "../components/ErrorBoundary";
 
-const SchoolHeader = ({ schoolName, onLogout, applicationsCount, hasProfile }) => (
+const SchoolHeader = ({ schoolName, onLogout, applicationsCount, hasProfile, currentUser }) => (
   <header className="bg-white shadow-md">
     <nav className="container mx-auto px-6 py-4 flex justify-between items-center">
       <div className="text-xl font-bold text-gray-800">
         <School className="inline-block mr-2 text-blue-600" /> School Portal
       </div>
       <div className="flex items-center space-x-6">
-        {hasProfile === false && (
+        {currentUser?.userType === 'school' && (
           <Link
             to="/school-portal/register"
             className="text-gray-600 hover:text-blue-600 flex items-center"
@@ -107,26 +107,40 @@ const ViewStudentApplications = ({ schoolId }) => {
     }
   }, [schoolId]);
 
-  const handleStatusChange = async (idOrApp, newStatus) => {
-    const isObj = typeof idOrApp === 'object' && idOrApp !== null;
-    const targetId = isObj ? (idOrApp.studId || idOrApp.id || idOrApp._raw?.studId || idOrApp._raw?._id) : idOrApp;
-    // Optimistic UI update
-    setApplications((prevApps) => prevApps.map((app) => (app.id === targetId || app.studId === targetId) ? { ...app, status: newStatus } : app));
-    if (!targetId) {
-      console.warn('No valid application id to update');
-      return;
-    }
+ // Replace the handleStatusChange function in ViewStudentApplications component
+
+const handleStatusChange = async (app, newStatus) => {
+  // Use the form's _id (which is stored in the 'id' field from normalization)
+  const formId = app?.formId || app?.id || app?._raw?._id;
+  
+  if (!formId) {
+    console.warn('No valid form id to update:', app);
+    return;
+  }
+
+  // Optimistic UI update
+  setApplications((prevApps) =>
+    prevApps.map((a) =>
+      a.id === app.id ? { ...a, status: newStatus } : a
+    )
+  );
+
+  try {
+    console.log(`Updating form ${formId} to status: ${newStatus}`);
+    await updateApplicationStatus(formId, newStatus, schoolId);
+    console.log('Status updated successfully');
+  } catch (e) {
+    console.error('Failed to update status:', e);
+    // Revert optimistic update by refetching
     try {
-      await updateApplicationStatus(targetId, newStatus);
-    } catch (e) {
-      // Revert on failure by refetching
-      try {
-        const response = await fetchStudentApplications(schoolId);
-        setApplications(response.data);
-      } catch (_) {}
-      console.error('Failed to update status', e);
+      const response = await fetchStudentApplications(schoolId);
+      setApplications(response.data);
+      alert('Failed to update status. Changes reverted.');
+    } catch (_) {
+      alert('Failed to update status and unable to reload.');
     }
-  };
+  }
+};
 
 
   const handleOpenDetails = (app) => {
@@ -198,6 +212,8 @@ const ViewStudentApplications = ({ schoolId }) => {
                 <td className="p-4 align-top">{app.studentName}</td>
                 <td className="p-4 align-top">{app.class}</td>
                 <td className="p-4 align-top">{app.date}</td>
+                <td className="p-4 align-top"></td>
+                <td className="p-4 align-top"></td>
                 <td className="p-4 align-top">
                   <button onClick={() => handleOpenDetails(app)} className="text-sm text-blue-600 hover:underline">
                     View Details
@@ -343,7 +359,9 @@ const SchoolPortalPage = ({ currentUser, onLogout, onRegister }) => {
 
   useEffect(() => {
     // Assume registered for school users by default (hides link), refine after API check
-    if (currentUser?.userType === 'school' || currentUser?.schoolId) {
+    if (currentUser?.userType === 'school') {
+      setHasProfile(true);
+    } else if (currentUser?.schoolId) {
       setHasProfile(true);
     } else {
       setHasProfile(null);
@@ -353,28 +371,34 @@ const SchoolPortalPage = ({ currentUser, onLogout, onRegister }) => {
   useEffect(() => {
     const checkProfile = async () => {
       try {
-        // For school users, never show registration; skip network checks
+        // For school users, always set hasProfile to true - no need for API checks
         if (currentUser?.userType === 'school') {
           setHasProfile(true);
           return;
         }
-        if (!currentUser?._id) return setHasProfile(false);
-        // If backend has already linked a schoolId to this user, treat as registered
+
+        // For users with schoolId, also assume they have a profile
         if (currentUser?.schoolId) {
           setHasProfile(true);
           return;
         }
+
+        if (!currentUser?._id) {
+          setHasProfile(false);
+          return;
+        }
+
+        // Only do API checks for non-school users without schoolId
         let found = null;
         try {
           const byAuth = await checkSchoolProfileExists(currentUser._id);
-          // Consider common response shapes as success
           const payload = byAuth?.data;
           found = payload?.data || payload || null;
           if (!found && byAuth?.status === 200) {
-            // If server returned 200 without nested data, still treat as exists
             found = { ok: true };
           }
         } catch (_) {}
+
         if (!found && (currentUser?.schoolId || currentUser?._id)) {
           try {
             const byId = await getSchoolById(currentUser.schoolId || currentUser._id);
@@ -391,7 +415,7 @@ const SchoolPortalPage = ({ currentUser, onLogout, onRegister }) => {
       }
     };
     checkProfile();
-  }, [currentUser?._id, currentUser?.schoolId]);
+  }, [currentUser?._id, currentUser?.schoolId, currentUser?.userType]);
 
   if (!currentUser || currentUser.userType !== "school") {
     return (
@@ -403,7 +427,7 @@ const SchoolPortalPage = ({ currentUser, onLogout, onRegister }) => {
 
   return (
     <div>
-      <SchoolHeader schoolName={currentUser?.name} onLogout={onLogout} applicationsCount={applicationsCount} hasProfile={hasProfile} />
+      <SchoolHeader schoolName={currentUser?.name} onLogout={onLogout} applicationsCount={applicationsCount} hasProfile={hasProfile} currentUser={currentUser} />
       <Routes>
         <Route
           path="shortlisted"
@@ -414,11 +438,11 @@ const SchoolPortalPage = ({ currentUser, onLogout, onRegister }) => {
           path="applications"
           element={
             <ErrorBoundary>
-              <ViewStudentApplications schoolId={currentUser?.schoolId || currentUser?._id} />
+              
             </ErrorBoundary>
           }
         />
-        {!hasProfile && (
+        {currentUser?.userType === 'school' && (
           <Route
             path="register"
             element={
@@ -429,9 +453,7 @@ const SchoolPortalPage = ({ currentUser, onLogout, onRegister }) => {
             }
           />
         )}
-        {hasProfile && (
-          <Route path="register" element={<Navigate to="/school-portal/applications" replace />} />
-        )}
+
         <Route
           path="profile-view"
           element={<SchoolProfileView />}
