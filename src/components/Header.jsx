@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { School, Menu, X, LogOut, User, ChevronDown, Shield } from 'lucide-react';
+import NotificationIcon from './NotificationIcon';
 
 const Header = ({ isMobileMenuOpen, setMobileMenuOpen, compareCount, shortlistCount = 0, currentUser, onLogout }) => {
   const location = useLocation();
@@ -55,6 +56,7 @@ const Header = ({ isMobileMenuOpen, setMobileMenuOpen, compareCount, shortlistCo
       <div className="hidden md:flex items-center space-x-4">
         {currentUser ? (
             <>
+                <NotificationIcon />
                 <ProfileDropdown currentUser={currentUser} onLogout={onLogout} />
             </>
         ) : (
@@ -99,9 +101,16 @@ const Header = ({ isMobileMenuOpen, setMobileMenuOpen, compareCount, shortlistCo
 
         <div className="px-6 py-4 border-t">
           {currentUser ? (
-            <button onClick={() => { onLogout(); setMobileMenuOpen(false); }} className="w-full text-center text-gray-600 hover:text-blue-600 flex items-center justify-center">
-                <LogOut size={16} className="mr-1" /> Logout
-            </button>
+            <>
+              {(currentUser.userType === 'student' || currentUser.userType === 'parent') && (
+                <div className="mb-4">
+                  <NotificationIcon />
+                </div>
+              )}
+              <button onClick={() => { onLogout(); setMobileMenuOpen(false); }} className="w-full text-center text-gray-600 hover:text-blue-600 flex items-center justify-center">
+                  <LogOut size={16} className="mr-1" /> Logout
+              </button>
+            </>
           ) : (
             <>
               <Link to="/guest-search" className="block w-full text-center text-gray-600 hover:text-blue-600 mb-2 py-2" onClick={() => setMobileMenuOpen(false)}>Continue as Guest</Link>

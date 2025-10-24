@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Routes, Route, Link, useNavigate, Navigate } from "react-router-dom";
-import { School, LogOut, FileText, Eye, Star, Check, X } from "lucide-react";
+import { School, LogOut, FileText, Eye, Star, Check, X, Calendar } from "lucide-react";
 import {
   getSchoolById,
   getPendingSchools,
@@ -9,8 +9,11 @@ import {
 import RegistrationPage from "./RegistrationPage";
 import SchoolProfileView from "./SchoolProfileView";
 import { fetchStudentApplications, updateApplicationStatus } from "../api/apiService";
+import { getSchoolForms, updateFormStatus } from "../api/applicationService";
+import InterviewSchedulingModal from "../components/InterviewSchedulingModal";
 import { useAuth } from "../context/AuthContext";
 import ErrorBoundary from "../components/ErrorBoundary";
+import { toast } from "react-toastify";
 
 const SchoolHeader = ({ schoolName, onLogout, applicationsCount, hasProfile, currentUser }) => (
   <header className="bg-white shadow-md">
@@ -82,6 +85,9 @@ const ViewStudentApplications = ({ schoolId }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState('All');
+  const [showInterviewModal, setShowInterviewModal] = useState(false);
+  const [selectedApplication, setSelectedApplication] = useState(null);
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
 
@@ -95,7 +101,8 @@ const ViewStudentApplications = ({ schoolId }) => {
       setError(null);
       
       console.log(`🔄 ${isRefresh ? 'Refreshing' : 'Fetching'} applications for school: ${schoolId}`);
-      const response = await fetchStudentApplications(schoolId);
+      const status = selectedStatus === 'All' ? null : selectedStatus;
+      const response = await getSchoolForms(schoolId, status);
       console.log('✅ Applications fetched:', response.data?.length || 0, 'applications');
       setApplications(response.data || []); 
     } catch (error) {
@@ -115,7 +122,7 @@ const ViewStudentApplications = ({ schoolId }) => {
       console.warn("⚠️ No schoolId provided to ViewStudentApplications");
       setLoading(false);
     }
-  }, [schoolId]);
+  }, [schoolId, selectedStatus]);
 
   // Listen for new applications
   useEffect(() => {
@@ -136,46 +143,78 @@ const ViewStudentApplications = ({ schoolId }) => {
     };
   }, [schoolId]);
 
- // Replace the handleStatusChange function in ViewStudentApplications component
-
-const handleStatusChange = async (app, newStatus) => {
-  // Use the form's _id (which is stored in the 'id' field from normalization)
-  const formId = app?.formId || app?.id || app?._raw?._id;
-  
-  if (!formId) {
-    console.warn('No valid form id to update:', app);
-    return;
-  }
-
-  // Optimistic UI update
-  setApplications((prevApps) =>
-    prevApps.map((a) =>
-      a.id === app.id ? { ...a, status: newStatus } : a
-    )
-  );
-
-  try {
-    console.log(`Updating form ${formId} to status: ${newStatus}`);
-    await updateApplicationStatus(formId, newStatus, schoolId);
-    console.log('Status updated successfully');
-  } catch (e) {
-    console.error('Failed to update status:', e);
-    // Revert optimistic update by refetching
-    try {
-      const response = await fetchStudentApplications(schoolId);
-      setApplications(response.data);
-      alert('Failed to update status. Changes reverted.');
-    } catch (_) {
-      alert('Failed to update status and unable to reload.');
+  const handleStatusChange = async (app, newStatus) => {
+    // Try multiple possible form ID locations
+    const formId = app?._id || app?.formId || app?.id || app?._raw?._id;
+    
+    if (!formId) {
+      console.warn('No valid form id to update:', app);
+      console.log('Available app properties:', Object.keys(app));
+      return;
     }
-  }
-};
+
+    // Optimistic UI update
+    setApplications((prevApps) =>
+      prevApps.map((a) =>
+        a.id === app.id ? { ...a, status: newStatus } : a
+      )
+    );
+
+    try {
+      console.log(`Updating form ${formId} to status: ${newStatus}`);
+      await updateFormStatus(formId, newStatus);
+      console.log('Status updated successfully');
+      toast.success(`Application status updated to ${newStatus}`);
+    } catch (e) {
+      console.error('Failed to update status:', e);
+      // Revert optimistic update by refetching
+      try {
+        const response = await getSchoolForms(schoolId, selectedStatus === 'All' ? null : selectedStatus);
+        setApplications(response.data);
+        toast.error('Failed to update status. Changes reverted.');
+      } catch (_) {
+        toast.error('Failed to update status and unable to reload.');
+      }
+    }
+  };
+
+  const handleScheduleInterview = (app) => {
+    // Extract form ID for the interview modal
+    const formId = app?._id || app?.formId || app?.id || app?._raw?._id;
+    if (!formId) {
+      console.warn('No valid form id for interview scheduling:', app);
+      toast.error('Cannot schedule interview: Invalid application data');
+      return;
+    }
+    
+    // Add formId to the application object for the modal
+    const appWithFormId = { ...app, formId };
+    setSelectedApplication(appWithFormId);
+    setShowInterviewModal(true);
+  };
+
+  const handleInterviewScheduled = async (formId, status, note) => {
+    try {
+      await updateFormStatus(formId, status, note);
+      toast.success('Interview scheduled successfully!');
+      fetchApplications(true);
+    } catch (error) {
+      console.error('Error scheduling interview:', error);
+      toast.error('Failed to schedule interview');
+    }
+  };
+
+  const handleStatusFilter = (status) => {
+    setSelectedStatus(status);
+  };
 
 
   const handleOpenDetails = (app) => {
-    const studId = app.studId || app._raw?.studId || app._raw?.studentId || app._raw?.student?._id || app.id;
+    // Try multiple possible student ID locations
+    const studId = app?.studId?._id || app?.studId || app?._raw?.studId || app?._raw?.studentId || app?._raw?.student?._id || app?.id;
     if (!studId) {
       console.warn("⚠️ No student ID found for application:", app);
+      console.log('Available app properties:', Object.keys(app));
       return;
     }
     console.log("🔗 Opening details for student:", studId);
@@ -209,6 +248,8 @@ const handleStatusChange = async (app, newStatus) => {
 
   const rows = applications;
 
+  const statusOptions = ['All', 'Pending', 'Reviewed', 'Interview', 'Accepted', 'Rejected'];
+
   return (
     <div className="p-8">
       <div className="flex justify-between items-center mb-6">
@@ -235,6 +276,23 @@ const handleStatusChange = async (app, newStatus) => {
           )}
         </button>
       </div>
+
+      {/* Status Filter Tabs */}
+      <div className="flex flex-wrap gap-2 mb-6">
+        {statusOptions.map((status) => (
+          <button
+            key={status}
+            onClick={() => handleStatusFilter(status)}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              selectedStatus === status
+                ? 'bg-blue-600 text-white'
+                : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+            }`}
+          >
+            {status}
+          </button>
+        ))}
+      </div>
       <div className="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
         <table className="min-w-full table-auto">
           <thead className="bg-gray-50">
@@ -242,8 +300,6 @@ const handleStatusChange = async (app, newStatus) => {
               <th className="p-4 text-left text-sm font-semibold text-gray-600">Student Name</th>
               <th className="p-4 text-left text-sm font-semibold text-gray-600">Class</th>
               <th className="p-4 text-left text-sm font-semibold text-gray-600">Date</th>
-              <th className="p-4 text-left text-sm font-semibold text-gray-600">Accepted</th>
-              <th className="p-4 text-left text-sm font-semibold text-gray-600">Rejected</th>
               <th className="p-4 text-left text-sm font-semibold text-gray-600">Details</th>
               <th className="p-4 text-left text-sm font-semibold text-gray-600">Status</th>
               <th className="p-4 text-left text-sm font-semibold text-gray-600">
@@ -258,12 +314,10 @@ const handleStatusChange = async (app, newStatus) => {
                 const isAccepted = statusLower === 'accepted';
                 const isRejected = statusLower === 'rejected';
                 return (
-              <tr key={app.id} className="border-b last:border-b-0 hover:bg-gray-50">
+              <tr key={app._id || app.id || app.formId || `app-${index}`} className="border-b last:border-b-0 hover:bg-gray-50">
                 <td className="p-4 align-top">{app.studentName}</td>
                 <td className="p-4 align-top">{app.class}</td>
                 <td className="p-4 align-top">{app.date}</td>
-                <td className="p-4 align-top"></td>
-                <td className="p-4 align-top"></td>
                 <td className="p-4 align-top">
                   <button onClick={() => handleOpenDetails(app)} className="text-sm text-blue-600 hover:underline">
                     View Details
@@ -280,14 +334,30 @@ const handleStatusChange = async (app, newStatus) => {
                 </td>
                 <td className="p-4 flex flex-wrap gap-2 items-center">
                   <button
+                    onClick={() => handleStatusChange(app, "Reviewed")}
+                    className="p-2 text-blue-600 bg-blue-100 rounded-full hover:bg-blue-200"
+                    title="Mark as Reviewed"
+                  >
+                    <Eye size={16} />
+                  </button>
+                  <button
+                    onClick={() => handleScheduleInterview(app)}
+                    className="p-2 text-purple-600 bg-purple-100 rounded-full hover:bg-purple-200"
+                    title="Schedule Interview"
+                  >
+                    <Calendar size={16} />
+                  </button>
+                  <button
                     onClick={() => handleStatusChange(app, "Accepted")}
                     className="p-2 text-green-600 bg-green-100 rounded-full hover:bg-green-200"
+                    title="Accept"
                   >
                     <Check size={16} />
                   </button>
                   <button
                     onClick={() => handleStatusChange(app, "Rejected")}
                     className="p-2 text-red-600 bg-red-100 rounded-full hover:bg-red-200"
+                    title="Reject"
                   >
                     <X size={16} />
                   </button>
@@ -320,6 +390,14 @@ const handleStatusChange = async (app, newStatus) => {
           );
         })()}
       </div>
+
+      {/* Interview Scheduling Modal */}
+      <InterviewSchedulingModal
+        isOpen={showInterviewModal}
+        onClose={() => setShowInterviewModal(false)}
+        application={selectedApplication}
+        onSchedule={handleInterviewScheduled}
+      />
     </div>
   );
 };
@@ -365,8 +443,8 @@ const ViewShortlistedApplications = ({ schoolId }) => {
             </tr>
           </thead>
           <tbody>
-            {applications.map((app) => (
-              <tr key={app.id} className="border-b last:border-b-0">
+            {applications.map((app, index) => (
+              <tr key={app._id || app.id || app.formId || `app-${index}`} className="border-b last:border-b-0">
                 <td className="p-4 text-gray-800">{app.studentName}</td>
                 <td className="p-4 text-gray-700">{app.class}</td>
                 <td className="p-4 text-gray-700">{app.date}</td>

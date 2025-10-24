@@ -207,6 +207,11 @@ export const getFormsBySchool = async (schoolId) => {
  */
 export const trackForm = async (formId) => {
   try {
+    // Validate formId before making the API call
+    if (!formId || formId === 'undefined' || formId === 'null') {
+      throw new Error('Invalid form ID provided');
+    }
+    
     const response = await apiClient.get(`/api/form/track/${formId}`);
     return response.data;
   } catch (error) {
@@ -216,14 +221,140 @@ export const trackForm = async (formId) => {
 };
 
 /**
+ * Get all forms for a student with optional status filtering
+ * @param {string} studId - Student ID
+ * @param {string} status - Optional status filter
+ * @returns {Promise<Object>} Student forms data
+ */
+export const getStudentForms = async (studId, status = null) => {
+  try {
+    const url = status ? `/api/form/student/${studId}?status=${status}` : `/api/form/student/${studId}`;
+    const response = await apiClient.get(url);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching student forms:', error.response?.data || error.message);
+    throw error.response?.data || error;
+  }
+};
+
+/**
+ * Get all forms for a school with optional status filtering
+ * @param {string} schoolId - School ID
+ * @param {string} status - Optional status filter
+ * @returns {Promise<Object>} School forms data
+ */
+export const getSchoolForms = async (schoolId, status = null) => {
+  try {
+    const url = status ? `/api/form/school/${schoolId}?status=${status}` : `/api/form/school/${schoolId}`;
+    const response = await apiClient.get(url);
+    
+    const raw = response?.data;
+    let forms = [];
+    if (Array.isArray(raw)) {
+      forms = raw;
+    } else if (Array.isArray(raw?.data)) {
+      forms = raw.data;
+    } else if (Array.isArray(raw?.forms)) {
+      forms = raw.forms;
+    }
+
+    console.log(`✅ Fetched ${forms.length} forms for school`);
+
+    if (forms.length === 0) {
+      return { data: [] };
+    }
+
+    // Normalize and fetch student application data for each form
+    const normalized = await Promise.all(
+      forms.map(async (form, idx) => {
+        // Extract student ID properly
+        let studId = null;
+        if (typeof form?.studId === 'string') {
+          studId = form.studId;
+        } else if (typeof form?.student?._id === 'string') {
+          studId = form.student._id;
+        } else if (typeof form?.student === 'string') {
+          studId = form.student;
+        } else if (form?.studId && typeof form.studId === 'object' && form.studId._id) {
+          studId = form.studId._id;
+        }
+        
+        console.log(`🔍 Form ${idx} - studId extracted:`, studId, 'from form:', form);
+        
+        // Fetch student application data to get name and class
+        let studentName = '—';
+        let studentClass = '—';
+        if (studId) {
+          try {
+            console.log(`🔍 Fetching application data for student: ${studId}`);
+            const appResponse = await apiClient.get(`/applications/${studId}`);
+            if (appResponse?.data?.data) {
+              const appData = appResponse.data.data;
+              studentName = appData.name || '—';
+              studentClass = appData.classCompleted || appData.class || '—';
+              console.log(`✅ Found student data: ${studentName}, Class: ${studentClass}`);
+            }
+          } catch (appError) {
+            console.warn(`⚠️ Could not fetch application data for student ${studId}:`, appError.message);
+            // Fallback to populated student data if available
+            studentName = form?.studId?.name || form?.student?.name || '—';
+            studentClass = form?.studId?.class || form?.student?.class || '—';
+          }
+        }
+
+        return {
+          id: form?._id || form?.id || `form-${idx}`,
+          formId: form?._id,
+          studentName: studentName,
+          class: studentClass,
+          date: form?.createdAt
+            ? new Date(form?.createdAt).toISOString().slice(0, 10)
+            : (form?.date || '—'),
+          status: form?.status || 'Pending',
+          schoolId: form?.schoolId,
+          studId: studId,
+          applicationData: form,
+          _raw: form,
+        };
+      })
+    );
+
+    console.log(`✅ Normalized ${normalized.length} forms for school`, normalized);
+    return { data: normalized };
+    
+  } catch (error) {
+    console.error('Error fetching school forms:', error.response?.data || error.message);
+    throw error.response?.data || error;
+  }
+};
+
+/**
+ * Get detailed form information
+ * @param {string} formId - Form ID
+ * @returns {Promise<Object>} Detailed form data
+ */
+export const getFormDetails = async (formId) => {
+  try {
+    const response = await apiClient.get(`/api/form/${formId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching form details:', error.response?.data || error.message);
+    throw error.response?.data || error;
+  }
+};
+
+/**
  * Update form status
  * @param {string} formId - Form ID
  * @param {string} status - New status
+ * @param {string} note - Optional note for the status change
  * @returns {Promise<Object>} Updated form data
  */
-export const updateFormStatus = async (formId, status) => {
+export const updateFormStatus = async (formId, status, note = null) => {
   try {
-    const response = await apiClient.put(`/api/form/${formId}?status=${status}`);
+    const url = `/api/form/${formId}?status=${status}`;
+    const body = note ? { note } : {};
+    const response = await apiClient.put(url, body);
     return response.data;
   } catch (error) {
     console.error('Error updating form status:', error.response?.data || error.message);

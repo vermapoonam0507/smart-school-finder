@@ -35,6 +35,7 @@ import ApplicationSummaryPage from "./pages/ApplicationSummaryPage";
 import ApplicationConfirmationPage from "./pages/ApplicationConfirmationPage";
 import CompareSelectPage from "./pages/CompareSelectPage";
 import ApplicationFlowPage from "./pages/ApplicationFlowPage";
+import StudentApplicationTrackingPage from "./pages/StudentApplicationTrackingPage";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useAuth } from "./context/AuthContext";
@@ -304,6 +305,10 @@ useEffect(() => {
             <Route
               path="/student-application/:schoolId"
               element={<StudentApplicationPage />}
+            />
+            <Route
+              path="/my-applications"
+              element={<StudentApplicationTrackingPage />}
             />
           </Route>
           {/* Admin routes guarded separately so they aren't blocked by user onboarding */}
