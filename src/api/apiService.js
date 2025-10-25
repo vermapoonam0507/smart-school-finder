@@ -218,7 +218,13 @@ export const viewPDFInNewTab = (studId) => {
     console.warn('No student ID provided');
     return;
   }
-  window.open(`/api/users/pdf/view/${studId}`, '_blank');
+
+  // Use the correct backend URL based on environment
+  const apiBaseURL = import.meta.env.DEV ? '' : 'https://backend-tc-sa-v2.onrender.com';
+  const pdfUrl = `${apiBaseURL}/api/users/pdf/view/${studId}`;
+
+  console.log('🔗 Opening PDF at:', pdfUrl);
+  window.open(pdfUrl, '_blank');
 };
 
 // Download PDF
