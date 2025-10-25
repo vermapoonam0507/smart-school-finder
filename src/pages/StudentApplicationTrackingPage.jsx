@@ -62,9 +62,11 @@ const ApplicationCard = ({ application, onViewDetails }) => {
             <School className="w-5 h-5 text-blue-600" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">{application.schoolName}</h3>
+            <h3 className="text-lg font-semibold text-gray-900">
+              {application.schoolId?.name || application.schoolName || 'Unknown School'}
+            </h3>
             <p className="text-sm text-gray-600">
-              Application ID: {application.formId || application._id || application.id || 'N/A'}
+              School Application
             </p>
           </div>
         </div>
