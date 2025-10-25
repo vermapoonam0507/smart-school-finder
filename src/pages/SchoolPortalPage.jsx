@@ -86,8 +86,8 @@ const ViewStudentApplications = ({ schoolId }) => {
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState('All');
-  const [showInterviewModal, setShowInterviewModal] = useState(false);
-  const [selectedApplication, setSelectedApplication] = useState(null);
+  const [showInterviewDetailsModal, setShowInterviewDetailsModal] = useState(false);
+  const [selectedInterviewApplication, setSelectedInterviewApplication] = useState(null);
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
 
@@ -99,12 +99,30 @@ const ViewStudentApplications = ({ schoolId }) => {
         setLoading(true);
       }
       setError(null);
-      
+
       console.log(`🔄 ${isRefresh ? 'Refreshing' : 'Fetching'} applications for school: ${schoolId}`);
       const status = selectedStatus === 'All' ? null : selectedStatus;
       const response = await getSchoolForms(schoolId, status);
       console.log('✅ Applications fetched:', response.data?.length || 0, 'applications');
-      setApplications(response.data || []); 
+      console.log('📋 Full API Response:', response);
+
+      // Log each application to see the structure after update
+      if (response.data && response.data.length > 0) {
+        response.data.forEach((app, index) => {
+          console.log(`📄 Application ${index} after update:`, {
+            id: app._id,
+            status: app.status,
+            note: app.note,
+            interviewNote: app.interviewNote,
+            formDetails: app.formDetails,
+            applicationData: app.applicationData,
+            _raw: app._raw,
+            fullData: app
+          });
+        });
+      }
+
+      setApplications(response.data || []);
     } catch (error) {
       console.error("❌ Error fetching applications:", error);
       setError(error.message || "Failed to fetch applications");
@@ -195,30 +213,127 @@ const ViewStudentApplications = ({ schoolId }) => {
 
   const handleInterviewScheduled = async (formId, status, note) => {
     try {
-      await updateFormStatus(formId, status, note);
+      console.log('📝 Scheduling interview with note:', note);
+      console.log('🔄 Calling updateApplicationStatus with:', { formId, status, note });
+
+      // Use the updateApplicationStatus function that properly handles the note parameter
+      const result = await updateApplicationStatus(formId, status, null, note);
+      console.log('✅ API Response:', result);
+
       toast.success('Interview scheduled successfully!');
-      fetchApplications(true);
+      console.log('🔄 Refreshing applications data...');
+      await fetchApplications(true);
     } catch (error) {
       console.error('Error scheduling interview:', error);
       toast.error('Failed to schedule interview');
     }
   };
 
-  const handleStatusFilter = (status) => {
-    setSelectedStatus(status);
+  const handleShowInterviewDetails = (app) => {
+    try {
+      // Use the existing form data from the application object
+      // The interview notes should already be available in the form data
+      console.log('📋 Interview details from existing form data:', app);
+      console.log('🔍 All available fields in app:', Object.keys(app));
+      console.log('🔍 Interview status:', app?.status);
+      console.log('🔍 Available note fields:', {
+        note: app?.note,
+        interviewNote: app?.interviewNote,
+        formDetails: app?.formDetails,
+        applicationData: app?.applicationData,
+        _raw: app?._raw
+      });
+
+      // Set the application data for the modal using existing form data
+      const interviewNote = app?.note ||
+                      app?.formDetails?.note ||
+                      app?.applicationData?.note ||
+                      app?._raw?.note ||
+                      app?.applicationData?.formData?.note ||
+                      app?.interviewNote ||  // Direct field from database
+                      app?._raw?.interviewNote ||
+                      app?.formDetails?.interviewNote ||
+                      app?.applicationData?.interviewNote ||
+                      app?._raw?.data?.note ||
+                      app?.formDetails?.data?.note ||
+                      app?.data?.note ||
+                      app?.formData?.note ||
+                      'No interview details available';
+
+      // Try to find interview notes in any text field that contains interview-related content
+      let fallbackNote = 'No interview details available';
+      if (interviewNote === 'No interview details available' || !interviewNote) {
+        const allKeys = Object.keys(app || {});
+        for (const key of allKeys) {
+          const value = app[key];
+          if (typeof value === 'string' && value.length > 10) {
+            // Look for fields that might contain interview details
+            if (key.toLowerCase().includes('note') ||
+                key.toLowerCase().includes('detail') ||
+                key.toLowerCase().includes('interview') ||
+                value.toLowerCase().includes('interview') ||
+                value.toLowerCase().includes('date') ||
+                value.toLowerCase().includes('time') ||
+                value.toLowerCase().includes('venue')) {
+              fallbackNote = value;
+              console.log(`🎯 Found potential interview notes in field '${key}':`, value);
+              break;
+            }
+          }
+        }
+      }
+
+      setSelectedInterviewApplication({
+        ...app,
+        interviewNote: interviewNote !== 'No interview details available' ? interviewNote : fallbackNote
+      });
+
+      setShowInterviewDetailsModal(true);
+    } catch (error) {
+      console.error('Error showing interview details:', error);
+      toast.error('Failed to load interview details');
+    }
   };
 
 
   const handleOpenDetails = (app) => {
-    // Try multiple possible student ID locations
-    const studId = app?.studId?._id || app?.studId || app?._raw?.studId || app?._raw?.studentId || app?._raw?.student?._id || app?.id;
-    if (!studId) {
-      console.warn("⚠️ No student ID found for application:", app);
-      console.log('Available app properties:', Object.keys(app));
+    const statusLower = (app.status || '').toString().toLowerCase();
+
+    // If status is Interview, show interview details instead of PDF
+    if (statusLower === 'interview') {
+      handleShowInterviewDetails(app);
       return;
     }
-    console.log("🔗 Opening details for student:", studId);
-    window.open(`/api/users/pdf/view/${studId}`, '_blank');
+
+    // For other statuses, open PDF
+    // Extract studId properly - handle both string and object formats
+    let studId = null;
+
+    if (typeof app?.studId === 'string') {
+      // Case 1: studId is already a string
+      studId = app.studId;
+    } else if (typeof app?.studId === 'object' && app?.studId?._id) {
+      // Case 2: studId is an object with _id property
+      studId = app.studId._id;
+    } else if (typeof app?.studentId === 'string') {
+      // Case 3: studentId is a string
+      studId = app.studentId;
+    } else if (typeof app?.studentId === 'object' && app?.studentId?._id) {
+      // Case 4: studentId is an object with _id property
+      studId = app.studentId._id;
+    } else if (app?._id) {
+      // Case 5: fallback to application _id
+      studId = app._id;
+    }
+
+    if (studId) {
+      console.log('🔗 Opening PDF for student:', studId, 'Type:', typeof studId);
+      window.open(`/api/users/pdf/view/${studId}`, '_blank');
+    } else {
+      toast.error('Unable to view details: Student ID not found');
+      console.warn('No student ID found for application:', app);
+      console.log('Available app properties:', Object.keys(app));
+    }
   };
 
   if (loading) {
@@ -326,10 +441,10 @@ const ViewStudentApplications = ({ schoolId }) => {
                 <td className="p-4 align-top">
                   <span
                     className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${
-                      isAccepted ? 'bg-green-100 text-green-800' : isRejected ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
+                      isAccepted ? 'bg-green-100 text-green-800' : isRejected ? 'bg-red-100 text-red-800' : statusLower === 'interview' ? 'bg-purple-100 text-purple-800' : 'bg-yellow-100 text-yellow-800'
                     }`}
                   >
-                    {isAccepted ? 'Accepted' : isRejected ? 'Rejected' : 'Pending'}
+                    {isAccepted ? 'Accepted' : isRejected ? 'Rejected' : statusLower === 'interview' ? 'Interview' : 'Pending'}
                   </span>
                 </td>
                 <td className="p-4 flex flex-wrap gap-2 items-center">
@@ -376,6 +491,7 @@ const ViewStudentApplications = ({ schoolId }) => {
         {applications.length > 0 && (() => {
           const total = applications.length;
           const pending = applications.filter(a => (a.status || '').toString().toLowerCase() === 'pending').length;
+          const interview = applications.filter(a => (a.status || '').toString().toLowerCase() === 'interview').length;
           const accepted = applications.filter(a => (a.status || '').toString().toLowerCase() === 'accepted').length;
           const rejected = applications.filter(a => (a.status || '').toString().toLowerCase() === 'rejected').length;
           return (
@@ -383,6 +499,7 @@ const ViewStudentApplications = ({ schoolId }) => {
               <span>Total Applications: <span className="font-semibold">{total}</span></span>
               <div className="flex items-center gap-6">
                 <span>Pending: <span className="font-semibold">{pending}</span></span>
+                <span>Interview: <span className="font-semibold">{interview}</span></span>
                 <span>Accepted: <span className="font-semibold">{accepted}</span></span>
                 <span>Rejected: <span className="font-semibold">{rejected}</span></span>
               </div>
@@ -391,13 +508,80 @@ const ViewStudentApplications = ({ schoolId }) => {
         })()}
       </div>
 
-      {/* Interview Scheduling Modal */}
-      <InterviewSchedulingModal
-        isOpen={showInterviewModal}
-        onClose={() => setShowInterviewModal(false)}
-        application={selectedApplication}
-        onSchedule={handleInterviewScheduled}
-      />
+      {/* Interview Details Modal */}
+      {showInterviewDetailsModal && selectedInterviewApplication && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="flex justify-between items-center p-6 border-b border-gray-200">
+              <div className="flex items-center">
+                <Calendar className="w-6 h-6 text-purple-600 mr-3" />
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">Interview Details</h2>
+                  <p className="text-sm text-gray-600">
+                    {selectedInterviewApplication?.studId?.name || selectedInterviewApplication?.studentName} - {selectedInterviewApplication?.schoolId?.name || selectedInterviewApplication?.schoolName || 'School'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowInterviewDetailsModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              <div className="bg-purple-50 rounded-lg p-4 mb-4">
+                <h3 className="font-medium text-purple-900 mb-2">Interview Information:</h3>
+                <div className="text-sm text-purple-800 space-y-1">
+                  <p><strong>Student:</strong> {selectedInterviewApplication?.studId?.name || selectedInterviewApplication?.studentName || 'N/A'}</p>
+                  <p><strong>School:</strong> {selectedInterviewApplication?.schoolId?.name || selectedInterviewApplication?.schoolName || 'N/A'}</p>
+                  <p><strong>Class:</strong> {selectedInterviewApplication?.class || 'N/A'}</p>
+                  <p><strong>Application Date:</strong> {selectedInterviewApplication?.date || 'N/A'}</p>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="font-medium text-gray-900 mb-2">Interview Notes:</h3>
+                <div className="text-sm text-gray-700 whitespace-pre-wrap">
+                  {selectedInterviewApplication?.interviewNote || 'No interview details available'}
+                </div>
+                {/* Debug information */}
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <p className="text-xs text-gray-500 mb-2">Debug Information:</p>
+                  <details className="text-xs text-gray-400">
+                    <summary className="cursor-pointer hover:text-gray-600">View Raw Data</summary>
+                    <pre className="mt-2 p-2 bg-gray-100 rounded text-xs overflow-auto max-h-32">
+                      {JSON.stringify({
+                        note: selectedInterviewApplication?.note,
+                        interviewNote: selectedInterviewApplication?.interviewNote,
+                        formDetails: selectedInterviewApplication?.formDetails,
+                        applicationData: selectedInterviewApplication?.applicationData,
+                        _raw: selectedInterviewApplication?._raw,
+                        status: selectedInterviewApplication?.status,
+                        fullData: selectedInterviewApplication,
+                        allKeys: Object.keys(selectedInterviewApplication || {})
+                      }, null, 2)}
+                    </pre>
+                  </details>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-end space-x-3 p-6 border-t border-gray-200">
+              <button
+                onClick={() => setShowInterviewDetailsModal(false)}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

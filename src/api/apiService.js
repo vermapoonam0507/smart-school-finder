@@ -88,71 +88,78 @@ export const fetchStudentApplications = async (schoolIdOrEmail) => {
         }
 
          // Normalize and fetch PDF data for each form
-         const normalized = await Promise.all(
-             forms.map(async (form, idx) => {
-                 // Extract student ID properly - handle different data structures
-                 let studId = null;
-                 if (typeof form?.studId === 'string') {
-                     studId = form.studId;
-                 } else if (typeof form?.student?._id === 'string') {
-                     studId = form.student._id;
-                 } else if (typeof form?.student === 'string') {
-                     studId = form.student;
-                 } else if (form?.studId && typeof form.studId === 'object' && form.studId._id) {
-                     studId = form.studId._id;
-                 }
-                 
-                 console.log(`🔍 Form ${idx} - studId extracted:`, studId, 'from form:', form);
-                 
-                 // Try to fetch PDF data, but don't let it break the entire process
-                 let pdfData = null;
-                 if (studId) {
-                     try {
-                         pdfData = await fetchStudentPDF(studId);
-                     } catch (pdfError) {
-                         console.warn(`⚠️ Could not fetch PDF for student ${studId}:`, pdfError.message);
-                         pdfData = null;
-                     }
-                 }
+        const normalized = await Promise.all(
+    forms.map(async (form, idx) => {
+        // Extract studId - handle BOTH string and populated object
+        let studId = null;
+        
+        if (typeof form?.studId === 'string') {
+            // Case 1: studId is a plain string
+            studId = form.studId;
+            console.log(`✅ Form ${idx} - studId is string: ${studId}`);
+        } else if (typeof form?.studId === 'object' && form?.studId?._id) {
+            // Case 2: studId is populated object (has _id property)
+            studId = String(form.studId._id);
+            console.log(`✅ Form ${idx} - studId is populated, extracted _id: ${studId}`);
+        } else if (typeof form?.student === 'string') {
+            // Case 3: student field is a string
+            studId = form.student;
+        } else if (typeof form?.student === 'object' && form?.student?._id) {
+            // Case 4: student field is an object with _id property
+            studId = form.student._id;
+        }
 
-                 // Fetch student application data to get name and class
-                 let studentName = '—';
-                 let studentClass = '—';
-                 if (studId) {
-                     try {
-                         console.log(`🔍 Fetching application data for student: ${studId}`);
-                         const appResponse = await apiClient.get(`/applications/${studId}`);
-                         if (appResponse?.data?.data) {
-                             const appData = appResponse.data.data;
-                             studentName = appData.name || '—';
-                             studentClass = appData.classCompleted || appData.class || '—';
-                             console.log(`✅ Found student data: ${studentName}, Class: ${studentClass}`);
-                         }
-                     } catch (appError) {
-                         console.warn(`⚠️ Could not fetch application data for student ${studId}:`, appError.message);
-                         // Fallback to populated student data if available
-                         studentName = form?.studId?.name || form?.student?.name || '—';
-                         studentClass = form?.studId?.class || form?.student?.class || '—';
-                     }
-                 }
+        console.log(`🔍 Form ${idx} - studId extracted:`, studId, 'from form:', form);
 
-                return {
-                    id: form?._id || form?.id || `form-${idx}`,
-                    formId: form?._id,
-                    studentName: studentName,
-                    class: studentClass,
-                    date: form?.createdAt
-                        ? new Date(form?.createdAt).toISOString().slice(0, 10)
-                        : (form?.date || '—'),
-                    status: form?.status || 'Pending',
-                    schoolId: form?.schoolId,
-                    studId: studId,
-                    applicationData: form,
-                    pdfUrl: pdfData?.url,
-                    pdfBlob: pdfData?.blob,
-                    _raw: form,
-                };
-            })
+        // Try to fetch PDF data, but don't let it break the entire process
+        let pdfData = null;
+        if (studId) {
+            try {
+                pdfData = await fetchStudentPDF(studId);
+            } catch (pdfError) {
+                console.warn(`⚠️ Could not fetch PDF for student ${studId}:`, pdfError.message);
+                pdfData = null;
+            }
+        }
+
+        // Fetch student application data to get name and class
+        let studentName = '—';
+        let studentClass = '—';
+        if (studId) {
+            try {
+                console.log(`🔍 Fetching application data for student: ${studId}`);
+                const appResponse = await apiClient.get(`/applications/${studId}`);
+                if (appResponse?.data?.data) {
+                    const appData = appResponse.data.data;
+                    studentName = appData.name || '—';
+                    studentClass = appData.classCompleted || appData.class || '—';
+                    console.log(`✅ Found student data: ${studentName}, Class: ${studentClass}`);
+                }
+            } catch (appError) {
+                console.warn(`⚠️ Could not fetch application data for student ${studId}:`, appError.message);
+                // Fallback to populated student data if available
+                studentName = form?.studId?.name || form?.student?.name || '—';
+                studentClass = form?.studId?.class || form?.student?.class || '—';
+            }
+        }
+
+        return {
+            id: form?._id || form?.id || `form-${idx}`,
+            formId: form?._id,
+            studentName: studentName,
+            class: studentClass,
+            date: form?.createdAt
+                ? new Date(form?.createdAt).toISOString().slice(0, 10)
+                : (form?.date || '—'),
+            status: form?.status || 'Pending',
+            schoolId: form?.schoolId,
+            studId: studId, // Ensure this is always a string
+            applicationData: form,
+            pdfUrl: pdfData?.url,
+            pdfBlob: pdfData?.blob,
+            _raw: form,
+        };
+    })
         );
 
         console.log(`✅ Normalized ${normalized.length} forms`, normalized);
@@ -173,20 +180,30 @@ export const fetchStudentApplications = async (schoolIdOrEmail) => {
 };
 
 // Update form status
-export const updateApplicationStatus = async (formId, newStatus, schoolId) => {
+export const updateApplicationStatus = async (formId, newStatus, schoolId, note = null) => {
     const id = encodeURIComponent(formId);
-    
+
     try {
         console.log(`🔄 Updating form ${id} to status: ${newStatus}`);
-        
+        console.log(`📝 Note being sent:`, note);
+
+        // Include note in the request if provided
+        const requestBody = { status: newStatus };
+        if (note) {
+            requestBody.note = note;
+        }
+
+        console.log(`📤 Sending PUT /form/${id} with body:`, requestBody);
+
         const res = await apiClient.put(
             `/form/${id}`,
-            { status: newStatus }
+            requestBody
         );
-        
-        console.log(`✅ Form updated:`, res?.data);
+
+        console.log(`✅ Form updated successfully. Response:`, res?.data);
+        console.log(`📋 Full response data:`, res);
         return res?.data || { ok: true };
-        
+
     } catch (e) {
         console.error(`❌ Failed to update form:`, e.message);
         console.error(`📍 Status: ${e?.response?.status}`);
