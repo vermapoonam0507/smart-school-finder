@@ -6,3 +6,6 @@ services:
     startCommand: npm start
     plan: free
     region: oregon
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: https://backend-tc-sa-v2.onrender.com/api
