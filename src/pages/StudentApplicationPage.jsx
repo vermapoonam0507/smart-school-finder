@@ -205,6 +205,18 @@ const StudentApplicationPage = () => {
                 toast.error("Application created but could not submit to school.");
                 return;
             }
+
+            // Generate PDF automatically after successful submission
+            console.log('📄 Generating PDF for student:', studentId);
+            try {
+                await generateStudentPdf(studentId);
+                console.log('✅ PDF generated successfully after submission');
+                toast.success("PDF generated successfully!");
+            } catch (pdfError) {
+                console.error('❌ Failed to generate PDF after submission:', pdfError);
+                toast.warning("Application submitted but PDF generation failed. You can generate it later from your dashboard.");
+                // Don't return here - application was saved successfully, PDF failure shouldn't block the flow
+            }
             
             // Emit event to notify school portal of new application
             eventEmitter.emit('applicationAdded', {
@@ -367,14 +379,14 @@ const StudentApplicationPage = () => {
                     {submitted && (
                         <div className="mb-8 p-4 rounded-lg bg-green-50 border border-green-200 text-green-800">
                             <div className="flex items-center justify-between flex-col md:flex-row gap-3">
-                                <span>Your application has been submitted successfully.</span>
+                                <span>Your application has been submitted and PDF generated successfully!</span>
                                 <div className="flex items-center gap-2">
                                     <button
                                         type="button"
-                                        onClick={handleGenerateAndOpenPdf}
+                                        onClick={() => window.open(`/api/users/pdf/view/${currentUser._id}`, '_blank')}
                                         className="px-4 py-2 font-semibold text-white bg-green-600 rounded-md hover:bg-green-700"
                                     >
-                                        Generate PDF
+                                        View PDF
                                     </button>
                                     <button
                                         type="button"
