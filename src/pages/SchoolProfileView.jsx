@@ -2,6 +2,19 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { getSchoolById, updateSchoolInfo } from "../api/adminService";
 import { toast } from "react-toastify";
+import {
+  getAmenitiesById,
+  getActivitiesById,
+  getInfrastructureById,
+  getFeesAndScholarshipsById,
+  getTechnologyAdoptionById,
+  getSafetyAndSecurityById,
+  getInternationalExposureById,
+  getOtherDetailsById,
+  getAdmissionTimelineById,
+  getAcademicsById,
+  getFacultyById
+} from "../api/adminService";
 
 const Row = ({ label, value }) => (
   <div className="grid grid-cols-3 gap-3 py-2 border-b last:border-b-0">
@@ -26,6 +39,18 @@ const SchoolProfileView = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const [amenities, setAmenities] = useState(null);
+  const [activities, setActivities] = useState(null);
+  const [infrastructure, setInfrastructure] = useState(null);
+  const [fees, setFees] = useState(null);
+  const [tech, setTech] = useState(null);
+  const [safety, setSafety] = useState(null);
+  const [intl, setIntl] = useState(null);
+  const [otherDetails, setOtherDetails] = useState(null);
+  const [timeline, setTimeline] = useState(null);
+  const [academics, setAcademics] = useState(null);
+  const [faculty, setFaculty] = useState(null);
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -45,6 +70,36 @@ const SchoolProfileView = () => {
         setSchool(s);
         // Remember the actual school id we should use for updates
         setResolvedSchoolId(s?._id || id);
+
+        const profileId = s?._id || id;
+        try {
+          const [am, ac, inf, fe, te, sa, ine, od, tl, acd, fc] = await Promise.all([
+            getAmenitiesById(profileId).catch(() => null),
+            getActivitiesById(profileId).catch(() => null),
+            getInfrastructureById(profileId).catch(() => null),
+            getFeesAndScholarshipsById(profileId).catch(() => null),
+            getTechnologyAdoptionById(profileId).catch(() => null),
+            getSafetyAndSecurityById(profileId).catch(() => null),
+            getInternationalExposureById(profileId).catch(() => null),
+            getOtherDetailsById(profileId).catch(() => null),
+            getAdmissionTimelineById(profileId).catch(() => null),
+            getAcademicsById(profileId).catch(() => null),
+            getFacultyById(profileId).catch(() => null)
+          ]);
+          setAmenities(am?.data?.data || am?.data || null);
+          setActivities(ac?.data?.data || ac?.data || null);
+          setInfrastructure(inf?.data?.data || inf?.data || null);
+          setFees(fe?.data?.data || fe?.data || null);
+          setTech(te?.data?.data || te?.data || null);
+          setSafety(sa?.data?.data || sa?.data || null);
+          setIntl(ine?.data?.data || ine?.data || null);
+          setOtherDetails(od?.data?.data || od?.data || null);
+          setTimeline(tl?.data?.data || tl?.data || null);
+          setAcademics(acd?.data?.data || acd?.data || null);
+          setFaculty(fc?.data?.data || fc?.data || null);
+        } catch (_) {
+          // Non-fatal: show what we have
+        }
       } catch (e) {
         setError(e?.response?.data?.message || "Failed to load school profile");
       } finally {
@@ -172,10 +227,124 @@ const SchoolProfileView = () => {
               <Row label="Shifts" value={shifts} />
               <Row label="Language Medium" value={languageMedium} />
               <Row label="Teacher:Student Ratio" value={teacherStudentRatio} />
+              {academics && (
+                <>
+                  <Row label="Average Class 10 Result" value={academics.averageClass10Result} />
+                  <Row label="Average Class 12 Result" value={academics.averageClass12Result} />
+                  <Row label="Average School Marks" value={academics.averageSchoolMarks} />
+                  <Row label="Special Exams Training" value={(academics.specialExamsTraining || []).join(', ')} />
+                  <Row label="Extra Curricular Activities" value={(academics.extraCurricularActivities || []).join(', ')} />
+                </>
+              )}
             </>
           )}
         </div>
       </Section>
+
+      {amenities && (
+        <Section title="Amenities">
+          <div className="divide-y">
+            <Row label="Predefined Amenities" value={(amenities.predefinedAmenities || []).join(', ')} />
+            <Row label="Custom Amenities" value={(amenities.customAmenities || []).join(', ')} />
+          </div>
+        </Section>
+      )}
+
+      {activities && (
+        <Section title="Activities">
+          <div className="divide-y">
+            <Row label="Activities" value={(activities.activities || []).join(', ')} />
+            <Row label="Custom Activities" value={(activities.customActivities || []).join(', ')} />
+          </div>
+        </Section>
+      )}
+
+      {infrastructure && (
+        <Section title="Infrastructure">
+          <div className="divide-y">
+            <Row label="Labs" value={(infrastructure.labs || []).join(', ')} />
+            <Row label="Sports Grounds" value={(infrastructure.sportsGrounds || []).join(', ')} />
+            <Row label="Library Books" value={infrastructure.libraryBooks} />
+            <Row label="Smart Classrooms" value={infrastructure.smartClassrooms} />
+          </div>
+        </Section>
+      )}
+
+      {fees && (
+        <Section title="Fees & Scholarships">
+          <div className="divide-y">
+            <Row label="Fee Transparency" value={fees.feesTransparency} />
+            <Row label="Scholarships" value={(fees.scholarships || []).map(s=>`${s.name||s.type||''}${s.percentage?' ('+s.percentage+'%)':''}`).join('; ')} />
+            <Row label="Class-wise Fees" value={(fees.classFees || []).map(f=>`${f.class}: ${[f.tuition,f.activity,f.transport,f.hostel,f.misc].filter(v=>v!=null).join('/')}`).join(' | ')} />
+          </div>
+        </Section>
+      )}
+
+      {tech && (
+        <Section title="Technology Adoption">
+          <div className="divide-y">
+            <Row label="Smart Classrooms %" value={tech.smartClassroomsPercentage} />
+            <Row label="E-Learning Platforms" value={(tech.eLearningPlatforms || []).join(', ')} />
+          </div>
+        </Section>
+      )}
+
+      {safety && (
+        <Section title="Safety & Security">
+          <div className="divide-y">
+            <Row label="CCTV Coverage %" value={safety.cctvCoveragePercentage} />
+            <Row label="Doctor Availability" value={safety.medicalFacility?.doctorAvailability} />
+            <Row label="Medkit Available" value={String(safety.medicalFacility?.medkitAvailable)} />
+            <Row label="Ambulance Available" value={String(safety.medicalFacility?.ambulanceAvailable)} />
+            <Row label="GPS Tracker" value={String(safety.transportSafety?.gpsTrackerAvailable)} />
+            <Row label="Drivers Verified" value={String(safety.transportSafety?.driversVerified)} />
+            <Row label="Fire Safety Measures" value={(safety.fireSafetyMeasures || []).join(', ')} />
+            <Row label="Visitor Management System" value={String(safety.visitorManagementSystem)} />
+          </div>
+        </Section>
+      )}
+
+      {intl && (
+        <Section title="International Exposure">
+          <div className="divide-y">
+            <Row label="Exchange Programs" value={(intl.exchangePrograms || []).map(p=>`${p.partnerSchool} - ${p.programType||p.type||''} (${p.duration||''})`).join(' | ')} />
+            <Row label="Global Tie-ups" value={(intl.globalTieUps || []).map(t=>`${t.organization} (${t.since||t.year||''})`).join(' | ')} />
+          </div>
+        </Section>
+      )}
+
+      {otherDetails && (
+        <Section title="Diversity & Inclusivity">
+          <div className="divide-y">
+            <Row label="Gender Ratio" value={`Male ${otherDetails.genderRatio?.male || 0}%, Female ${otherDetails.genderRatio?.female || 0}%, Others ${otherDetails.genderRatio?.others || 0}%`} />
+            <Row label="Scholarship Types" value={(otherDetails.scholarshipDiversity?.types || []).join(', ')} />
+            <Row label="Students Covered %" value={otherDetails.scholarshipDiversity?.studentsCoveredPercentage} />
+            <Row label="Dedicated Staff" value={String(otherDetails.specialNeedsSupport?.dedicatedStaff)} />
+            <Row label="Students Supported %" value={otherDetails.specialNeedsSupport?.studentsSupportedPercentage} />
+            <Row label="Facilities Available" value={(otherDetails.specialNeedsSupport?.facilitiesAvailable || []).join(', ')} />
+          </div>
+        </Section>
+      )}
+
+      {timeline && (
+        <Section title="Admission Process Timeline">
+          <div className="divide-y">
+            {(timeline.timelines || []).map((t, idx) => (
+              <Row key={idx} label={`Entry ${idx+1}`} value={`${new Date(t.admissionStartDate).toLocaleDateString()} → ${new Date(t.admissionEndDate).toLocaleDateString()} | ${t.status} | Level: ${t.eligibility?.admissionLevel}`} />
+            ))}
+          </div>
+        </Section>
+      )}
+
+      {faculty && (
+        <Section title="Faculty">
+          <div className="divide-y">
+            {(faculty.facultyMembers || faculty.members || []).map((m, idx) => (
+              <Row key={idx} label={m.name || `Faculty ${idx+1}`} value={`${m.qualification || ''}${m.experience ? `, ${m.experience} yrs` : ''}${m.awards ? `, Awards: ${m.awards}` : ''}`} />
+            ))}
+          </div>
+        </Section>
+      )}
 
       <Section title="Location">
         <div className="divide-y">

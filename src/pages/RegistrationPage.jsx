@@ -18,7 +18,9 @@ import {
   addTechnologyAdoption,
   addSafetyAndSecurity,
   addInternationalExposure,
-  addAcademics
+  addAcademics,
+  getSchoolById,
+  updateSchoolInfo
 } from "../api/adminService";
 
 
@@ -320,6 +322,8 @@ const RegistrationPage = () => {
   const navigate = useNavigate();
   const { user: currentUser, updateUserContext } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingSchoolId, setEditingSchoolId] = useState("");
 
   // State with all the fields required by the backend schema
   const [formData, setFormData] = useState({
@@ -606,6 +610,38 @@ const RegistrationPage = () => {
         normalizedFeeRange = `${a} - ${b}`;
       }
 
+      // Client-side validation to prevent backend 500s
+      const requiredErrors = [];
+      const allowedShifts = ['morning','afternoon','night school'];
+      const allowedBoards = [
+        'CBSE','ICSE','CISCE','NIOS','SSC','IGCSE','IB','KVS','JNV','DBSE','MSBSHSE','UPMSP','KSEEB','WBBSE','GSEB','RBSE','BSEB','PSEB','BSE','SEBA','MPBSE','STATE','OTHER'
+      ];
+      const allowedFeeRanges = [
+        "1000 - 10000","10000 - 25000","25000 - 50000","50000 - 75000","75000 - 100000","1 Lakh - 2 Lakh","2 Lakh - 3 Lakh","3 Lakh - 4 Lakh","4 Lakh - 5 Lakh","More than 5 Lakh"
+      ];
+
+      if (!formData.name?.trim()) requiredErrors.push('School Name');
+      if (!formData.description?.trim()) requiredErrors.push('Description');
+      if (!formData.state?.trim()) requiredErrors.push('State');
+      if (!formData.city?.trim()) requiredErrors.push('City');
+      if (!allowedBoards.includes(formData.board)) requiredErrors.push('Board');
+      if (!allowedSchoolModes.includes(normalizedSchoolMode)) requiredErrors.push('School Mode');
+      if (!['boy','girl','co-ed'].includes(normalizedGender)) requiredErrors.push('Gender Type');
+      if (!Array.isArray(formData.shifts) || formData.shifts.length === 0 || formData.shifts.some(s => !allowedShifts.includes(String(s).toLowerCase()))) {
+        requiredErrors.push('Shifts');
+      }
+      if (!allowedFeeRanges.includes(normalizedFeeRange)) requiredErrors.push('Fee Range');
+      if (!formData.upto?.trim()) requiredErrors.push('Classes Upto');
+      if (!formData.email?.trim()) requiredErrors.push('Email');
+      if (!formData.phoneNo?.trim()) requiredErrors.push('Phone Number');
+      if (!Array.isArray(formData.languageMedium) || formData.languageMedium.length === 0) requiredErrors.push('Language Medium');
+
+      if (requiredErrors.length > 0) {
+        toast.error(`Please fill valid values for: ${requiredErrors.join(', ')}`);
+        setIsSubmitting(false);
+        return;
+      }
+
       const payload = {
         // Core School Fields (matching backend School model)
         name: formData.name,
@@ -623,7 +659,7 @@ const RegistrationPage = () => {
         mobileNo: formData.phoneNo,
         schoolMode: normalizedSchoolMode,
         genderType: normalizedGender,
-        shifts: Array.isArray(formData.shifts) ? formData.shifts : [formData.shifts].filter(Boolean),
+        shifts: (Array.isArray(formData.shifts) ? formData.shifts : [formData.shifts].filter(Boolean)).map(s => String(s).toLowerCase()),
         languageMedium: Array.isArray(formData.languageMedium) ? formData.languageMedium : [formData.languageMedium].filter(Boolean),
         transportAvailable: formData.transportAvailable,
         latitude: formData.latitude ? Number(formData.latitude) : undefined,
@@ -632,163 +668,15 @@ const RegistrationPage = () => {
         rank: formData.rank,
         specialist: Array.isArray(formData.specialist) ? formData.specialist : [],
         tags: Array.isArray(formData.tags) ? formData.tags : [],
-        authId: currentUser._id,
-        famousAlumnies,
-        topAlumnies,
-        otherAlumnies,
-        // ensure numeric faculty fields
-        ...(function() {
-          const avgTeachingExperience = formData.avgTeachingExperience !== "" ? Number(formData.avgTeachingExperience) : undefined;
-          const mastersPercent = formData.mastersPercent !== "" ? Number(formData.mastersPercent) : undefined;
-          const phdPercent = formData.phdPercent !== "" ? Number(formData.phdPercent) : undefined;
-          const primaryFacultyName = (formData.primaryFacultyName || '').trim() || undefined;
-          const facultyQualityClean = (facultyQuality || []).map(item => ({
-            name: (item?.name || '').trim(),
-            qualification: (item?.qualification || '').trim(),
-            awards: (item?.awards || '').trim(),
-            experience: item?.experience !== '' ? Number(item?.experience) : undefined,
-          })).filter(i => i.name || i.qualification || i.awards || i.experience !== undefined);
-          const infraLibraryBooks = formData.infraLibraryBooks !== '' ? Number(formData.infraLibraryBooks) : undefined;
-          const infraSmartClassrooms = formData.infraSmartClassrooms !== '' ? Number(formData.infraSmartClassrooms) : undefined;
-          const infraLabTypes = Array.isArray(formData.infraLabTypes) ? formData.infraLabTypes : [];
-          const infraSportsTypes = Array.isArray(formData.infraSportsTypes) ? formData.infraSportsTypes : [];
-          const safetyCCTV = formData.safetyCCTV !== '' ? Number(formData.safetyCCTV) : undefined;
-          const safetyDoctorAvailability = (formData.safetyDoctorAvailability || '').trim() || undefined;
-          const safetyNurseAvailable = !!formData.safetyNurseAvailable;
-          const safetyNurseTimings = (formData.safetyNurseTimings || '').trim() || undefined;
-          const safetyTransportRoutes = (Array.isArray(formData.safetyTransportRoutes) ? formData.safetyTransportRoutes : []).map(r => ({
-            route: (r?.route || '').trim(),
-            attendant: !!r?.attendant,
-          })).filter(r => r.route);
-          const safetyGPSTracking = !!formData.safetyGPSTracking;
-          const safetyDriverVerification = !!formData.safetyDriverVerification;
-          const feesTransparency = (formData.feesTransparency || '').trim() || undefined;
-          const classWiseFees = (Array.isArray(formData.classWiseFees) ? formData.classWiseFees : []).map(fee => ({
-            class: (fee?.class || '').trim(),
-            tuition: fee?.tuition ? Number(fee.tuition) : 0,
-            activity: fee?.activity ? Number(fee.activity) : 0,
-            transport: fee?.transport ? Number(fee.transport) : 0,
-            hostel: fee?.hostel ? Number(fee.hostel) : 0,
-            misc: fee?.misc ? Number(fee.misc) : 0,
-          })).filter(fee => fee.class);
-          const scholarships = (Array.isArray(formData.scholarships) ? formData.scholarships : []).map(sch => ({
-            type: (sch?.type || '').trim(),
-            eligibility: (sch?.eligibility || '').trim(),
-            reduction: (sch?.reduction || '').trim(),
-            description: (sch?.description || '').trim(),
-          })).filter(sch => sch.type || sch.eligibility || sch.reduction);
-          const genderRatioMale = formData.genderRatioMale !== '' ? Number(formData.genderRatioMale) : undefined;
-          const genderRatioFemale = formData.genderRatioFemale !== '' ? Number(formData.genderRatioFemale) : undefined;
-          const genderRatioOthers = formData.genderRatioOthers !== '' ? Number(formData.genderRatioOthers) : undefined;
-          const scholarshipDiversityTypes = Array.isArray(formData.scholarshipDiversityTypes) ? formData.scholarshipDiversityTypes : [];
-          const scholarshipDiversityCoverage = formData.scholarshipDiversityCoverage !== '' ? Number(formData.scholarshipDiversityCoverage) : undefined;
-          const specialNeedsStaff = !!formData.specialNeedsStaff;
-          const specialNeedsFacilities = Array.isArray(formData.specialNeedsFacilities) ? formData.specialNeedsFacilities : [];
-          const specialNeedsSupportPercentage = formData.specialNeedsSupportPercentage !== '' ? Number(formData.specialNeedsSupportPercentage) : undefined;
-          const reviewsEnabled = !!formData.reviewsEnabled;
-          const reviewModeration = (formData.reviewModeration || '').trim() || undefined;
-          const reviewVerificationRequired = !!formData.reviewVerificationRequired;
-          const reviewAnonymityOption = !!formData.reviewAnonymityOption;
-          const reviewMediaUpload = !!formData.reviewMediaUpload;
-          const averageRating = formData.averageRating !== '' ? Number(formData.averageRating) : undefined;
-          const totalReviews = formData.totalReviews !== '' ? Number(formData.totalReviews) : undefined;
-          const ratingBreakdown = formData.ratingBreakdown || {};
-          const highlightedReviews = (Array.isArray(formData.highlightedReviews) ? formData.highlightedReviews : []).map(review => ({
-            id: review.id,
-            rating: Number(review.rating || 0),
-            comment: (review.comment || '').trim(),
-            parentName: (review.parentName || '').trim(),
-            grade: (review.grade || '').trim(),
-            verified: !!review.verified,
-            helpful: Number(review.helpful || 0),
-            date: (review.date || '').trim(),
-          })).filter(review => review.comment || review.parentName);
-          const recentReviews = (Array.isArray(formData.recentReviews) ? formData.recentReviews : []).map(review => ({
-            id: review.id,
-            rating: Number(review.rating || 0),
-            comment: (review.comment || '').trim(),
-            parentName: (review.parentName || '').trim(),
-            grade: (review.grade || '').trim(),
-            verified: !!review.verified,
-            helpful: Number(review.helpful || 0),
-            date: (review.date || '').trim(),
-          })).filter(review => review.comment || review.parentName);
-          
-          // Technology Adoption fields
-          const elearningPlatforms = (Array.isArray(formData.elearningPlatforms) ? formData.elearningPlatforms : []).map(platform => ({
-            platform: (platform?.platform || '').trim(),
-            usagePercentage: platform?.usagePercentage ? Number(platform.usagePercentage) : undefined,
-            frequency: (platform?.frequency || '').trim(),
-          })).filter(platform => platform.platform);
-          const technologyIntegration = (formData.technologyIntegration || '').trim() || undefined;
-          const digitalLearningTools = Array.isArray(formData.digitalLearningTools) ? formData.digitalLearningTools : [];
-          
-          // International Exposure fields
-          const exchangePrograms = Array.isArray(formData.exchangePrograms) ? formData.exchangePrograms : [];
-          const globalTieUps = Array.isArray(formData.globalTieUps) ? formData.globalTieUps : [];
-          
-          // Academics fields
-          const averageClass10Result = formData.averageClass10Result !== '' ? Number(formData.averageClass10Result) : undefined;
-          const averageClass12Result = formData.averageClass12Result !== '' ? Number(formData.averageClass12Result) : undefined;
-          const averageSchoolMarks = formData.averageSchoolMarks !== '' ? Number(formData.averageSchoolMarks) : undefined;
-          const specialExamsTraining = Array.isArray(formData.specialExamsTraining) ? formData.specialExamsTraining : [];
-          const extraCurricularActivities = Array.isArray(formData.extraCurricularActivities) ? formData.extraCurricularActivities : [];
-          return {
-            avgTeachingExperience,
-            mastersPercent,
-            phdPercent,
-            primaryFacultyName,
-            facultyQuality: facultyQualityClean,
-            infraLabTypes,
-            infraSportsTypes,
-            infraLibraryBooks,
-            infraSmartClassrooms,
-            safetyCCTV,
-            safetyDoctorAvailability,
-            safetyNurseAvailable,
-            safetyNurseTimings,
-            safetyTransportRoutes,
-            safetyGPSTracking,
-            safetyDriverVerification,
-            feesTransparency,
-            classWiseFees,
-            scholarships,
-            genderRatioMale,
-            genderRatioFemale,
-            genderRatioOthers,
-            scholarshipDiversityTypes,
-            scholarshipDiversityCoverage,
-            specialNeedsStaff,
-            specialNeedsFacilities,
-            specialNeedsSupportPercentage,
-            reviewsEnabled,
-            reviewModeration,
-            reviewVerificationRequired,
-            reviewAnonymityOption,
-            reviewMediaUpload,
-            averageRating,
-            totalReviews,
-            ratingBreakdown,
-            highlightedReviews,
-            recentReviews,
-            // Technology Adoption
-            elearningPlatforms,
-            technologyIntegration,
-            digitalLearningTools,
-            // International Exposure
-            exchangePrograms,
-            globalTieUps,
-            // Academics
-            averageClass10Result,
-            averageClass12Result,
-            averageSchoolMarks,
-            specialExamsTraining,
-            extraCurricularActivities,
-          };
-        })(),
+        authId: currentUser._id
       };
-      delete payload.phoneNo;
-      delete payload.pincode;
+
+      // EDIT MODE: Update base school info only
+      if (isEditMode && editingSchoolId) {
+        await updateSchoolInfo(editingSchoolId, payload);
+        toast.success("School details updated successfully.");
+        return;
+      }
 
       // Create school first
       const schoolResponse = await addSchool(payload);
@@ -1229,6 +1117,56 @@ const RegistrationPage = () => {
     }
   };
 
+  const handleEnterEditMode = async () => {
+    if (!currentUser?._id) {
+      return toast.error("You must be logged in.");
+    }
+    try {
+      setIsSubmitting(true);
+      const res = await getSchoolById(currentUser._id);
+      const school = res?.data?.data;
+      if (!school) {
+        toast.error("No school found for this account.");
+        return;
+      }
+      setEditingSchoolId(school._id);
+      setIsEditMode(true);
+
+      setFormData(prev => ({
+        ...prev,
+        name: school.name || "",
+        description: school.description || "",
+        address: school.address || "",
+        area: school.area || "",
+        city: school.city || "",
+        state: school.state || "",
+        pincode: school.pinCode ? String(school.pinCode) : "",
+        board: school.board || "",
+        feeRange: school.feeRange || "",
+        upto: school.upto || "",
+        email: school.email || "",
+        website: school.website || "",
+        phoneNo: school.mobileNo || "",
+        schoolMode: school.schoolMode || "convent",
+        genderType: school.genderType === 'boy' ? 'boys' : school.genderType === 'girl' ? 'girls' : (school.genderType || 'co-ed'),
+        shifts: Array.isArray(school.shifts) ? school.shifts : [],
+        languageMedium: Array.isArray(school.languageMedium) ? school.languageMedium : [],
+        transportAvailable: school.transportAvailable || "no",
+        latitude: school.latitude != null ? String(school.latitude) : "",
+        longitude: school.longitude != null ? String(school.longitude) : "",
+        TeacherToStudentRatio: school.TeacherToStudentRatio || "",
+        rank: school.rank || "",
+        specialist: Array.isArray(school.specialist) ? school.specialist : [],
+        tags: Array.isArray(school.tags) ? school.tags : []
+      }));
+      toast.success("Loaded your existing school details. You can update and save.");
+    } catch (e) {
+      toast.error(e?.response?.data?.message || "Failed to load school details.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 min-h-screen py-8 relative overflow-hidden">
         {/* Animated background elements */}
@@ -1246,9 +1184,19 @@ const RegistrationPage = () => {
           <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent text-center mb-2 animate-fade-in">
             🎓 School Registration Portal
           </h1>
-          <p className="text-center text-gray-600 mb-6 animate-fade-in-delay">
+          <div className="flex items-center justify-center gap-3 mb-6">
+            <p className="text-center text-gray-600 animate-fade-in-delay">
             Complete your school profile with our interactive presentation
           </p>
+            <button
+              type="button"
+              onClick={handleEnterEditMode}
+              className="px-4 py-2 rounded-lg text-sm bg-indigo-600 text-white hover:bg-indigo-700"
+              disabled={isSubmitting}
+            >
+              Edit Existing Details
+            </button>
+          </div>
           
           {/* Slide Indicators */}
           <div className="flex justify-center gap-2 mb-6">
@@ -2438,6 +2386,60 @@ const RegistrationPage = () => {
                 </div>
               </div>
 
+          {/* Academics - Backend aligned inputs */}
+          <div className="mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <FormField
+                label="Average Class 10 Result (%)"
+                name="averageClass10Result"
+                type="number"
+                value={formData.averageClass10Result}
+                onChange={handleInputChange}
+              />
+              <FormField
+                label="Average Class 12 Result (%)"
+                name="averageClass12Result"
+                type="number"
+                value={formData.averageClass12Result}
+                onChange={handleInputChange}
+              />
+              <FormField
+                label="Average School Marks (%)"
+                name="averageSchoolMarks"
+                type="number"
+                value={formData.averageSchoolMarks}
+                onChange={handleInputChange}
+                required
+              />
+            </div>
+
+            <div className="mt-6">
+              <FormField
+                label="Special Exams Training"
+                name="specialExamsTraining"
+                type="checkboxGroup"
+                options={[
+                  'NEET','IIT-JEE','Olympiads','UPSC','CLAT','SAT/ACT','NTSE','KVPY'
+                ]}
+                value={formData.specialExamsTraining}
+                onChange={handleCheckboxChange}
+              />
+            </div>
+
+            <div className="mt-6">
+              <FormField
+                label="Extra Curricular Activities"
+                name="extraCurricularActivities"
+                type="checkboxGroup"
+                options={[
+                  'Sports','Music','Dance','Drama','Art','Debate','NCC','NSS','Coding','Robotics'
+                ]}
+                value={formData.extraCurricularActivities}
+                onChange={handleCheckboxChange}
+              />
+            </div>
+          </div>
+
           {/* Board Results */}
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
@@ -3216,17 +3218,10 @@ const RegistrationPage = () => {
               ) : (
                 <button
                   type="submit"
+                  className="mt-8 w-full inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-xl shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-transform transform hover:scale-[1.01]"
                   disabled={isSubmitting}
-                  className="flex-1 px-6 py-4 font-bold text-white bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-105 hover:shadow-xl shadow-lg disabled:transform-none"
                 >
-                  {isSubmitting ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                      Submitting...
-                    </span>
-                  ) : (
-                    "🚀 Submit for Approval"
-                  )}
+                  {isEditMode ? 'Update School' : 'Submit Registration'}
                 </button>
               )}
             </div>

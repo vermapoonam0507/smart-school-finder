@@ -47,19 +47,38 @@ apiClient.interceptors.response.use(
   },
   (error) => {
     // Don't log 404 errors for search endpoints and application checks as they're expected when no results found
-    const isSearch404 = error.config?.url?.includes('/search') && error.response?.status === 404;
-    const isApplicationCheck404 = error.config?.url?.includes('/applications/') && error.response?.status === 404;
+    const url = error.config?.url || '';
+    const status = error.response?.status;
+    const isSearch404 = url.includes('/search') && status === 404;
+    const isApplicationCheck404 = url.includes('/applications/') && status === 404;
+
+    // Suppress expected 404s for missing school sub-resources on profile view
+    const isSchoolSubResource404 = status === 404 && (
+      url.includes('/schools/amenities/') ||
+      url.includes('/schools/activities/') ||
+      url.includes('/schools/infrastructure/') ||
+      url.includes('/schools/fees-scholarships/') ||
+      url.includes('/schools/technology-adoption/') ||
+      url.includes('/schools/safety-security/') ||
+      url.includes('/schools/international-exposure/') ||
+      url.includes('/schools/other-details/') ||
+      url.includes('/schools/admission-timeline/') ||
+      url.includes('/schools/academics/') ||
+      url.includes('/schools/faculty/')
+    );
+
     const isSilent = error.config?.headers && (error.config.headers['X-Silent-Request'] === '1');
     
-    if (!isSearch404 && !isApplicationCheck404 && !isSilent) {
+    if (!isSearch404 && !isApplicationCheck404 && !isSchoolSubResource404 && !isSilent) {
       console.error('❌ API Error:', error.config?.url, error.response?.status, error.response?.data);
     }
     
     let message;
-    if (error.response?.status === 401) {
+    if (status === 401) {
       message = 'Invalid credentials or session expired. Please try logging in again.';
-    } else if (error.response?.status === 404) {
-      message = 'API endpoint not found. Please contact support.';
+    } else if (status === 404) {
+      // Use backend-provided message if available; otherwise a neutral not-found
+      message = error.response?.data?.message || 'Resource not found.';
     } else {
       message = error.response?.data?.message || error.message || 'Request failed';
     }
