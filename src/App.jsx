@@ -27,8 +27,6 @@ import AdminDashboardPage from "./pages/AdminDashboardPage";
 import AdminSchoolDetailsPage from "./pages/AdminSchoolDetailsPage";
 import AdminProtectedRoute from "./components/AdminProtectedRoute";
 import BlogPage from "./pages/BlogPage";
-import GuestSearchPage from "./pages/GuestSearchPage";
-import GuestResultsPage from "./pages/GuestResultsPage";
 import ApplicationStatusPage from "./pages/ApplicationStatusPage";
 import BlogDetailsPage from "./pages/BlogDetailsPage";
 import ApplicationSummaryPage from "./pages/ApplicationSummaryPage";
@@ -247,8 +245,6 @@ useEffect(() => {
           <Route path="/predictor" element={<PredictorPage />} />
           <Route path="/chatbot" element={<ChatbotPage />} />
           <Route path="/blog" element={<BlogPage />} />
-          <Route path="/guest-search" element={<GuestSearchPage />} />
-          <Route path="/guest-results" element={<GuestResultsPage />} />
           <Route path="/blog/:id" element={<BlogDetailsPage />} />
           <Route path="/application-status" element={<ApplicationStatusPage />} />
           <Route path="/application-summary" element={<ApplicationSummaryPage />} />
