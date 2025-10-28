@@ -894,33 +894,18 @@ const RegistrationPage = () => {
       // Add Admission Timeline if any (matching backend AdmissionTimeline model)
       if (admissionSteps && admissionSteps.length > 0) {
         const cleanTimelines = admissionSteps
-          .filter(step => step.title && step.type)
-          .map(step => {
-            // Map admission level to valid enum values
-            let admissionLevel = 'KGs'; // Default
-            const title = step.title.toLowerCase();
-            if (title.includes('kg') || title.includes('kindergarten')) {
-              admissionLevel = 'KGs';
-            } else if (title.includes('grade 1') || title.includes('grade 2') || title.includes('grade 3') || 
-                      title.includes('grade 4') || title.includes('grade 5') || title.includes('primary')) {
-              admissionLevel = 'Grade 1 - 5';
-            } else if (title.includes('grade 6') || title.includes('grade 7') || title.includes('grade 8') || 
-                      title.includes('grade 9') || title.includes('grade 10') || title.includes('secondary')) {
-              admissionLevel = 'Grade 6-10';
-            }
-
-            return {
-              admissionStartDate: step.deadline ? new Date(step.deadline) : new Date(),
-              admissionEndDate: step.deadline ? new Date(step.deadline) : new Date(),
-              status: 'Ongoing', // Default status
-              documentsRequired: [],
+          .filter(timeline => timeline.admissionStartDate && timeline.admissionEndDate && timeline.status && timeline.admissionLevel)
+          .map(timeline => ({
+            admissionStartDate: new Date(timeline.admissionStartDate),
+            admissionEndDate: new Date(timeline.admissionEndDate),
+            status: timeline.status,
+            documentsRequired: (timeline.documentsRequired || []).filter(doc => doc.trim()),
               eligibility: {
-                admissionLevel: admissionLevel,
-                ageCriteria: '',
-                otherInfo: ''
-              }
-            };
-          });
+              admissionLevel: timeline.admissionLevel,
+              ageCriteria: timeline.ageCriteria || '',
+              otherInfo: timeline.otherInfo || ''
+            }
+          }));
         
         if (cleanTimelines.length > 0) {
           promises.push(addAdmissionTimeline({
@@ -1050,25 +1035,25 @@ const RegistrationPage = () => {
       }
 
       // Add other details (matching backend OtherDetails model)
-      if (formData.genderRatio?.male || formData.genderRatio?.female || formData.genderRatio?.others ||
-          formData.scholarshipDiversity?.types?.length > 0 || formData.scholarshipDiversity?.studentsCoveredPercentage ||
-          formData.specialNeedsSupport?.dedicatedStaff || formData.specialNeedsSupport?.studentsSupportedPercentage ||
-          formData.specialNeedsSupport?.facilitiesAvailable?.length > 0) {
+      if (formData.genderRatioMale || formData.genderRatioFemale || formData.genderRatioOthers ||
+          formData.scholarshipDiversityTypes?.length > 0 || formData.scholarshipDiversityCoverage ||
+          formData.specialNeedsStaff || formData.specialNeedsSupportPercentage ||
+          formData.specialNeedsFacilities?.length > 0) {
         promises.push(addOtherDetails({
           schoolId,
           genderRatio: {
-            male: formData.genderRatio?.male ? Number(formData.genderRatio.male) : 0,
-            female: formData.genderRatio?.female ? Number(formData.genderRatio.female) : 0,
-            others: formData.genderRatio?.others ? Number(formData.genderRatio.others) : 0
+            male: formData.genderRatioMale ? Number(formData.genderRatioMale) : 0,
+            female: formData.genderRatioFemale ? Number(formData.genderRatioFemale) : 0,
+            others: formData.genderRatioOthers ? Number(formData.genderRatioOthers) : 0
           },
           scholarshipDiversity: {
-            types: formData.scholarshipDiversity?.types || [],
-            studentsCoveredPercentage: formData.scholarshipDiversity?.studentsCoveredPercentage ? Number(formData.scholarshipDiversity.studentsCoveredPercentage) : undefined
+            types: formData.scholarshipDiversityTypes || [],
+            studentsCoveredPercentage: formData.scholarshipDiversityCoverage ? Number(formData.scholarshipDiversityCoverage) : undefined
           },
           specialNeedsSupport: {
-            dedicatedStaff: formData.specialNeedsSupport?.dedicatedStaff || false,
-            studentsSupportedPercentage: formData.specialNeedsSupport?.studentsSupportedPercentage ? Number(formData.specialNeedsSupport.studentsSupportedPercentage) : undefined,
-            facilitiesAvailable: formData.specialNeedsSupport?.facilitiesAvailable || []
+            dedicatedStaff: formData.specialNeedsStaff || false,
+            studentsSupportedPercentage: formData.specialNeedsSupportPercentage ? Number(formData.specialNeedsSupportPercentage) : undefined,
+            facilitiesAvailable: formData.specialNeedsFacilities || []
           }
         }));
       }
@@ -1518,6 +1503,50 @@ const RegistrationPage = () => {
                 onChange={handleInputChange}
                 required
               />
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  School Shifts <span className="text-red-500">*</span>
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {["morning", "afternoon", "night school"].map((shift) => (
+                    <label key={shift} className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.shifts.includes(shift)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setFormData(prev => ({
+                              ...prev,
+                              shifts: [...prev.shifts, shift]
+                            }));
+                          } else {
+                            setFormData(prev => ({
+                              ...prev,
+                              shifts: prev.shifts.filter(s => s !== shift)
+                            }));
+                          }
+                        }}
+                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span className="text-sm text-gray-700 capitalize">
+                        {shift === "night school" ? "Night School" : shift}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                {formData.shifts.length === 0 && (
+                  <p className="text-red-500 text-xs mt-1">Please select at least one shift</p>
+                )}
+              </div>
+              <FormField
+                label="School Mode"
+                name="schoolMode"
+                type="select"
+                options={["convent", "private", "government"]}
+                value={formData.schoolMode}
+                onChange={handleInputChange}
+                required
+              />
               <FormField
                 label="Fee Range"
                 name="feeRange"
@@ -1807,148 +1836,176 @@ const RegistrationPage = () => {
                 </div>
               </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-8">
+            {/* CCTV Coverage */}
+            <div className="bg-white border border-gray-200 rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">CCTV Coverage</h3>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">CCTV Coverage - %</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  CCTV Coverage Percentage
+                </label>
               <input
                 type="range"
                 min="0"
                 max="100"
                 step="1"
-                name="safetyCCTV"
-                value={formData.safetyCCTV || 0}
-                onChange={handleInputChange}
-                className="w-full"
-              />
-              <div className="text-sm text-gray-600 mt-1">{formData.safetyCCTV || 0}% coverage</div>
+                  value={formData.cctvCoveragePercentage || 0}
+                  onChange={(e) => setFormData(prev => ({ ...prev, cctvCoveragePercentage: e.target.value }))}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                />
+                <div className="flex justify-between text-sm text-gray-600 mt-1">
+                  <span>0%</span>
+                  <span className="font-semibold text-indigo-600">{formData.cctvCoveragePercentage || 0}%</span>
+                  <span>100%</span>
+                </div>
+              </div>
             </div>
 
+            {/* Medical Facility */}
+            <div className="bg-white border border-gray-200 rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Medical Facility</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Doctor Availability</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Doctor Availability
+                  </label>
               <select
-                name="safetyDoctorAvailability"
-                value={formData.safetyDoctorAvailability}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-              >
-                <option value="">Select availability</option>
+                    value={formData.medicalFacility?.doctorAvailability || ''}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      medicalFacility: {
+                        ...prev.medicalFacility,
+                        doctorAvailability: e.target.value
+                      }
+                    }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                  >
+                    <option value="">Select Availability</option>
                 <option value="Full-time">Full-time</option>
                 <option value="Part-time">Part-time</option>
                 <option value="On-call">On-call</option>
+                    <option value="Not Available">Not Available</option>
               </select>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Nurse Availability</label>
-              <div className="flex items-center gap-4">
+                <div className="flex items-center">
                 <label className="flex items-center">
                   <input
                     type="checkbox"
-                    name="safetyNurseAvailable"
-                    checked={formData.safetyNurseAvailable}
-                    onChange={(e) => setFormData(prev => ({ ...prev, safetyNurseAvailable: e.target.checked }))}
-                    className="h-4 w-4 text-indigo-600 border-gray-300 rounded"
-                  />
-                  <span className="ml-2 text-gray-700">Yes</span>
+                      checked={formData.medicalFacility?.medkitAvailable || false}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        medicalFacility: {
+                          ...prev.medicalFacility,
+                          medkitAvailable: e.target.checked
+                        }
+                      }))}
+                      className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                    />
+                    <span className="ml-2 text-sm font-medium text-gray-700">Medkit Available</span>
                 </label>
+                </div>
+
+                <div className="flex items-center">
+                  <label className="flex items-center">
                 <input
-                  type="text"
-                  name="safetyNurseTimings"
-                  value={formData.safetyNurseTimings}
-                  onChange={handleInputChange}
-                  placeholder="Timings (e.g., 9am - 5pm)"
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                />
+                      type="checkbox"
+                      checked={formData.medicalFacility?.ambulanceAvailable || false}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        medicalFacility: {
+                          ...prev.medicalFacility,
+                          ambulanceAvailable: e.target.checked
+                        }
+                      }))}
+                      className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                    />
+                    <span className="ml-2 text-sm font-medium text-gray-700">Ambulance Available</span>
+                  </label>
+                </div>
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Transport Safety</label>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
+            {/* Transport Safety */}
+            <div className="bg-white border border-gray-200 rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Transport Safety</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="flex items-center">
                   <label className="flex items-center">
                     <input
                       type="checkbox"
-                      name="safetyGPSTracking"
-                      checked={formData.safetyGPSTracking}
-                      onChange={(e) => setFormData(prev => ({ ...prev, safetyGPSTracking: e.target.checked }))}
-                      className="h-4 w-4 text-indigo-600 border-gray-300 rounded"
+                      checked={formData.transportSafety?.gpsTrackerAvailable || false}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        transportSafety: {
+                          ...prev.transportSafety,
+                          gpsTrackerAvailable: e.target.checked
+                        }
+                      }))}
+                      className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
                     />
-                    <span className="ml-2 text-gray-700">GPS Tracking</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      name="safetyDriverVerification"
-                      checked={formData.safetyDriverVerification}
-                      onChange={(e) => setFormData(prev => ({ ...prev, safetyDriverVerification: e.target.checked }))}
-                      className="h-4 w-4 text-indigo-600 border-gray-300 rounded"
-                    />
-                    <span className="ml-2 text-gray-700">Driver Verification</span>
+                    <span className="ml-2 text-sm font-medium text-gray-700">GPS Tracker Available</span>
                   </label>
                 </div>
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-gray-700">Bus with Attendant (per route)</span>
-                    <button type="button" onClick={addTransportRoute} className="text-sm text-indigo-600 hover:text-indigo-800 flex items-center">
-                      <PlusCircle size={16} className="mr-1" /> Add Route
-                    </button>
+
+                <div className="flex items-center">
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={formData.transportSafety?.driversVerified || false}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        transportSafety: {
+                          ...prev.transportSafety,
+                          driversVerified: e.target.checked
+                        }
+                      }))}
+                      className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                    />
+                    <span className="ml-2 text-sm font-medium text-gray-700">Drivers Verified</span>
+                  </label>
+                </div>
                   </div>
-                  <div className="space-y-2">
-                    {(formData.safetyTransportRoutes || []).map((r, idx) => (
-                      <div key={idx} className="grid grid-cols-1 md:grid-cols-3 gap-3 items-center bg-gray-50 p-3 rounded-md">
-                        <input
-                          type="text"
-                          value={r.route || ''}
-                          onChange={(e) => updateTransportRoute(idx, 'route', e.target.value)}
-                          placeholder={`Route name/number`}
-                          className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                        />
-                        <label className="flex items-center">
+            </div>
+
+            {/* Fire Safety Measures */}
+            <div className="bg-white border border-gray-200 rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Fire Safety Measures</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {['Extinguishers', 'Alarms', 'Sprinklers', 'Evacuation Drills'].map((measure) => (
+                  <label key={measure} className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
                           <input
                             type="checkbox"
-                            checked={!!r.attendant}
-                            onChange={(e) => updateTransportRoute(idx, 'attendant', e.target.checked)}
-                            className="h-4 w-4 text-indigo-600 border-gray-300 rounded"
-                          />
-                          <span className="ml-2 text-gray-700">Attendant present</span>
+                      checked={(formData.fireSafetyMeasures || []).includes(measure)}
+                      onChange={(e) => {
+                        const current = formData.fireSafetyMeasures || [];
+                        if (e.target.checked) {
+                          setFormData(prev => ({ ...prev, fireSafetyMeasures: [...current, measure] }));
+                        } else {
+                          setFormData(prev => ({ ...prev, fireSafetyMeasures: current.filter(m => m !== measure) }));
+                        }
+                      }}
+                      className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                    />
+                    <span className="ml-2 text-sm font-medium text-gray-700">{measure}</span>
                         </label>
-                        <button type="button" onClick={() => removeTransportRoute(idx)} className="text-red-500 hover:text-red-700 justify-self-start md:justify-self-end">
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
                     ))}
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
 
-          {/* Safety & Security Visualization */}
-          <div className="mt-6">
-            <h4 className="text-sm font-medium text-gray-700 mb-3">Visualization: Icon Cards</h4>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-white border rounded-lg p-4 text-center">
-                <div className="text-gray-500 text-sm">CCTV</div>
-                <div className="text-lg font-semibold text-gray-900">{formData.safetyCCTV ? `${formData.safetyCCTV}%` : '—'}</div>
-              </div>
-              <div className="bg-white border rounded-lg p-4 text-center">
-                <div className="text-gray-500 text-sm">Medical</div>
-                <div className="text-lg font-semibold text-gray-900">
-                  {formData.safetyDoctorAvailability || (formData.safetyNurseAvailable ? 'Nurse' : '—')}
-                </div>
-              </div>
-              <div className="bg-white border rounded-lg p-4 text-center">
-                <div className="text-gray-500 text-sm">Transport</div>
-                <div className="text-lg font-semibold text-gray-900">
-                  {Array.isArray(formData.safetyTransportRoutes) && formData.safetyTransportRoutes.length > 0
-                    ? `${formData.safetyTransportRoutes.filter(r => r && r.attendant).length}/${formData.safetyTransportRoutes.length} routes`
-                    : (formData.safetyGPSTracking || formData.safetyDriverVerification ? 'Enabled' : '—')}
-                </div>
-              </div>
-              <div className="bg-white border rounded-lg p-4 text-center">
-                <div className="text-gray-500 text-sm">Security</div>
-                <div className="text-lg font-semibold text-gray-900">{computeSafetyRating()}%</div>
+            {/* Visitor Management System */}
+            <div className="bg-white border border-gray-200 rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Visitor Management</h3>
+              <div className="flex items-center">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={formData.visitorManagementSystem || false}
+                    onChange={(e) => setFormData(prev => ({ ...prev, visitorManagementSystem: e.target.checked }))}
+                    className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                  />
+                  <span className="ml-2 text-sm font-medium text-gray-700">Visitor Management System Available</span>
+                </label>
               </div>
             </div>
           </div>
@@ -2273,30 +2330,97 @@ const RegistrationPage = () => {
                   <p className="text-gray-600 mt-1">Digital tools and e-learning platforms</p>
                 </div>
               </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <FormField
-              label="Smart Classrooms (%)"
-              name="smartClassroomsPercentage"
-              type="number"
-              value={formData.smartClassroomsPercentage}
-              onChange={handleInputChange}
-            />
+          <div className="space-y-8">
+            {/* Smart Classrooms Percentage */}
+            <div className="bg-white border border-gray-200 rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Smart Classrooms</h3>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Smart Classrooms Percentage
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value={formData.smartClassroomsPercentage || 0}
+                  onChange={(e) => setFormData(prev => ({ ...prev, smartClassroomsPercentage: e.target.value }))}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                />
+                <div className="flex justify-between text-sm text-gray-600 mt-1">
+                  <span>0%</span>
+                  <span className="font-semibold text-indigo-600">{formData.smartClassroomsPercentage || 0}%</span>
+                  <span>100%</span>
           </div>
-          <div className="mt-6">
-            <DynamicElearningField
-              label="E-learning Platform Usage"
-              value={formData.elearningPlatforms}
-              onChange={(list) => setFormData(prev => ({ ...prev, elearningPlatforms: list }))}
-            />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-            <div className="bg-white border rounded-lg p-4 text-center">
-              <div className="text-gray-500 text-sm">Smart Classrooms</div>
-              <div className="text-lg font-semibold text-gray-900">{formData.smartClassroomsPercentage || '—'}%</div>
+                <p className="text-xs text-gray-500 mt-2">
+                  Percentage of classrooms equipped with smart technology (interactive boards, projectors, etc.)
+                </p>
+              </div>
             </div>
-            <div className="bg-white border rounded-lg p-4 text-center">
-              <div className="text-gray-500 text-sm">E-learning Platforms</div>
-              <div className="text-lg font-semibold text-gray-900">{Array.isArray(formData.elearningPlatforms) ? formData.elearningPlatforms.length : 0}</div>
+
+            {/* E-Learning Platforms */}
+            <div className="bg-white border border-gray-200 rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">E-Learning Platforms</h3>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Available E-Learning Platforms
+                </label>
+                <div className="space-y-3">
+                  {(formData.eLearningPlatforms || []).map((platform, index) => (
+                    <div key={index} className="flex items-center gap-3">
+                      <input
+                        type="text"
+                        value={platform}
+                        onChange={(e) => {
+                          const next = [...(formData.eLearningPlatforms || [])];
+                          next[index] = e.target.value;
+                          setFormData(prev => ({ ...prev, eLearningPlatforms: next }));
+                        }}
+                        placeholder="Platform name (e.g., Google Classroom, Zoom, Microsoft Teams)"
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = [...(formData.eLearningPlatforms || [])];
+                          next.splice(index, 1);
+                          setFormData(prev => ({ ...prev, eLearningPlatforms: next }));
+                        }}
+                        className="text-red-500 hover:text-red-700 p-1"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+          </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = [...(formData.eLearningPlatforms || []), ''];
+                      setFormData(prev => ({ ...prev, eLearningPlatforms: next }));
+                    }}
+                    className="flex items-center text-sm text-indigo-600 hover:text-indigo-800"
+                  >
+                    <PlusCircle size={16} className="mr-1" /> Add Platform
+                  </button>
+            </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  List all e-learning platforms used by the school (LMS, video conferencing, etc.)
+                </p>
+              </div>
+            </div>
+
+            {/* Technology Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-lg p-6 text-center">
+                <div className="text-indigo-600 text-sm font-medium mb-2">Smart Classrooms</div>
+                <div className="text-3xl font-bold text-indigo-700">{formData.smartClassroomsPercentage || 0}%</div>
+                <div className="text-xs text-indigo-600 mt-1">of classrooms are smart-enabled</div>
+              </div>
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-6 text-center">
+                <div className="text-green-600 text-sm font-medium mb-2">E-Learning Platforms</div>
+                <div className="text-3xl font-bold text-green-700">{formData.eLearningPlatforms?.length || 0}</div>
+                <div className="text-xs text-green-600 mt-1">platforms in use</div>
+              </div>
             </div>
           </div>
             </div>
@@ -2820,120 +2944,211 @@ const RegistrationPage = () => {
                   <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent">
                     📅 Admission Process Timeline
                   </h2>
-                  <p className="text-gray-600 mt-1">Define steps, upload docs, and toggles</p>
+                  <p className="text-gray-600 mt-1">Define admission timelines with dates, eligibility, and required documents</p>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                {admissionSteps.map((step, index) => (
-                  <div key={index} className="bg-gray-50 p-4 rounded-lg border grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
-                    <FormField
-                      label="Step Title"
-                      name={`adm-title-${index}`}
-                      value={step.title || ''}
-                      onChange={(e) => {
-                        const next = admissionSteps.slice();
-                        next[index] = { ...next[index], title: e.target.value };
-                        setAdmissionSteps(next);
-                      }}
-                      required
-                    />
-                    <FormField
-                      label="Type"
-                      name={`adm-type-${index}`}
-                      type="select"
-                      options={["deadline","payment","date","upload","toggle"]}
-                      value={step.type || ''}
-                      onChange={(e) => {
-                        const next = admissionSteps.slice();
-                        next[index] = { ...next[index], type: e.target.value };
-                        setAdmissionSteps(next);
-                      }}
-                    />
-                    {/* Deadline / Date (visible for deadline/date) */}
-                    {(step.type === 'deadline' || step.type === 'date') && (
-                      <FormField
-                        label={step.type === 'deadline' ? 'Deadline' : 'Date'}
-                        name={`adm-deadline-${index}`}
-                        type="text"
-                        value={step.deadline || step.date || ''}
-                        onChange={(e) => {
-                          const next = admissionSteps.slice();
-                          if (step.type === 'deadline') next[index] = { ...next[index], deadline: e.target.value };
-                          else next[index] = { ...next[index], date: e.target.value };
-                          setAdmissionSteps(next);
-                        }}
-                      />
-                    )}
-                    {/* Amount / Notes (visible for payment) */}
-                    {step.type === 'payment' && (
-                      <FormField
-                        label="Amount"
-                        name={`adm-amount-${index}`}
-                        type="text"
-                        value={step.amount || ''}
-                        onChange={(e) => {
-                          const next = admissionSteps.slice();
-                          next[index] = { ...next[index], amount: e.target.value };
-                          setAdmissionSteps(next);
-                        }}
-                      />
-                    )}
-                    {/* File Upload (visible for upload) */}
-                    {step.type === 'upload' && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Upload Document</label>
-                        <input
-                          type="file"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0] || null;
-                            const next = admissionSteps.slice();
-                            next[index] = { ...next[index], file };
-                            setAdmissionSteps(next);
-                          }}
-                          className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                        />
-                      </div>
-                    )}
-                    {/* Toggle (visible for toggle) */}
-                    {step.type === 'toggle' && (
-                      <div className="flex items-center gap-2">
-                        <label className="text-sm font-medium text-gray-700">Installment Enabled</label>
-                        <input
-                          type="checkbox"
-                          checked={!!step.toggle}
-                          onChange={(e) => {
-                            const next = admissionSteps.slice();
-                            next[index] = { ...next[index], toggle: e.target.checked };
-                            setAdmissionSteps(next);
-                          }}
-                          className="h-4 w-4 text-indigo-600 border-gray-300 rounded"
-                        />
-                      </div>
-                    )}
-
-                    <div className="flex items-center gap-3">
+              <div className="space-y-6">
+                {admissionSteps.map((timeline, index) => (
+                  <div key={index} className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-gray-800">Timeline Entry {index + 1}</h3>
                       <button
                         type="button"
                         onClick={() => {
                           const next = admissionSteps.filter((_, i) => i !== index);
                           setAdmissionSteps(next);
                         }}
-                        className="text-red-500 hover:text-red-700"
-                        aria-label={`Remove step ${index + 1}`}
+                        className="text-red-500 hover:text-red-700 p-1"
+                        aria-label={`Remove timeline ${index + 1}`}
                       >
                         <Trash2 size={18} />
                       </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Admission Start Date */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Admission Start Date <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={timeline.admissionStartDate || ''}
+                      onChange={(e) => {
+                        const next = admissionSteps.slice();
+                            next[index] = { ...next[index], admissionStartDate: e.target.value };
+                        setAdmissionSteps(next);
+                      }}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                          min={new Date().toISOString().split('T')[0]}
+                        />
+                      </div>
+
+                      {/* Admission End Date */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Admission End Date <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={timeline.admissionEndDate || ''}
+                      onChange={(e) => {
+                        const next = admissionSteps.slice();
+                            next[index] = { ...next[index], admissionEndDate: e.target.value };
+                        setAdmissionSteps(next);
+                      }}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                          min={timeline.admissionStartDate || new Date().toISOString().split('T')[0]}
+                        />
+                      </div>
+
+                      {/* Status */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Status <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                          value={timeline.status || ''}
+                        onChange={(e) => {
+                          const next = admissionSteps.slice();
+                            next[index] = { ...next[index], status: e.target.value };
+                          setAdmissionSteps(next);
+                        }}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                        >
+                          <option value="">Select Status</option>
+                          <option value="Ongoing">Ongoing</option>
+                          <option value="Ended">Ended</option>
+                          <option value="Starting Soon">Starting Soon</option>
+                        </select>
+                      </div>
+
+                      {/* Admission Level */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Admission Level <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                          value={timeline.admissionLevel || ''}
+                          onChange={(e) => {
+                            const next = admissionSteps.slice();
+                            next[index] = { ...next[index], admissionLevel: e.target.value };
+                            setAdmissionSteps(next);
+                          }}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                        >
+                          <option value="">Select Level</option>
+                          <option value="KGs">KGs</option>
+                          <option value="Grade 1 - 5">Grade 1 - 5</option>
+                          <option value="Grade 6-10">Grade 6-10</option>
+                        </select>
+                      </div>
+
+                      {/* Age Criteria */}
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Age Criteria
+                        </label>
+                        <input
+                        type="text"
+                          placeholder="e.g., Child must be 3 years old by June 1, 2026"
+                          value={timeline.ageCriteria || ''}
+                        onChange={(e) => {
+                          const next = admissionSteps.slice();
+                            next[index] = { ...next[index], ageCriteria: e.target.value };
+                          setAdmissionSteps(next);
+                        }}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                        />
+                      </div>
+
+                      {/* Other Info */}
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Other Eligibility Information
+                        </label>
+                        <textarea
+                          placeholder="Any other eligibility information..."
+                          value={timeline.otherInfo || ''}
+                          onChange={(e) => {
+                            const next = admissionSteps.slice();
+                            next[index] = { ...next[index], otherInfo: e.target.value };
+                            setAdmissionSteps(next);
+                          }}
+                          rows={3}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                        />
+                      </div>
+
+                      {/* Documents Required */}
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Documents Required
+                        </label>
+                        <div className="space-y-2">
+                          {(timeline.documentsRequired || []).map((doc, docIndex) => (
+                            <div key={docIndex} className="flex items-center gap-2">
+                        <input
+                                type="text"
+                                value={doc}
+                          onChange={(e) => {
+                            const next = admissionSteps.slice();
+                                  const nextDocs = [...(next[index].documentsRequired || [])];
+                                  nextDocs[docIndex] = e.target.value;
+                                  next[index] = { ...next[index], documentsRequired: nextDocs };
+                            setAdmissionSteps(next);
+                          }}
+                                placeholder="Document name"
+                                className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const next = admissionSteps.slice();
+                                  const nextDocs = [...(next[index].documentsRequired || [])];
+                                  nextDocs.splice(docIndex, 1);
+                                  next[index] = { ...next[index], documentsRequired: nextDocs };
+                                  setAdmissionSteps(next);
+                                }}
+                                className="text-red-500 hover:text-red-700 p-1"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                      </div>
+                          ))}
+                      <button
+                        type="button"
+                        onClick={() => {
+                              const next = admissionSteps.slice();
+                              const nextDocs = [...(next[index].documentsRequired || []), ''];
+                              next[index] = { ...next[index], documentsRequired: nextDocs };
+                          setAdmissionSteps(next);
+                        }}
+                            className="flex items-center text-sm text-indigo-600 hover:text-indigo-800"
+                      >
+                            <PlusCircle size={16} className="mr-1" /> Add Document
+                      </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}
 
                 <button
                   type="button"
-                  onClick={() => setAdmissionSteps([...admissionSteps, { title: '', type: 'deadline', deadline: '', amount: '', file: null, toggle: false }])}
-                  className="mt-2 flex items-center text-sm text-indigo-600 hover:text-indigo-800"
+                  onClick={() => setAdmissionSteps([...admissionSteps, {
+                    admissionStartDate: '',
+                    admissionEndDate: '',
+                    status: '',
+                    admissionLevel: '',
+                    ageCriteria: '',
+                    otherInfo: '',
+                    documentsRequired: []
+                  }])}
+                  className="mt-4 flex items-center text-sm text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-4 py-2 rounded-lg border border-indigo-200"
                 >
-                  <PlusCircle size={16} className="mr-1" /> Add Step
+                  <PlusCircle size={16} className="mr-2" /> Add Timeline Entry
                 </button>
               </div>
             </div>
