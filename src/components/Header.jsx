@@ -62,10 +62,6 @@ const Header = ({ isMobileMenuOpen, setMobileMenuOpen, compareCount, shortlistCo
         ) : (
             <>
                 <Link to="/login" className="text-gray-600 hover:text-blue-600">Sign In</Link>
-                <Link to="/admin/login" className="text-gray-600 hover:text-blue-600 flex items-center">
-                  <Shield className="w-4 h-4 mr-1" />
-                  Admin
-                </Link>
                 <button onClick={handleRegisterClick} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Register Your School</button>
             </>
         )}
@@ -114,10 +110,6 @@ const Header = ({ isMobileMenuOpen, setMobileMenuOpen, compareCount, shortlistCo
             <>
               
               <Link to="/login" className="block w-full text-center text-gray-600 hover:text-blue-600 mb-2 py-2" onClick={() => setMobileMenuOpen(false)}>Sign In</Link>
-              <Link to="/admin/login" className="block w-full text-center text-gray-600 hover:text-blue-600 mb-2 py-2 flex items-center justify-center" onClick={() => setMobileMenuOpen(false)}>
-                <Shield className="w-4 h-4 mr-1" />
-                Admin
-              </Link>
             </>
           )}
         </div>
