@@ -88,6 +88,8 @@ const ViewStudentApplications = ({ schoolId }) => {
   const [selectedStatus, setSelectedStatus] = useState('All');
   const [showInterviewDetailsModal, setShowInterviewDetailsModal] = useState(false);
   const [selectedInterviewApplication, setSelectedInterviewApplication] = useState(null);
+  const [showInterviewModal, setShowInterviewModal] = useState(false);
+  const [selectedApplication, setSelectedApplication] = useState(null);
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
 
@@ -214,10 +216,10 @@ const ViewStudentApplications = ({ schoolId }) => {
   const handleInterviewScheduled = async (formId, status, note) => {
     try {
       console.log('📝 Scheduling interview with note:', note);
-      console.log('🔄 Calling updateApplicationStatus with:', { formId, status, note });
+      console.log('🔄 Calling updateFormStatus with:', { formId, status, note });
 
-      // Use the updateApplicationStatus function that properly handles the note parameter
-      const result = await updateApplicationStatus(formId, status, null, note);
+      // Use updateFormStatus which properly handles the note parameter in the request body
+      const result = await updateFormStatus(formId, status, note);
       console.log('✅ API Response:', result);
 
       toast.success('Interview scheduled successfully!');
@@ -365,6 +367,10 @@ const ViewStudentApplications = ({ schoolId }) => {
 
   const statusOptions = ['All', 'Pending', 'Reviewed', 'Interview', 'Accepted', 'Rejected'];
 
+  const handleStatusFilter = (status) => {
+    setSelectedStatus(status);
+  };
+
   return (
     <div className="p-8">
       <div className="flex justify-between items-center mb-6">
@@ -507,6 +513,16 @@ const ViewStudentApplications = ({ schoolId }) => {
           );
         })()}
       </div>
+
+      {/* Interview Scheduling Modal */}
+      {showInterviewModal && selectedApplication && (
+        <InterviewSchedulingModal
+          isOpen={showInterviewModal}
+          onClose={() => setShowInterviewModal(false)}
+          application={selectedApplication}
+          onSchedule={handleInterviewScheduled}
+        />
+      )}
 
       {/* Interview Details Modal */}
       {showInterviewDetailsModal && selectedInterviewApplication && (
