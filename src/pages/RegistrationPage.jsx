@@ -20,7 +20,7 @@ import {
   addInternationalExposure,
   addAcademics,
   getSchoolById,
-  getAllSchools,
+  getSchoolsByStatus,
   updateSchoolInfo,
   getAmenitiesById,
   getActivitiesById,
@@ -1199,23 +1199,40 @@ const RegistrationPage = () => {
         }
       }
       
-      // Method 3: Fetch all schools and filter by authId (frontend-only solution)
+      // Method 3: Fetch schools and filter by authId (frontend-only solution)
       if (!school) {
         try {
-          console.log('🔍 Fetching all schools to find match by authId...');
-          const allSchoolsRes = await getAllSchools();
-          const schools = allSchoolsRes?.data?.data || allSchoolsRes?.data || [];
+          console.log('🔍 Fetching schools to find match by authId...');
+          
+          // Try multiple status endpoints since 'all' doesn't work
+          let schools = [];
+          const statuses = ['accepted', 'pending', 'rejected'];
+          
+          for (const status of statuses) {
+            try {
+              const res = await getSchoolsByStatus(status);
+              const statusSchools = res?.data?.data || res?.data || [];
+              schools = schools.concat(statusSchools);
+            } catch (statusErr) {
+              console.log(`Could not fetch ${status} schools:`, statusErr.message);
+            }
+          }
+          
+          console.log(`Found ${schools.length} total schools across all statuses`);
           
           // Find school where authId matches current user's _id
           school = schools.find(s => s.authId === currentUser._id);
           
           if (school) {
-            console.log('✅ Found school by filtering all schools with authId');
+            console.log('✅ Found school by filtering schools with authId');
             // Cache it for future use
             localStorage.setItem('lastCreatedSchoolId', school._id);
+          } else {
+            console.log('❌ No school found with authId:', currentUser._id);
+            console.log('Available schools authIds:', schools.map(s => s.authId));
           }
         } catch (e) {
-          console.log('❌ Could not fetch all schools:', e.message);
+          console.log('❌ Could not fetch schools:', e.message);
         }
       }
       

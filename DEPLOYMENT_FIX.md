@@ -27,11 +27,13 @@ Updated `RegistrationPage.jsx` to try multiple methods to find the school profil
 - Uses `currentUser.schoolId` if available
 - Works if backend includes this field in the auth response
 
-**Method 3: Fetch All Schools & Filter** (Reliable - PRODUCTION FIX)
-- Fetches all schools using existing `getAllSchools()` API
+**Method 3: Fetch Schools by Status & Filter** (Reliable - PRODUCTION FIX)
+- Fetches schools from all status endpoints ('accepted', 'pending', 'rejected')
 - Filters to find the school where `school.authId === currentUser._id`
 - Caches the result in localStorage for future quick access
 - **This method works 100% on production without any backend changes**
+
+**Note:** The backend doesn't support `/schools/status/all`, so we fetch from each status individually.
 
 ### Code Changes
 
