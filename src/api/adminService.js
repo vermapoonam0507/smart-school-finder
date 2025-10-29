@@ -121,6 +121,9 @@ export const addInternationalExposure = (data) =>
 export const getSchoolById = (schoolId, config) =>
   apiClient.get(`/admin/schools/${encodeURIComponent(schoolId)}`, config);
 
+export const getSchoolByAuthId = (authId, config) =>
+  apiClient.get(`/admin/schools/auth/${encodeURIComponent(authId)}`, config);
+
 export const updateSchoolInfo = (schoolId, data) =>
   apiClient.put(`/admin/schools/${encodeURIComponent(schoolId)}`, data);
 

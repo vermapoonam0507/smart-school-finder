@@ -20,6 +20,7 @@ import {
   addInternationalExposure,
   addAcademics,
   getSchoolById,
+  getAllSchools,
   updateSchoolInfo,
   getAmenitiesById,
   getActivitiesById,
@@ -1172,15 +1173,54 @@ const RegistrationPage = () => {
     }
     try {
       setIsSubmitting(true);
-      const targetSchoolId = (typeof localStorage!== 'undefined' && localStorage.getItem('lastCreatedSchoolId')) || currentUser?.schoolId;
-      if (!targetSchoolId) {
-        toast.error("No linked school profile found for this account.");
-        return;
+      
+      let school;
+      
+      // Method 1: Try localStorage (works if same session)
+      const cachedSchoolId = typeof localStorage !== 'undefined' && localStorage.getItem('lastCreatedSchoolId');
+      if (cachedSchoolId) {
+        try {
+          const res = await getSchoolById(cachedSchoolId, { headers: { 'X-Silent-Request': '1' } });
+          school = res?.data?.data;
+          console.log('✅ Found school from localStorage');
+        } catch (e) {
+          console.log('❌ localStorage schoolId not valid, trying other methods...');
+        }
       }
-      const res = await getSchoolById(targetSchoolId, { headers: { 'X-Silent-Request': '1' } });
-      const school = res?.data?.data;
+      
+      // Method 2: Try currentUser.schoolId (works if backend returns it)
+      if (!school && currentUser?.schoolId) {
+        try {
+          const res = await getSchoolById(currentUser.schoolId, { headers: { 'X-Silent-Request': '1' } });
+          school = res?.data?.data;
+          console.log('✅ Found school from currentUser.schoolId');
+        } catch (e) {
+          console.log('❌ currentUser.schoolId not valid, trying other methods...');
+        }
+      }
+      
+      // Method 3: Fetch all schools and filter by authId (frontend-only solution)
       if (!school) {
-        toast.error("No school found for this account.");
+        try {
+          console.log('🔍 Fetching all schools to find match by authId...');
+          const allSchoolsRes = await getAllSchools();
+          const schools = allSchoolsRes?.data?.data || allSchoolsRes?.data || [];
+          
+          // Find school where authId matches current user's _id
+          school = schools.find(s => s.authId === currentUser._id);
+          
+          if (school) {
+            console.log('✅ Found school by filtering all schools with authId');
+            // Cache it for future use
+            localStorage.setItem('lastCreatedSchoolId', school._id);
+          }
+        } catch (e) {
+          console.log('❌ Could not fetch all schools:', e.message);
+        }
+      }
+      
+      if (!school) {
+        toast.error("No linked school profile found for this account. Please create a school profile first.");
         return;
       }
       setEditingSchoolId(school._id);
