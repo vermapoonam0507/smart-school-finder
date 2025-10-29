@@ -15,6 +15,7 @@ import {
   getAcademicsById,
   getFacultyById
 } from "../api/adminService";
+import { getAlumniBySchool } from "../api/schoolService";
 
 const Row = ({ label, value }) => (
   <div className="grid grid-cols-3 gap-3 py-2 border-b last:border-b-0">
@@ -49,6 +50,7 @@ const SchoolProfileView = () => {
   const [timeline, setTimeline] = useState(null);
   const [academics, setAcademics] = useState(null);
   const [faculty, setFaculty] = useState(null);
+  const [alumni, setAlumni] = useState(null);
 
   useEffect(() => {
     const load = async () => {
@@ -75,7 +77,7 @@ const SchoolProfileView = () => {
           return;
         }
         try {
-          const [am, ac, inf, fe, te, sa, ine, od, tl, acd, fc] = await Promise.all([
+          const [am, ac, inf, fe, te, sa, ine, od, tl, acd, fc, al] = await Promise.all([
             getAmenitiesById(profileId).catch(() => null),
             getActivitiesById(profileId).catch(() => null),
             getInfrastructureById(profileId).catch(() => null),
@@ -86,7 +88,8 @@ const SchoolProfileView = () => {
             getOtherDetailsById(profileId).catch(() => null),
             getAdmissionTimelineById(profileId).catch(() => null),
             getAcademicsById(profileId).catch(() => null),
-            getFacultyById(profileId).catch(() => null)
+            getFacultyById(profileId).catch(() => null),
+            getAlumniBySchool(profileId).catch(() => null)
           ]);
           setAmenities(am?.data?.data || am?.data || null);
           setActivities(ac?.data?.data || ac?.data || null);
@@ -99,6 +102,7 @@ const SchoolProfileView = () => {
           setTimeline(tl?.data?.data || tl?.data || null);
           setAcademics(acd?.data?.data || acd?.data || null);
           setFaculty(fc?.data?.data || fc?.data || null);
+          setAlumni(al?.data?.data || al?.data || null);
         } catch (_) {
           // Non-fatal: show what we have
         }
@@ -174,7 +178,11 @@ const SchoolProfileView = () => {
           <Row label="Phone Number" value={school.mobileNo || school.phoneNo} />
           <Row label="Website" value={school.website} />
           <Row label="Address" value={school.address} />
+          <Row label="Area" value={school.area} />
           <Row label="Description" value={school.description} />
+          <Row label="Rank" value={school.rank} />
+          <Row label="Specialist" value={(school.specialist || []).join(', ')} />
+          <Row label="Tags" value={(school.tags || []).join(', ')} />
         </div>
       </Section>
 
@@ -230,9 +238,43 @@ const SchoolProfileView = () => {
       {fees && (
         <Section title="Fees & Scholarships">
           <div className="divide-y">
-            <Row label="Fee Transparency" value={fees.feesTransparency} />
-            <Row label="Scholarships" value={(fees.scholarships || []).map(s=>`${s.name||s.type||''}${s.percentage?' ('+s.percentage+'%)':''}`).join('; ')} />
-            <Row label="Class-wise Fees" value={(fees.classFees || []).map(f=>`${f.class}: ${[f.tuition,f.activity,f.transport,f.hostel,f.misc].filter(v=>v!=null).join('/')}`).join(' | ')} />
+            <Row label="Fee Transparency %" value={fees.feesTransparency} />
+            {fees.scholarships && fees.scholarships.length > 0 && (
+              <div className="py-3">
+                <div className="font-semibold text-gray-700 mb-2">Scholarships</div>
+                <div className="space-y-2">
+                  {fees.scholarships.map((s, idx) => (
+                    <div key={idx} className="text-sm">
+                      <span className="font-medium">{s.name || s.type}</span>
+                      {s.amount && <span className="text-gray-600"> - ₹{s.amount}</span>}
+                      {s.type && s.name && <span className="text-gray-500"> ({s.type})</span>}
+                      {s.documentsRequired && s.documentsRequired.length > 0 && (
+                        <span className="text-gray-500 text-xs block ml-4">Docs: {s.documentsRequired.join(', ')}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {fees.classFees && fees.classFees.length > 0 && (
+              <div className="py-3">
+                <div className="font-semibold text-gray-700 mb-2">Class-wise Fees</div>
+                <div className="space-y-2">
+                  {fees.classFees.map((f, idx) => (
+                    <div key={idx} className="text-sm">
+                      <div className="font-medium">{f.className || f.class}</div>
+                      <div className="ml-4 text-gray-600 text-xs">
+                        {f.tuition != null && <span>Tuition: ₹{f.tuition}</span>}
+                        {f.activity != null && f.activity > 0 && <span>, Activity: ₹{f.activity}</span>}
+                        {f.transport != null && f.transport > 0 && <span>, Transport: ₹{f.transport}</span>}
+                        {f.hostel != null && f.hostel > 0 && <span>, Hostel: ₹{f.hostel}</span>}
+                        {f.misc != null && f.misc > 0 && <span>, Misc: ₹{f.misc}</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </Section>
       )}
@@ -241,7 +283,11 @@ const SchoolProfileView = () => {
         <Section title="Technology Adoption">
           <div className="divide-y">
             <Row label="Smart Classrooms %" value={tech.smartClassroomsPercentage} />
-            <Row label="E-Learning Platforms" value={(tech.eLearningPlatforms || []).join(', ')} />
+            <Row label="E-Learning Platforms" value={
+              (tech.eLearningPlatforms || []).map(p => 
+                typeof p === 'string' ? p : (p.platform || '')
+              ).filter(Boolean).join(', ')
+            } />
           </div>
         </Section>
       )}
@@ -264,8 +310,36 @@ const SchoolProfileView = () => {
       {intl && (
         <Section title="International Exposure">
           <div className="divide-y">
-            <Row label="Exchange Programs" value={(intl.exchangePrograms || []).map(p=>`${p.partnerSchool} - ${p.programType||p.type||''} (${p.duration||''})`).join(' | ')} />
-            <Row label="Global Tie-ups" value={(intl.globalTieUps || []).map(t=>`${t.organization} (${t.since||t.year||''})`).join(' | ')} />
+            {intl.exchangePrograms && intl.exchangePrograms.length > 0 && (
+              <div className="py-3">
+                <div className="font-semibold text-gray-700 mb-2">Exchange Programs</div>
+                <div className="space-y-2">
+                  {intl.exchangePrograms.map((p, idx) => (
+                    <div key={idx} className="text-sm">
+                      <span className="font-medium">{p.partnerSchool || p.school}</span>
+                      {(p.programType || p.type) && <span className="text-gray-600"> - {p.programType || p.type}</span>}
+                      {p.duration && <span className="text-gray-500"> ({p.duration})</span>}
+                      {p.country && <span className="text-gray-500"> • {p.country}</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {intl.globalTieUps && intl.globalTieUps.length > 0 && (
+              <div className="py-3">
+                <div className="font-semibold text-gray-700 mb-2">Global Tie-ups</div>
+                <div className="space-y-2">
+                  {intl.globalTieUps.map((t, idx) => (
+                    <div key={idx} className="text-sm">
+                      <span className="font-medium">{t.organization || t.name}</span>
+                      {(t.since || t.year) && <span className="text-gray-600"> (Since {t.since || t.year})</span>}
+                      {t.country && <span className="text-gray-500"> • {t.country}</span>}
+                      {t.purpose && <span className="text-gray-500 block ml-4 text-xs">{t.purpose}</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </Section>
       )}
@@ -283,11 +357,45 @@ const SchoolProfileView = () => {
         </Section>
       )}
 
-      {timeline && (
+      {timeline && timeline.timelines && timeline.timelines.length > 0 && (
         <Section title="Admission Process Timeline">
-          <div className="divide-y">
-            {(timeline.timelines || []).map((t, idx) => (
-              <Row key={idx} label={`Entry ${idx+1}`} value={`${new Date(t.admissionStartDate).toLocaleDateString()} → ${new Date(t.admissionEndDate).toLocaleDateString()} | ${t.status} | Level: ${t.eligibility?.admissionLevel}`} />
+          <div className="space-y-4">
+            {timeline.timelines.map((t, idx) => (
+              <div key={idx} className="border-b pb-4 last:border-b-0">
+                <div className="font-semibold text-gray-800 mb-2">Admission Period {idx + 1}</div>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="text-gray-600">Start Date:</div>
+                  <div className="text-gray-900">{new Date(t.admissionStartDate).toLocaleDateString()}</div>
+                  <div className="text-gray-600">End Date:</div>
+                  <div className="text-gray-900">{new Date(t.admissionEndDate).toLocaleDateString()}</div>
+                  <div className="text-gray-600">Status:</div>
+                  <div className="text-gray-900">{t.status}</div>
+                  {t.eligibility?.admissionLevel && (
+                    <>
+                      <div className="text-gray-600">Level:</div>
+                      <div className="text-gray-900">{t.eligibility.admissionLevel}</div>
+                    </>
+                  )}
+                  {t.eligibility?.ageCriteria && (
+                    <>
+                      <div className="text-gray-600">Age Criteria:</div>
+                      <div className="text-gray-900">{t.eligibility.ageCriteria}</div>
+                    </>
+                  )}
+                  {t.documentsRequired && t.documentsRequired.length > 0 && (
+                    <>
+                      <div className="text-gray-600">Documents:</div>
+                      <div className="text-gray-900">{t.documentsRequired.join(', ')}</div>
+                    </>
+                  )}
+                  {t.eligibility?.otherInfo && (
+                    <>
+                      <div className="text-gray-600 col-span-2">Other Info:</div>
+                      <div className="text-gray-900 col-span-2">{t.eligibility.otherInfo}</div>
+                    </>
+                  )}
+                </div>
+              </div>
             ))}
           </div>
         </Section>
@@ -299,6 +407,58 @@ const SchoolProfileView = () => {
             {(faculty.facultyMembers || faculty.members || []).map((m, idx) => (
               <Row key={idx} label={m.name || `Faculty ${idx+1}`} value={`${m.qualification || ''}${m.experience ? `, ${m.experience} yrs` : ''}${m.awards ? `, Awards: ${m.awards}` : ''}`} />
             ))}
+          </div>
+        </Section>
+      )}
+
+      {alumni && (alumni.famousAlumnies?.length > 0 || alumni.topAlumnies?.length > 0 || alumni.otherAlumnies?.length > 0) && (
+        <Section title="Alumni">
+          <div className="divide-y">
+            {alumni.famousAlumnies && alumni.famousAlumnies.length > 0 && (
+              <>
+                <div className="py-3">
+                  <div className="font-semibold text-gray-700 mb-2">Famous Alumni</div>
+                  <div className="space-y-2">
+                    {alumni.famousAlumnies.map((alumniItem, idx) => (
+                      <div key={idx} className="text-sm">
+                        <span className="font-medium">{alumniItem.name}</span>
+                        {alumniItem.profession && <span className="text-gray-600"> - {alumniItem.profession}</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+            {alumni.topAlumnies && alumni.topAlumnies.length > 0 && (
+              <>
+                <div className="py-3">
+                  <div className="font-semibold text-gray-700 mb-2">Top Performers</div>
+                  <div className="space-y-2">
+                    {alumni.topAlumnies.map((alumniItem, idx) => (
+                      <div key={idx} className="text-sm">
+                        <span className="font-medium">{alumniItem.name}</span>
+                        {alumniItem.percentage && <span className="text-gray-600"> - {alumniItem.percentage}%</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+            {alumni.otherAlumnies && alumni.otherAlumnies.length > 0 && (
+              <>
+                <div className="py-3">
+                  <div className="font-semibold text-gray-700 mb-2">Other Alumni</div>
+                  <div className="space-y-2">
+                    {alumni.otherAlumnies.map((alumniItem, idx) => (
+                      <div key={idx} className="text-sm">
+                        <span className="font-medium">{alumniItem.name}</span>
+                        {alumniItem.percentage && <span className="text-gray-600"> - {alumniItem.percentage}%</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </Section>
       )}
