@@ -58,8 +58,13 @@ const SchoolProfileView = () => {
         setLoading(true);
         setError("");
         const rawId = (typeof localStorage!=='undefined' && localStorage.getItem('lastCreatedSchoolId'))
-          || currentUser?.schoolId;
+          || currentUser?.schoolId
+          || currentUser?._id;
         const id = (typeof rawId === 'string' ? rawId : String(rawId || '')).trim();
+        
+        console.log('🔍 SchoolProfileView - Loading profile for ID:', id);
+        console.log('🔍 currentUser:', currentUser);
+        
         if (!id) {
           setError("No school identifier found for current user.");
           setLoading(false);
