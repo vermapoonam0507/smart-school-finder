@@ -41,7 +41,8 @@ import {
   updateSafetyAndSecurity,
   updateInternationalExposure,
   updateFaculty,
-  updateAdmissionTimeline
+  updateAdmissionTimeline,
+  updateAcademics
 } from "../api/adminService";
 
 
@@ -387,6 +388,11 @@ const RegistrationPage = () => {
     sportsGrounds: [], // Updated: matches backend enum ['Football', 'Cricket', 'Basketball', 'Tennis', 'Athletics', 'Badminton']
     libraryBooks: "", // Updated: matches backend field
     smartClassrooms: "", // Updated: matches backend field
+    // Infrastructure form field names (used in the UI)
+    infraLabTypes: [], // Form field for labs
+    infraSportsTypes: [], // Form field for sports grounds
+    infraLibraryBooks: "", // Form field for library books
+    infraSmartClassrooms: "", // Form field for smart classrooms
     
     // Safety & Security Fields (matching backend SafetyAndSecurity model)
     cctvCoveragePercentage: 0, // default numeric to avoid uncontrolled->controlled warnings
@@ -472,7 +478,7 @@ const RegistrationPage = () => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     // Special handling: keep ratio and numeric in sync
-    if (name === 'teacherStudentRatio') {
+    if (name === 'TeacherToStudentRatio') {
       const raw = value.trim();
       let students = '';
       const parts = raw.split(':').map(p => p.trim());
@@ -486,7 +492,7 @@ const RegistrationPage = () => {
         // allow entering just the student count
         students = raw;
       }
-      setFormData((prev) => ({ ...prev, teacherStudentRatio: value, studentsPerTeacher: students }));
+      setFormData((prev) => ({ ...prev, TeacherToStudentRatio: value, studentsPerTeacher: students }));
       return;
     }
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -688,9 +694,13 @@ const RegistrationPage = () => {
         TeacherToStudentRatio: formData.TeacherToStudentRatio,
         rank: formData.rank,
         specialist: Array.isArray(formData.specialist) ? formData.specialist : [],
-        tags: Array.isArray(formData.tags) ? formData.tags : [],
-        authId: currentUser._id
+        tags: Array.isArray(formData.tags) ? formData.tags : []
       };
+
+      // Only include authId for new registrations, not for updates
+      if (!isEditMode) {
+        payload.authId = currentUser._id;
+      }
 
       // Create or update school and resolve schoolId
       let schoolId = editingSchoolId;
@@ -736,13 +746,13 @@ const RegistrationPage = () => {
       }
 
       // Add/Update infrastructure
-      if (formData.labs?.length > 0 || formData.sportsGrounds?.length > 0 || formData.libraryBooks || formData.smartClassrooms) {
+      if (formData.infraLabTypes?.length > 0 || formData.infraSportsTypes?.length > 0 || formData.infraLibraryBooks || formData.infraSmartClassrooms) {
         const payloadInfra = {
           schoolId,
-          labs: formData.labs || [],
-          sportsGrounds: formData.sportsGrounds || [],
-          libraryBooks: formData.libraryBooks ? Number(formData.libraryBooks) : undefined,
-          smartClassrooms: formData.smartClassrooms ? Number(formData.smartClassrooms) : undefined
+          labs: formData.infraLabTypes || [],
+          sportsGrounds: formData.infraSportsTypes || [],
+          libraryBooks: formData.infraLibraryBooks ? Number(formData.infraLibraryBooks) : undefined,
+          smartClassrooms: formData.infraSmartClassrooms ? Number(formData.infraSmartClassrooms) : undefined
         };
         if (isEditMode) {
           // Try update; if not found or not created yet, fall back to create
@@ -995,7 +1005,9 @@ const RegistrationPage = () => {
       }
 
       toast.success(
-        "School Registration Successful! Your profile is pending approval."
+        isEditMode 
+          ? "School profile updated successfully!"
+          : "School Registration Successful! Your profile is pending approval."
       );
 
       // Update user context to reflect school user type
@@ -1005,7 +1017,17 @@ const RegistrationPage = () => {
 
       navigate("/school-portal/profile-view");
     } catch (error) {
-      toast.error(error.response?.data?.message || "Registration failed.");
+      console.error('Submission error:', error);
+      console.error('Error response:', error.response);
+      console.error('Error data:', error.response?.data);
+      
+      const errorMessage = error.response?.data?.message || error.message || (isEditMode ? "Update failed." : "Registration failed.");
+      toast.error(errorMessage);
+      
+      // Show detailed error in console for debugging
+      if (error.response?.data) {
+        console.error('Backend validation errors:', error.response.data);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -1237,10 +1259,10 @@ const RegistrationPage = () => {
         ...prev,
         predefinedAmenities: Array.isArray(amenities.predefinedAmenities) ? amenities.predefinedAmenities : (Array.isArray(amenities.amenities) ? amenities.amenities : prev.predefinedAmenities),
         activities: Array.isArray(activities.activities) ? activities.activities : prev.activities,
-        labs: Array.isArray(infra.labs) ? infra.labs : prev.labs,
-        sportsGrounds: Array.isArray(infra.sportsGrounds) ? infra.sportsGrounds : prev.sportsGrounds,
-        libraryBooks: infra.libraryBooks != null ? String(infra.libraryBooks) : prev.libraryBooks,
-        smartClassrooms: infra.smartClassrooms != null ? String(infra.smartClassrooms) : prev.smartClassrooms,
+        infraLabTypes: Array.isArray(infra.labs) ? infra.labs : prev.infraLabTypes,
+        infraSportsTypes: Array.isArray(infra.sportsGrounds) ? infra.sportsGrounds : prev.infraSportsTypes,
+        infraLibraryBooks: infra.libraryBooks != null ? String(infra.libraryBooks) : prev.infraLibraryBooks,
+        infraSmartClassrooms: infra.smartClassrooms != null ? String(infra.smartClassrooms) : prev.infraSmartClassrooms,
         // Technology Adoption
         smartClassroomsPercentage: tech.smartClassroomsPercentage != null ? String(tech.smartClassroomsPercentage) : prev.smartClassroomsPercentage,
         eLearningPlatforms: Array.isArray(tech.eLearningPlatforms) ? tech.eLearningPlatforms : prev.eLearningPlatforms,
@@ -1534,9 +1556,9 @@ const RegistrationPage = () => {
               />
               <FormField
                 label="Teacher:Student Ratio (e.g., 1:20)"
-                name="teacherStudentRatio"
+                name="TeacherToStudentRatio"
                 type="text"
-                value={formData.teacherStudentRatio}
+                value={formData.TeacherToStudentRatio}
                 onChange={handleInputChange}
               />
               <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
