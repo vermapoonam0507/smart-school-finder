@@ -297,11 +297,11 @@ export const getFormsByStudent = async (studId) => {
   
   // Try multiple known endpoints and normalize into an array of applications
   const candidates = [
-    `/api/form/student/${studId}`,        // some deployments
-    `/api/applications/${studId}`,        // application-routes get by student
-    `/api/forms/student/${studId}`,       // alternate plural path
-    `/api/users/forms/${studId}`,         // users namespaced
-    `/api/form/${studId}`                 // fallback legacy
+    `/form/student/${studId}`,        // some deployments
+    `/applications/${studId}`,        // application-routes get by student
+    `/forms/student/${studId}`,       // alternate plural path
+    `/users/forms/${studId}`,         // users namespaced
+    `/form/${studId}`                 // fallback legacy
   ];
 
   let all = [];

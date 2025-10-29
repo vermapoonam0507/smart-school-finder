@@ -13,7 +13,7 @@ import apiClient from './axios';
 export const getStudentNotifications = async (studId) => {
   try {
     // Get all forms for the student to check for status changes
-    const response = await apiClient.get(`/api/form/student/${studId}`);
+    const response = await apiClient.get(`/form/student/${studId}`);
     const forms = response.data?.data || response.data || [];
     
     // Generate notifications based on form status changes

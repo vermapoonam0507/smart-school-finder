@@ -153,7 +153,7 @@ export const submitFormToSchool = async (schoolId, studId, formId) => {
       };
     }
 
-    const response = await apiClient.post(`/api/form/${schoolId}/${studId}/${formId}`);
+    const response = await apiClient.post(`/form/${schoolId}/${studId}/${formId}`);
     return response.data;
   } catch (error) {
     // Handle 409 Conflict (duplicate submission)
@@ -177,7 +177,7 @@ export const submitFormToSchool = async (schoolId, studId, formId) => {
  */
 export const getFormsByStudent = async (studId) => {
   try {
-    const response = await apiClient.get(`/api/form/student/${studId}`);
+    const response = await apiClient.get(`/form/student/${studId}`);
     return response.data;
   } catch (error) {
     console.error('Error fetching forms by student:', error.response?.data || error.message);
@@ -192,7 +192,7 @@ export const getFormsByStudent = async (studId) => {
  */
 export const getFormsBySchool = async (schoolId) => {
   try {
-    const response = await apiClient.get(`/api/form/school/${schoolId}`);
+    const response = await apiClient.get(`/form/school/${schoolId}`);
     return response.data;
   } catch (error) {
     console.error('Error fetching forms by school:', error.response?.data || error.message);
@@ -212,7 +212,7 @@ export const trackForm = async (formId) => {
       throw new Error('Invalid form ID provided');
     }
     
-    const response = await apiClient.get(`/api/form/track/${formId}`);
+    const response = await apiClient.get(`/form/track/${formId}`);
     return response.data;
   } catch (error) {
     console.error('Error tracking form:', error.response?.data || error.message);
@@ -228,7 +228,7 @@ export const trackForm = async (formId) => {
  */
 export const getStudentForms = async (studId, status = null) => {
   try {
-    const url = status ? `/api/form/student/${studId}?status=${status}` : `/api/form/student/${studId}`;
+    const url = status ? `/form/student/${studId}?status=${status}` : `/form/student/${studId}`;
     const response = await apiClient.get(url);
     return response.data;
   } catch (error) {
@@ -245,7 +245,7 @@ export const getStudentForms = async (studId, status = null) => {
  */
 export const getSchoolForms = async (schoolId, status = null) => {
   try {
-    const url = status ? `/api/form/school/${schoolId}?status=${status}` : `/api/form/school/${schoolId}`;
+    const url = status ? `/form/school/${schoolId}?status=${status}` : `/form/school/${schoolId}`;
     const response = await apiClient.get(url);
     
     const raw = response?.data;
@@ -335,7 +335,7 @@ export const getSchoolForms = async (schoolId, status = null) => {
  */
 export const getFormDetails = async (formId) => {
   try {
-    const response = await apiClient.get(`/api/form/${formId}`);
+    const response = await apiClient.get(`/form/${formId}`);
     return response.data;
   } catch (error) {
     console.error('Error fetching form details:', error.response?.data || error.message);
@@ -352,7 +352,7 @@ export const getFormDetails = async (formId) => {
  */
 export const updateFormStatus = async (formId, status, note = null) => {
   try {
-    const url = `/api/form/${formId}?status=${status}`;
+    const url = `/form/${formId}?status=${status}`;
     const body = note ? { note } : {};
     const response = await apiClient.put(url, body);
     return response.data;

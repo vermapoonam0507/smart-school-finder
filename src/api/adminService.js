@@ -51,20 +51,20 @@ export const deleteApplication = (studId) => apiClient.delete(`/api/applications
 
 // Submit form to school
 export const submitFormToSchool = (schoolId, studId, formId) => 
-  apiClient.post(`/api/form/${schoolId}/${studId}/${formId}`);
+  apiClient.post(`/form/${schoolId}/${studId}/${formId}`);
 
 // Get forms by student
-export const getFormsByStudent = (studId) => apiClient.get(`/api/form/student/${studId}`);
+export const getFormsByStudent = (studId) => apiClient.get(`/form/student/${studId}`);
 
 // Get forms by school
-export const getFormsBySchool = (schoolId) => apiClient.get(`/api/form/school/${schoolId}`);
+export const getFormsBySchool = (schoolId) => apiClient.get(`/form/school/${schoolId}`);
 
 // Track form
-export const trackForm = (formId) => apiClient.get(`/api/form/track/${formId}`);
+export const trackForm = (formId) => apiClient.get(`/form/track/${formId}`);
 
 // Update form status
 export const updateFormStatus = (formId, status) => 
-  apiClient.put(`/api/form/${formId}?status=${status}`);
+  apiClient.put(`/form/${formId}?status=${status}`);
 
 /**
  * ============================
