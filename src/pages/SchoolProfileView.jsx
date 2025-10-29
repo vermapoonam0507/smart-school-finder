@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import { getSchoolById, updateSchoolInfo } from "../api/adminService";
+import { getSchoolById } from "../api/adminService";
 import { toast } from "react-toastify";
 import {
   getAmenitiesById,
@@ -34,8 +34,7 @@ const SchoolProfileView = () => {
   const { user: currentUser } = useAuth();
   const [school, setSchool] = useState(null);
   const [resolvedSchoolId, setResolvedSchoolId] = useState("");
-  const [isEditing, setIsEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
+  // Read-only view (edit removed)
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -56,22 +55,25 @@ const SchoolProfileView = () => {
       try {
         setLoading(true);
         setError("");
-        const id = (typeof localStorage!=='undefined' && localStorage.getItem('lastCreatedSchoolId'))
-          || currentUser?.schoolId
-          || currentUser?._id
-          || currentUser?.authId;
+        const rawId = (typeof localStorage!=='undefined' && localStorage.getItem('lastCreatedSchoolId'))
+          || currentUser?.schoolId;
+        const id = (typeof rawId === 'string' ? rawId : String(rawId || '')).trim();
         if (!id) {
           setError("No school identifier found for current user.");
           setLoading(false);
           return;
         }
-        const res = await getSchoolById(id);
+        const res = await getSchoolById(id, { headers: { 'X-Silent-Request': '1' } });
         const s = res?.data?.data || res?.data || {};
         setSchool(s);
         // Remember the actual school id we should use for updates
         setResolvedSchoolId(s?._id || id);
 
-        const profileId = s?._id || id;
+        const profileId = (s?._id || id || '').toString().trim();
+        if (!profileId) {
+          // No valid id to fetch sub-resources; leave them null
+          return;
+        }
         try {
           const [am, ac, inf, fe, te, sa, ine, od, tl, acd, fc] = await Promise.all([
             getAmenitiesById(profileId).catch(() => null),
@@ -125,117 +127,74 @@ const SchoolProfileView = () => {
     ? school.languageMedium.join(", ")
     : school.languageMedium;
   const shifts = Array.isArray(school.shifts) ? school.shifts.join(", ") : school.shifts;
-  const teacherStudentRatio = school.TeacherToStudentRatio || school.teacherStudentRatio || school.teacherToStudentRatio || "";
+  const teacherStudentRatio = 
+    school.TeacherToStudentRatio 
+    || school.teacherStudentRatio 
+    || school.teacherToStudentRatio 
+    || (school.studentsPerTeacher != null && school.studentsPerTeacher !== '' ? `1:${school.studentsPerTeacher}` : '')
+    || (academics && (academics.teacherStudentRatio || academics.TeacherToStudentRatio))
+    || '';
 
-  const onChange = (e) => {
-    const { name, value } = e.target;
-    setSchool((prev) => ({ ...prev, [name]: value }));
-  };
+  // Infrastructure fallbacks (ensure section renders even if subresource missing)
+  const infraLabs = Array.isArray(infrastructure?.labs)
+    ? infrastructure.labs
+    : (Array.isArray(school?.labs) ? school.labs : []);
+  const infraSports = Array.isArray(infrastructure?.sportsGrounds)
+    ? infrastructure.sportsGrounds
+    : (Array.isArray(school?.sportsGrounds) ? school.sportsGrounds : []);
+  const infraLibraryBooks = (infrastructure && (infrastructure.libraryBooks ?? infrastructure.books))
+    ?? (school && (school.libraryBooks ?? school.books))
+    ?? '';
+  const infraSmartClassrooms = (infrastructure && (infrastructure.smartClassrooms ?? infrastructure.smartRooms))
+    ?? (school && (school.smartClassrooms ?? school.smartRooms))
+    ?? '';
 
-  const onSave = async () => {
-    try {
-      setSaving(true);
-      const id = resolvedSchoolId || currentUser?.schoolId || currentUser?._id || currentUser?.authId;
-      if (!id) throw new Error("Missing school id");
-      const payload = { ...school };
-      if (typeof payload.languageMedium === 'string') {
-        payload.languageMedium = payload.languageMedium
-          .split(',')
-          .map((s) => s.trim())
-          .filter(Boolean);
-      }
-      if (payload.shifts && !Array.isArray(payload.shifts)) {
-        payload.shifts = String(payload.shifts).split(',').map(s=>s.trim()).filter(Boolean);
-      }
-      // Normalize teacher-student ratio key casing for backend
-      if (payload.TeacherToStudentRatio && !payload.teacherStudentRatio) {
-        payload.teacherStudentRatio = payload.TeacherToStudentRatio;
-      }
-      if (payload.teacherToStudentRatio && !payload.teacherStudentRatio) {
-        payload.teacherStudentRatio = payload.teacherToStudentRatio;
-      }
-      await updateSchoolInfo(id, payload);
-      toast.success("School profile updated");
-      setIsEditing(false);
-    } catch (e) {
-      toast.error(e?.response?.data?.message || "Failed to update profile");
-    } finally {
-      setSaving(false);
-    }
-  };
+  // Read-only; no edit/save handlers
 
   return (
     <div className="p-8 space-y-8 bg-gray-50 min-h-[70vh]">
-      <div className="bg-white rounded-lg shadow p-6 ring-1 ring-gray-200">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-gray-800">School Profile</h2>
-          <div className="flex items-center gap-3">
-            <span className="text-sm px-2 py-1 rounded bg-gray-100 text-gray-700">Status: {(school.status || "—").toString()}</span>
-            {isEditing ? (
-              <button onClick={onSave} disabled={saving} className="px-3 py-1.5 bg-blue-600 text-white rounded disabled:opacity-60">{saving ? 'Saving...' : 'Save'}</button>
-            ) : (
-              <button onClick={() => setIsEditing(true)} className="px-3 py-1.5 border border-gray-300 rounded">Edit</button>
-            )}
+      <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-6 ring-1 ring-indigo-100">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800">{school.name || 'School Profile'}</h2>
+            <p className="text-sm text-gray-600">Comprehensive profile overview</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs px-2 py-1 rounded-full bg-white ring-1 ring-gray-200 text-gray-700">Status: {(school.status || "—").toString()}</span>
+            {school.city && <span className="text-xs px-2 py-1 rounded-full bg-white ring-1 ring-gray-200 text-gray-700">{school.city}</span>}
+            {school.board && <span className="text-xs px-2 py-1 rounded-full bg-white ring-1 ring-gray-200 text-gray-700">{school.board}</span>}
           </div>
         </div>
       </div>
 
       <Section title="Basic Information">
         <div className="divide-y">
-          {isEditing ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <input name="name" value={school.name || ''} onChange={onChange} className="border p-2 rounded" placeholder="School Name" />
-              <input name="email" value={school.email || ''} onChange={onChange} className="border p-2 rounded" placeholder="Email" />
-              <input name="mobileNo" value={school.mobileNo || school.phoneNo || ''} onChange={(e) => setSchool(prev => ({ ...prev, mobileNo: e.target.value }))} className="border p-2 rounded" placeholder="Phone Number" />
-              <input name="website" value={school.website || ''} onChange={onChange} className="border p-2 rounded" placeholder="Website" />
-              <input name="address" value={school.address || ''} onChange={onChange} className="border p-2 rounded md:col-span-2" placeholder="Address" />
-              <textarea name="description" value={school.description || ''} onChange={onChange} className="border p-2 rounded md:col-span-2" rows={3} placeholder="Description" />
-            </div>
-          ) : (
-            <>
-              <Row label="School Name" value={school.name} />
-              <Row label="Email" value={school.email} />
-              <Row label="Phone Number" value={school.mobileNo || school.phoneNo} />
-              <Row label="Website" value={school.website} />
-              <Row label="Address" value={school.address} />
-              <Row label="Description" value={school.description} />
-            </>
-          )}
+          <Row label="School Name" value={school.name} />
+          <Row label="Email" value={school.email} />
+          <Row label="Phone Number" value={school.mobileNo || school.phoneNo} />
+          <Row label="Website" value={school.website} />
+          <Row label="Address" value={school.address} />
+          <Row label="Description" value={school.description} />
         </div>
       </Section>
 
       <Section title="Academics">
         <div className="divide-y">
-          {isEditing ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <input name="board" value={school.board || ''} onChange={onChange} className="border p-2 rounded" placeholder="Board" />
-              <input name="upto" value={school.upto || ''} onChange={onChange} className="border p-2 rounded" placeholder="Upto Class" />
-              <input name="feeRange" value={school.feeRange || ''} onChange={onChange} className="border p-2 rounded" placeholder="Fee Range" />
-              <input name="genderType" value={school.genderType || ''} onChange={onChange} className="border p-2 rounded" placeholder="Gender Type" />
-              <input name="schoolMode" value={school.schoolMode || ''} onChange={onChange} className="border p-2 rounded" placeholder="School Mode" />
-              <input name="shifts" value={shifts || ''} onChange={(e) => setSchool(prev => ({ ...prev, shifts: e.target.value }))} className="border p-2 rounded" placeholder="Shifts (comma separated)" />
-              <input name="languageMedium" value={languageMedium || ''} onChange={onChange} className="border p-2 rounded md:col-span-2" placeholder="Language Medium (comma separated)" />
-              <input name="TeacherToStudentRatio" value={teacherStudentRatio} onChange={(e) => setSchool(prev => ({ ...prev, TeacherToStudentRatio: e.target.value }))} className="border p-2 rounded" placeholder="Teacher:Student Ratio" />
-            </div>
-          ) : (
+          <Row label="Board" value={school.board} />
+          <Row label="Upto Class" value={school.upto} />
+          <Row label="Fee Range" value={school.feeRange} />
+          <Row label="Gender Type" value={school.genderType} />
+          <Row label="School Mode" value={school.schoolMode} />
+          <Row label="Shifts" value={shifts} />
+          <Row label="Language Medium" value={languageMedium} />
+          <Row label="Teacher:Student Ratio" value={teacherStudentRatio} />
+          {academics && (
             <>
-              <Row label="Board" value={school.board} />
-              <Row label="Upto Class" value={school.upto} />
-              <Row label="Fee Range" value={school.feeRange} />
-              <Row label="Gender Type" value={school.genderType} />
-              <Row label="School Mode" value={school.schoolMode} />
-              <Row label="Shifts" value={shifts} />
-              <Row label="Language Medium" value={languageMedium} />
-              <Row label="Teacher:Student Ratio" value={teacherStudentRatio} />
-              {academics && (
-                <>
-                  <Row label="Average Class 10 Result" value={academics.averageClass10Result} />
-                  <Row label="Average Class 12 Result" value={academics.averageClass12Result} />
-                  <Row label="Average School Marks" value={academics.averageSchoolMarks} />
-                  <Row label="Special Exams Training" value={(academics.specialExamsTraining || []).join(', ')} />
-                  <Row label="Extra Curricular Activities" value={(academics.extraCurricularActivities || []).join(', ')} />
-                </>
-              )}
+              <Row label="Average Class 10 Result" value={academics.averageClass10Result} />
+              <Row label="Average Class 12 Result" value={academics.averageClass12Result} />
+              <Row label="Average School Marks" value={academics.averageSchoolMarks} />
+              <Row label="Special Exams Training" value={(academics.specialExamsTraining || []).join(', ')} />
+              <Row label="Extra Curricular Activities" value={(academics.extraCurricularActivities || []).join(', ')} />
             </>
           )}
         </div>
@@ -259,16 +218,14 @@ const SchoolProfileView = () => {
         </Section>
       )}
 
-      {infrastructure && (
-        <Section title="Infrastructure">
-          <div className="divide-y">
-            <Row label="Labs" value={(infrastructure.labs || []).join(', ')} />
-            <Row label="Sports Grounds" value={(infrastructure.sportsGrounds || []).join(', ')} />
-            <Row label="Library Books" value={infrastructure.libraryBooks} />
-            <Row label="Smart Classrooms" value={infrastructure.smartClassrooms} />
-          </div>
-        </Section>
-      )}
+      <Section title="Infrastructure">
+        <div className="divide-y">
+          <Row label="Labs" value={(infraLabs || []).join(', ')} />
+          <Row label="Sports Grounds" value={(infraSports || []).join(', ')} />
+          <Row label="Library Books" value={infraLibraryBooks} />
+          <Row label="Smart Classrooms" value={infraSmartClassrooms} />
+        </div>
+      </Section>
 
       {fees && (
         <Section title="Fees & Scholarships">
@@ -348,25 +305,12 @@ const SchoolProfileView = () => {
 
       <Section title="Location">
         <div className="divide-y">
-          {isEditing ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <input name="city" value={school.city || ''} onChange={onChange} className="border p-2 rounded" placeholder="City" />
-              <input name="state" value={school.state || ''} onChange={onChange} className="border p-2 rounded" placeholder="State" />
-              <input name="pinCode" value={school.pinCode || school.pincode || ''} onChange={(e) => setSchool(prev => ({ ...prev, pinCode: e.target.value }))} className="border p-2 rounded" placeholder="Pin Code" />
-              <input name="transportAvailable" value={school.transportAvailable || ''} onChange={onChange} className="border p-2 rounded" placeholder="Transport Available (yes/no)" />
-              <input name="latitude" value={school.latitude || ''} onChange={onChange} className="border p-2 rounded" placeholder="Latitude" />
-              <input name="longitude" value={school.longitude || ''} onChange={onChange} className="border p-2 rounded" placeholder="Longitude" />
-            </div>
-          ) : (
-            <>
-              <Row label="City" value={school.city} />
-              <Row label="State" value={school.state} />
-              <Row label="Pin Code" value={school.pinCode || school.pincode} />
-              <Row label="Transport Available" value={school.transportAvailable} />
-              <Row label="Latitude" value={school.latitude} />
-              <Row label="Longitude" value={school.longitude} />
-            </>
-          )}
+          <Row label="City" value={school.city} />
+          <Row label="State" value={school.state} />
+          <Row label="Pin Code" value={school.pinCode || school.pincode} />
+          <Row label="Transport Available" value={school.transportAvailable} />
+          <Row label="Latitude" value={school.latitude} />
+          <Row label="Longitude" value={school.longitude} />
         </div>
       </Section>
     </div>

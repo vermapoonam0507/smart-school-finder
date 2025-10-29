@@ -118,8 +118,8 @@ export const addInternationalExposure = (data) =>
  * ============================
  */
 
-export const getSchoolById = (schoolId) =>
-  apiClient.get(`/admin/schools/${encodeURIComponent(schoolId)}`);
+export const getSchoolById = (schoolId, config) =>
+  apiClient.get(`/admin/schools/${encodeURIComponent(schoolId)}`, config);
 
 export const updateSchoolInfo = (schoolId, data) =>
   apiClient.put(`/admin/schools/${encodeURIComponent(schoolId)}`, data);
@@ -160,8 +160,16 @@ export const getFacultyById = (schoolId) =>
 export const updateFaculty = (schoolId, data) =>
   apiClient.put(`/admin/schools/faculty/${encodeURIComponent(schoolId)}`, data);
 
-export const getAdmissionTimelineById = (schoolId) =>
-  apiClient.get(`/admin/schools/admission-timeline/${encodeURIComponent(schoolId)}`);
+export const getAdmissionTimelineById = async (schoolId) => {
+  try {
+    return await apiClient.get(`/admin/schools/admission-timeline/${encodeURIComponent(schoolId)}`, {
+      headers: { 'X-Silent-Request': '1' }
+    });
+  } catch (e) {
+    if (e?.response?.status === 404) return { data: null };
+    throw e;
+  }
+};
 export const updateAdmissionTimeline = (schoolId, data) =>
   apiClient.put(`/admin/schools/admission-timeline/${encodeURIComponent(schoolId)}`, data);
 
@@ -175,8 +183,16 @@ export const getSafetyAndSecurityById = (schoolId) =>
 export const updateSafetyAndSecurity = (schoolId, data) =>
   apiClient.put(`/admin/schools/safety-security/${encodeURIComponent(schoolId)}`, data);
 
-export const getInternationalExposureById = (schoolId) =>
-  apiClient.get(`/admin/schools/international-exposure/${encodeURIComponent(schoolId)}`);
+export const getInternationalExposureById = async (schoolId) => {
+  try {
+    return await apiClient.get(`/admin/schools/international-exposure/${encodeURIComponent(schoolId)}`, {
+      headers: { 'X-Silent-Request': '1' }
+    });
+  } catch (e) {
+    if (e?.response?.status === 404) return { data: null };
+    throw e;
+  }
+};
 export const updateInternationalExposure = (schoolId, data) =>
   apiClient.put(`/admin/schools/international-exposure/${encodeURIComponent(schoolId)}`, data);
 
@@ -237,7 +253,7 @@ export const deleteSchool = (schoolId) => apiClient.delete(`/admin/schools/${sch
 export const checkSchoolProfileExists = async (authId) => {
   if (!authId) return { data: null };
   try {
-    const res = await getSchoolById(authId);
+    const res = await getSchoolById(authId, { headers: { 'X-Silent-Request': '1' } });
     return res;
   } catch (error) {
     const status = error?.response?.status;
@@ -265,8 +281,22 @@ export const getFeesAndScholarshipsById = (schoolId) =>
   apiClient.get(`/admin/schools/fees-scholarships/${encodeURIComponent(schoolId)}`);
 export const getAcademicsById = (schoolId) =>
   apiClient.get(`/admin/schools/academics/${encodeURIComponent(schoolId)}`);
+export const updateAcademics = (schoolId, data) =>
+  apiClient.put(`/admin/schools/academics/${encodeURIComponent(schoolId)}`, data);
 export const getOtherDetailsById = (schoolId) =>
   apiClient.get(`/admin/schools/other-details/${encodeURIComponent(schoolId)}`);
+
+// Update endpoints for sub-resources (used during edit mode to avoid duplicate key errors)
+export const updateAmenities = (schoolId, data) =>
+  apiClient.put(`/admin/schools/amenities/${encodeURIComponent(schoolId)}`, data);
+export const updateActivities = (schoolId, data) =>
+  apiClient.put(`/admin/schools/activities/${encodeURIComponent(schoolId)}`, data);
+export const updateInfrastructure = (schoolId, data) =>
+  apiClient.put(`/admin/schools/infrastructure/${encodeURIComponent(schoolId)}`, data);
+export const updateFeesAndScholarshipsById = (schoolId, data) =>
+  apiClient.put(`/admin/schools/fees-scholarships/${encodeURIComponent(schoolId)}`, data);
+export const updateOtherDetailsById = (schoolId, data) =>
+  apiClient.put(`/admin/schools/other-details/${encodeURIComponent(schoolId)}`, data);
 
 /**
  * ============================

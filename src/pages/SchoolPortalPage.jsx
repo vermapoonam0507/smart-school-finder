@@ -711,9 +711,10 @@ const SchoolPortalPage = ({ currentUser, onLogout, onRegister }) => {
           }
         } catch (_) {}
 
-        if (!found && (currentUser?.schoolId || currentUser?._id)) {
+        // Only try fetching by schoolId; avoid calling with auth _id (not a school id)
+        if (!found && currentUser?.schoolId) {
           try {
-            const byId = await getSchoolById(currentUser.schoolId || currentUser._id);
+            const byId = await getSchoolById(currentUser.schoolId, { headers: { 'X-Silent-Request': '1' } });
             const payload = byId?.data;
             found = payload?.data || payload || null;
             if (!found && byId?.status === 200) {

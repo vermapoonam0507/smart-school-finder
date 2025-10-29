@@ -20,7 +20,28 @@ import {
   addInternationalExposure,
   addAcademics,
   getSchoolById,
-  updateSchoolInfo
+  updateSchoolInfo,
+  getAmenitiesById,
+  getActivitiesById,
+  getInfrastructureById,
+  getFeesAndScholarshipsById,
+  getAcademicsById,
+  getOtherDetailsById,
+  getSafetyAndSecurityById,
+  getTechnologyAdoptionById,
+  getInternationalExposureById,
+  getFacultyById,
+  getAdmissionTimelineById,
+  updateAmenities,
+  updateActivities,
+  updateInfrastructure,
+  updateFeesAndScholarshipsById,
+  updateOtherDetailsById,
+  updateTechnologyAdoption,
+  updateSafetyAndSecurity,
+  updateInternationalExposure,
+  updateFaculty,
+  updateAdmissionTimeline
 } from "../api/adminService";
 
 
@@ -368,7 +389,7 @@ const RegistrationPage = () => {
     smartClassrooms: "", // Updated: matches backend field
     
     // Safety & Security Fields (matching backend SafetyAndSecurity model)
-    cctvCoveragePercentage: "", // Updated: matches backend field
+    cctvCoveragePercentage: 0, // default numeric to avoid uncontrolled->controlled warnings
     medicalFacility: {
       doctorAvailability: "", // Matches backend enum ['Full-time', 'Part-time', 'On-call', 'Not Available']
       medkitAvailable: false, // Matches backend field
@@ -671,37 +692,37 @@ const RegistrationPage = () => {
         authId: currentUser._id
       };
 
-      // EDIT MODE: Update base school info only
+      // Create or update school and resolve schoolId
+      let schoolId = editingSchoolId;
       if (isEditMode && editingSchoolId) {
         await updateSchoolInfo(editingSchoolId, payload);
-        toast.success("School details updated successfully.");
-        return;
+      } else {
+        const schoolResponse = await addSchool(payload);
+        schoolId = schoolResponse.data.data._id;
+        try { localStorage.setItem('lastCreatedSchoolId', String(schoolId)); } catch (_) {}
       }
-
-      // Create school first
-      const schoolResponse = await addSchool(payload);
-      const schoolId = schoolResponse.data.data._id;
-      try { localStorage.setItem('lastCreatedSchoolId', String(schoolId)); } catch (_) {}
 
       // Create related data in parallel
       const promises = [];
 
-      // Add amenities if any (matching backend Amenities model)
+      // Add/Update amenities
       if (formData.predefinedAmenities?.length > 0 || customAmenities?.length > 0) {
-        promises.push(addAmenities({
+        const payloadAmenities = {
           schoolId,
           predefinedAmenities: formData.predefinedAmenities || [],
           customAmenities: customAmenities || []
-        }));
+        };
+        promises.push(isEditMode ? updateAmenities(schoolId, payloadAmenities) : addAmenities(payloadAmenities));
       }
 
-      // Add activities if any (matching backend Activities model)
+      // Add/Update activities
       if (formData.activities?.length > 0 || customActivities?.length > 0) {
-        promises.push(addActivities({
+        const payloadActivities = {
           schoolId,
           activities: formData.activities || [],
           customActivities: customActivities || []
-        }));
+        };
+        promises.push(isEditMode ? updateActivities(schoolId, payloadActivities) : addActivities(payloadActivities));
       }
 
       // Add alumni if any
@@ -714,15 +735,23 @@ const RegistrationPage = () => {
         }));
       }
 
-      // Add infrastructure if any (matching backend Infrastructure model)
+      // Add/Update infrastructure
       if (formData.labs?.length > 0 || formData.sportsGrounds?.length > 0 || formData.libraryBooks || formData.smartClassrooms) {
-        promises.push(addInfrastructure({
+        const payloadInfra = {
           schoolId,
           labs: formData.labs || [],
           sportsGrounds: formData.sportsGrounds || [],
           libraryBooks: formData.libraryBooks ? Number(formData.libraryBooks) : undefined,
           smartClassrooms: formData.smartClassrooms ? Number(formData.smartClassrooms) : undefined
-        }));
+        };
+        if (isEditMode) {
+          // Try update; if not found or not created yet, fall back to create
+          promises.push(
+            updateInfrastructure(schoolId, payloadInfra).catch(() => addInfrastructure(payloadInfra))
+          );
+        } else {
+          promises.push(addInfrastructure(payloadInfra));
+        }
       }
 
       // Add fees and scholarships if any (matching backend FeesAndScholarships model)
@@ -750,16 +779,17 @@ const RegistrationPage = () => {
         }));
 
         if (validClassFees.length > 0 || validScholarships.length > 0 || formData.feesTransparency) {
-          promises.push(addFeesAndScholarships({
+          const payloadFees = {
             schoolId,
             feesTransparency: formData.feesTransparency ? Number(formData.feesTransparency) : undefined,
             classFees: validClassFees,
             scholarships: validScholarships
-          }));
+          };
+          promises.push(isEditMode ? updateFeesAndScholarshipsById(schoolId, payloadFees) : addFeesAndScholarships(payloadFees));
         }
       }
 
-      // Add Faculty Quality if any (matching backend Faculty model)
+      // Add/Update Faculty Quality
       if (facultyQuality && facultyQuality.length > 0) {
         const cleanFaculty = facultyQuality
           .filter(f => f.name || f.qualification || f.awards || f.experience !== undefined)
@@ -772,10 +802,8 @@ const RegistrationPage = () => {
           .filter(f => f.name && f.qualification && f.experience !== undefined);
         
         if (cleanFaculty.length > 0) {
-          promises.push(addFaculty({
-            schoolId,
-            facultyMembers: cleanFaculty
-          }));
+          const payloadFaculty = { schoolId, facultyMembers: cleanFaculty };
+          promises.push(isEditMode ? updateFaculty(schoolId, payloadFaculty) : addFaculty(payloadFaculty));
         }
       }
 
@@ -796,28 +824,27 @@ const RegistrationPage = () => {
           }));
         
         if (cleanTimelines.length > 0) {
-          promises.push(addAdmissionTimeline({
-            schoolId,
-            timelines: cleanTimelines
-          }));
+          const payloadTimeline = { schoolId, timelines: cleanTimelines };
+          promises.push(isEditMode ? updateAdmissionTimeline(schoolId, payloadTimeline) : addAdmissionTimeline(payloadTimeline));
         }
       }
 
-      // Add Technology Adoption if any (matching backend TechnologyAdoption model)
+      // Add/Update Technology Adoption
       if (formData.smartClassroomsPercentage || formData.eLearningPlatforms?.length > 0) {
-        promises.push(addTechnologyAdoption({
+        const payloadTech = {
           schoolId,
           smartClassroomsPercentage: formData.smartClassroomsPercentage ? Number(formData.smartClassroomsPercentage) : undefined,
           eLearningPlatforms: formData.eLearningPlatforms || []
-        }));
+        };
+        promises.push(isEditMode ? updateTechnologyAdoption(schoolId, payloadTech) : addTechnologyAdoption(payloadTech));
       }
 
-      // Add Safety & Security if any (matching backend SafetyAndSecurity model)
+      // Add/Update Safety & Security
       if (formData.cctvCoveragePercentage || formData.medicalFacility?.doctorAvailability || 
           formData.medicalFacility?.medkitAvailable || formData.medicalFacility?.ambulanceAvailable ||
           formData.transportSafety?.gpsTrackerAvailable || formData.transportSafety?.driversVerified ||
           formData.fireSafetyMeasures?.length > 0 || formData.visitorManagementSystem) {
-        promises.push(addSafetyAndSecurity({
+        const payloadSafety = {
           schoolId,
           cctvCoveragePercentage: formData.cctvCoveragePercentage ? Number(formData.cctvCoveragePercentage) : undefined,
           medicalFacility: {
@@ -831,7 +858,8 @@ const RegistrationPage = () => {
           },
           fireSafetyMeasures: formData.fireSafetyMeasures || [],
           visitorManagementSystem: formData.visitorManagementSystem || false
-        }));
+        };
+        promises.push(isEditMode ? updateSafetyAndSecurity(schoolId, payloadSafety) : addSafetyAndSecurity(payloadSafety));
       }
 
       // Add International Exposure if any (matching backend InternationalExposure model)
@@ -900,34 +928,32 @@ const RegistrationPage = () => {
           globalTieUps: validGlobalTieUps
         });
         
-        promises.push(addInternationalExposure({
-          schoolId,
-          exchangePrograms: validExchangePrograms,
-          globalTieUps: validGlobalTieUps
-        }));
+        const payloadIntl = { schoolId, exchangePrograms: validExchangePrograms, globalTieUps: validGlobalTieUps };
+        promises.push(isEditMode ? updateInternationalExposure(schoolId, payloadIntl) : addInternationalExposure(payloadIntl));
       } else {
         console.log('No valid international exposure data to send');
       }
 
-      // Add Academics if any (matching backend Academics model)
+      // Add/Update Academics
       if (formData.averageClass10Result || formData.averageClass12Result || formData.averageSchoolMarks || 
           formData.specialExamsTraining?.length > 0 || formData.extraCurricularActivities?.length > 0) {
-        promises.push(addAcademics({
+        const payloadAcademics = {
           schoolId,
           averageClass10Result: formData.averageClass10Result ? Number(formData.averageClass10Result) : undefined,
           averageClass12Result: formData.averageClass12Result ? Number(formData.averageClass12Result) : undefined,
           averageSchoolMarks: formData.averageSchoolMarks ? Number(formData.averageSchoolMarks) : 75, // Required field, default to 75
           specialExamsTraining: formData.specialExamsTraining || [],
           extraCurricularActivities: formData.extraCurricularActivities || []
-        }));
+        };
+        promises.push(isEditMode ? updateAcademics(schoolId, payloadAcademics) : addAcademics(payloadAcademics));
       }
 
-      // Add other details (matching backend OtherDetails model)
+      // Add/Update other details (matching backend OtherDetails model)
       if (formData.genderRatioMale || formData.genderRatioFemale || formData.genderRatioOthers ||
           formData.scholarshipDiversityTypes?.length > 0 || formData.scholarshipDiversityCoverage ||
           formData.specialNeedsStaff || formData.specialNeedsSupportPercentage ||
           formData.specialNeedsFacilities?.length > 0) {
-        promises.push(addOtherDetails({
+        const payloadOther = {
           schoolId,
           genderRatio: {
             male: formData.genderRatioMale ? Number(formData.genderRatioMale) : 0,
@@ -943,7 +969,8 @@ const RegistrationPage = () => {
             studentsSupportedPercentage: formData.specialNeedsSupportPercentage ? Number(formData.specialNeedsSupportPercentage) : undefined,
             facilitiesAvailable: formData.specialNeedsFacilities || []
           }
-        }));
+        };
+        promises.push(isEditMode ? updateOtherDetailsById(schoolId, payloadOther) : addOtherDetails(payloadOther));
       }
 
       // Wait for all related data to be created
@@ -1123,7 +1150,12 @@ const RegistrationPage = () => {
     }
     try {
       setIsSubmitting(true);
-      const res = await getSchoolById(currentUser._id);
+      const targetSchoolId = (typeof localStorage!== 'undefined' && localStorage.getItem('lastCreatedSchoolId')) || currentUser?.schoolId;
+      if (!targetSchoolId) {
+        toast.error("No linked school profile found for this account.");
+        return;
+      }
+      const res = await getSchoolById(targetSchoolId, { headers: { 'X-Silent-Request': '1' } });
       const school = res?.data?.data;
       if (!school) {
         toast.error("No school found for this account.");
@@ -1159,6 +1191,129 @@ const RegistrationPage = () => {
         specialist: Array.isArray(school.specialist) ? school.specialist : [],
         tags: Array.isArray(school.tags) ? school.tags : []
       }));
+      
+      // Load sub-resources in parallel and prefill form controls
+      const [
+        amenitiesRes,
+        activitiesRes,
+        infraRes,
+        feesRes,
+        academicsRes,
+        otherRes,
+        safetyRes,
+        techRes,
+        intlRes,
+        facultyRes,
+        timelineRes
+      ] = await Promise.allSettled([
+        getAmenitiesById(school._id),
+        getActivitiesById(school._id),
+        getInfrastructureById(school._id),
+        getFeesAndScholarshipsById(school._id),
+        getAcademicsById(school._id),
+        getOtherDetailsById(school._id),
+        getSafetyAndSecurityById(school._id),
+        getTechnologyAdoptionById(school._id),
+        getInternationalExposureById(school._id),
+        getFacultyById(school._id),
+        getAdmissionTimelineById(school._id)
+      ]);
+
+      const val = (s) => (s && s.status === 'fulfilled') ? (s.value?.data?.data ?? s.value?.data) : null;
+      const amenities = val(amenitiesRes) || {};
+      const activities = val(activitiesRes) || {};
+      const infra = val(infraRes) || {};
+      const fees = val(feesRes) || {};
+      const academics = val(academicsRes) || {};
+      const other = val(otherRes) || {};
+      const safety = val(safetyRes) || {};
+      const tech = val(techRes) || {};
+      const intl = val(intlRes) || {};
+      const faculty = val(facultyRes) || {};
+      const timeline = val(timelineRes) || {};
+
+      // Prefill arrays/booleans safely
+      setFormData(prev => ({
+        ...prev,
+        predefinedAmenities: Array.isArray(amenities.predefinedAmenities) ? amenities.predefinedAmenities : (Array.isArray(amenities.amenities) ? amenities.amenities : prev.predefinedAmenities),
+        activities: Array.isArray(activities.activities) ? activities.activities : prev.activities,
+        labs: Array.isArray(infra.labs) ? infra.labs : prev.labs,
+        sportsGrounds: Array.isArray(infra.sportsGrounds) ? infra.sportsGrounds : prev.sportsGrounds,
+        libraryBooks: infra.libraryBooks != null ? String(infra.libraryBooks) : prev.libraryBooks,
+        smartClassrooms: infra.smartClassrooms != null ? String(infra.smartClassrooms) : prev.smartClassrooms,
+        // Technology Adoption
+        smartClassroomsPercentage: tech.smartClassroomsPercentage != null ? String(tech.smartClassroomsPercentage) : prev.smartClassroomsPercentage,
+        eLearningPlatforms: Array.isArray(tech.eLearningPlatforms) ? tech.eLearningPlatforms : prev.eLearningPlatforms,
+        feesTransparency: fees.feesTransparency != null ? String(fees.feesTransparency) : prev.feesTransparency,
+        classFees: Array.isArray(fees.classFees) ? fees.classFees : prev.classFees,
+        scholarships: Array.isArray(fees.scholarships) ? fees.scholarships : prev.scholarships,
+        averageClass10Result: academics.averageClass10Result ?? prev.averageClass10Result,
+        averageClass12Result: academics.averageClass12Result ?? prev.averageClass12Result,
+        averageSchoolMarks: academics.averageSchoolMarks ?? prev.averageSchoolMarks,
+        specialExamsTraining: Array.isArray(academics.specialExamsTraining) ? academics.specialExamsTraining : prev.specialExamsTraining,
+        extraCurricularActivities: Array.isArray(academics.extraCurricularActivities) ? academics.extraCurricularActivities : prev.extraCurricularActivities,
+        // Safety & Security
+        cctvCoveragePercentage: safety.cctvCoveragePercentage != null ? String(safety.cctvCoveragePercentage) : prev.cctvCoveragePercentage,
+        medicalFacility: safety.medicalFacility ? {
+          doctorAvailability: safety.medicalFacility.doctorAvailability ?? prev.medicalFacility.doctorAvailability,
+          medkitAvailable: !!safety.medicalFacility.medkitAvailable,
+          ambulanceAvailable: !!safety.medicalFacility.ambulanceAvailable,
+        } : prev.medicalFacility,
+        transportSafety: safety.transportSafety ? {
+          gpsTrackerAvailable: !!safety.transportSafety.gpsTrackerAvailable,
+          driversVerified: !!safety.transportSafety.driversVerified,
+        } : prev.transportSafety,
+        fireSafetyMeasures: Array.isArray(safety.fireSafetyMeasures) ? safety.fireSafetyMeasures : prev.fireSafetyMeasures,
+        visitorManagementSystem: safety.visitorManagementSystem != null ? !!safety.visitorManagementSystem : prev.visitorManagementSystem,
+        genderRatio: other.genderRatio ? {
+          male: other.genderRatio.male ?? prev.genderRatio.male,
+          female: other.genderRatio.female ?? prev.genderRatio.female,
+          others: other.genderRatio.others ?? prev.genderRatio.others,
+        } : prev.genderRatio,
+        scholarshipDiversity: other.scholarshipDiversity ? {
+          types: Array.isArray(other.scholarshipDiversity.types) ? other.scholarshipDiversity.types : prev.scholarshipDiversity.types,
+          studentsCoveredPercentage: other.scholarshipDiversity.studentsCoveredPercentage ?? prev.scholarshipDiversity.studentsCoveredPercentage,
+        } : prev.scholarshipDiversity,
+        specialNeedsSupport: other.specialNeedsSupport ? {
+          dedicatedStaff: !!other.specialNeedsSupport.dedicatedStaff,
+          studentsSupportedPercentage: other.specialNeedsSupport.studentsSupportedPercentage ?? prev.specialNeedsSupport.studentsSupportedPercentage,
+          facilitiesAvailable: Array.isArray(other.specialNeedsSupport.facilitiesAvailable) ? other.specialNeedsSupport.facilitiesAvailable : prev.specialNeedsSupport.facilitiesAvailable,
+        } : prev.specialNeedsSupport,
+        // UI-flat mirrors for Other Details (to update existing inputs)
+        genderRatioMale: other.genderRatio && other.genderRatio.male != null ? String(other.genderRatio.male) : prev.genderRatioMale,
+        genderRatioFemale: other.genderRatio && other.genderRatio.female != null ? String(other.genderRatio.female) : prev.genderRatioFemale,
+        genderRatioOthers: other.genderRatio && other.genderRatio.others != null ? String(other.genderRatio.others) : prev.genderRatioOthers,
+        scholarshipDiversityTypes: Array.isArray(other.scholarshipDiversity?.types) ? other.scholarshipDiversity.types : prev.scholarshipDiversityTypes,
+        scholarshipDiversityCoverage: other.scholarshipDiversity && other.scholarshipDiversity.studentsCoveredPercentage != null ? String(other.scholarshipDiversity.studentsCoveredPercentage) : prev.scholarshipDiversityCoverage,
+        specialNeedsFacilities: Array.isArray(other.specialNeedsSupport?.facilitiesAvailable) ? other.specialNeedsSupport.facilitiesAvailable : prev.specialNeedsFacilities,
+        specialNeedsSupportPercentage: other.specialNeedsSupport && other.specialNeedsSupport.studentsSupportedPercentage != null ? String(other.specialNeedsSupport.studentsSupportedPercentage) : prev.specialNeedsSupportPercentage,
+        specialNeedsStaff: other.specialNeedsSupport ? !!other.specialNeedsSupport.dedicatedStaff : prev.specialNeedsStaff,
+        // Prefill Board Results visualization if available
+        academicResults: (prev.academicResults && prev.academicResults.length > 0) ? prev.academicResults : (
+          (academics && (academics.averageClass10Result || academics.averageClass12Result || academics.averageSchoolMarks)) ? [
+            { year: 'Class 10', passPercent: String(academics.averageClass10Result ?? ''), averageMarksPercent: String(academics.averageSchoolMarks ?? '') },
+            { year: 'Class 12', passPercent: String(academics.averageClass12Result ?? ''), averageMarksPercent: '' }
+          ] : prev.academicResults
+        ),
+        // International Exposure
+        exchangePrograms: Array.isArray(intl.exchangePrograms) ? intl.exchangePrograms : prev.exchangePrograms,
+        globalTieUps: Array.isArray(intl.globalTieUps) ? intl.globalTieUps : prev.globalTieUps,
+      }));
+
+      // Prefill complex UI-specific states
+      setCustomAmenities(Array.isArray(amenities.customAmenities) ? amenities.customAmenities : []);
+      setCustomActivities(Array.isArray(activities.customActivities) ? activities.customActivities : []);
+      setFamousAlumnies(Array.isArray((faculty.famousAlumnies)) ? faculty.famousAlumnies : []);
+      setTopAlumnies(Array.isArray((faculty.topAlumnies)) ? faculty.topAlumnies : []);
+      setOtherAlumnies(Array.isArray((faculty.otherAlumnies)) ? faculty.otherAlumnies : []);
+      setFacultyQuality(Array.isArray(faculty.facultyMembers) ? faculty.facultyMembers.map(m => ({
+        name: m.name || '',
+        qualification: m.qualification || '',
+        awards: Array.isArray(m.awards) ? m.awards.join(', ') : (m.awards || ''),
+        experience: m.experience ?? ''
+      })) : facultyQuality);
+      setAdmissionSteps(Array.isArray(timeline.timelines) ? timeline.timelines : Array.isArray(timeline) ? timeline : []);
+
       toast.success("Loaded your existing school details. You can update and save.");
     } catch (e) {
       toast.error(e?.response?.data?.message || "Failed to load school details.");
