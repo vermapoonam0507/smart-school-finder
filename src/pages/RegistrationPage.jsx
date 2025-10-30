@@ -980,9 +980,34 @@ const RegistrationPage = () => {
       }
 
       // Add/Update Academics
+      // Validate and clean academic results (Board Results)
+      const validAcademicResults = (academicResults || []).filter(result => 
+        result.year && (result.passPercent || result.averageMarksPercent)
+      ).map(result => ({
+        year: result.year,
+        passPercent: result.passPercent ? Number(result.passPercent) : undefined,
+        averageMarksPercent: result.averageMarksPercent ? Number(result.averageMarksPercent) : undefined
+      }));
+
+      // Validate and clean exam qualifiers
+      const validExamQualifiers = (examQualifiers || []).filter(qualifier => 
+        qualifier.year && qualifier.exam && qualifier.participation
+      ).map(qualifier => ({
+        year: qualifier.year,
+        exam: qualifier.exam,
+        participation: qualifier.participation
+      }));
+
+      console.log('📊 Academics Data to Save:', {
+        validAcademicResults,
+        validExamQualifiers,
+        rawAcademicResults: academicResults,
+        rawExamQualifiers: examQualifiers
+      });
+
       if (formData.averageClass10Result || formData.averageClass12Result || formData.averageSchoolMarks || 
           formData.specialExamsTraining?.length > 0 || formData.extraCurricularActivities?.length > 0 ||
-          examQualifiers?.length > 0 || academicResults?.length > 0) {
+          validExamQualifiers.length > 0 || validAcademicResults.length > 0) {
         const payloadAcademics = {
           schoolId,
           averageClass10Result: formData.averageClass10Result ? Number(formData.averageClass10Result) : undefined,
@@ -990,9 +1015,9 @@ const RegistrationPage = () => {
           averageSchoolMarks: formData.averageSchoolMarks ? Number(formData.averageSchoolMarks) : 75, // Required field, default to 75
           specialExamsTraining: formData.specialExamsTraining || [],
           extraCurricularActivities: formData.extraCurricularActivities || [],
-          // Add exam qualifiers and academic results
-          examQualifiers: examQualifiers || [],
-          academicResults: academicResults || []
+          // Add validated exam qualifiers and academic results
+          examQualifiers: validExamQualifiers,
+          academicResults: validAcademicResults
         };
         promises.push(updateOrAdd(updateAcademics, addAcademics, schoolId, payloadAcademics));
       }
@@ -1444,6 +1469,11 @@ const RegistrationPage = () => {
       setAdmissionSteps(Array.isArray(timeline.timelines) ? timeline.timelines : Array.isArray(timeline) ? timeline : []);
       
       // Load academic performance trends and exam qualifiers
+      console.log('📚 Loading Academics from Backend:', {
+        academicResults: academics.academicResults,
+        examQualifiers: academics.examQualifiers,
+        fullAcademics: academics
+      });
       setAcademicResults(Array.isArray(academics.academicResults) ? academics.academicResults : academicResults);
       setExamQualifiers(Array.isArray(academics.examQualifiers) ? academics.examQualifiers : examQualifiers);
 
