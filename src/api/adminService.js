@@ -35,19 +35,19 @@ export const getAllUsers = () => apiClient.get('/admin/users');
  */
 
 // Check if application exists for student
-export const checkApplicationExists = (studId) => apiClient.get(`/api/applications/${studId}`);
+export const checkApplicationExists = (studId) => apiClient.get(`/applications/${studId}`);
 
 // Create new application
-export const createApplication = (data) => apiClient.post('/api/applications/', data);
+export const createApplication = (data) => apiClient.post('/applications/', data);
 
 // Get application by student ID
-export const getApplicationByStudentId = (studId) => apiClient.get(`/api/applications/${studId}`);
+export const getApplicationByStudentId = (studId) => apiClient.get(`/applications/${studId}`);
 
 // Update application
-export const updateApplication = (studId, data) => apiClient.put(`/api/applications/${studId}`, data);
+export const updateApplication = (studId, data) => apiClient.put(`/applications/${studId}`, data);
 
 // Delete application
-export const deleteApplication = (studId) => apiClient.delete(`/api/applications/${studId}`);
+export const deleteApplication = (studId) => apiClient.delete(`/applications/${studId}`);
 
 // Submit form to school
 export const submitFormToSchool = (schoolId, studId, formId) => 
@@ -83,7 +83,7 @@ export const handleApplicationFlow = (studId, schoolId, applicationData = null) 
 
 // Update existing application (Scenario C)
 export const updateExistingApplication = (studId, updateData) => {
-  return apiClient.put(`/api/applications/${studId}`, updateData);
+  return apiClient.put(`/applications/${studId}`, updateData);
 };
 
 /**
@@ -305,10 +305,10 @@ export const updateOtherDetailsById = (schoolId, data) =>
  */
 
 export const getStudentApplicationsBySchool = (schoolId) =>
-  apiClient.get(`/api/applications?schoolId=${encodeURIComponent(schoolId)}`);
+  apiClient.get(`/applications?schoolId=${encodeURIComponent(schoolId)}`);
 
 export const getStudentApplicationsBySchoolEmail = (schoolEmail) =>
-  apiClient.get(`/api/applications?schoolEmail=${encodeURIComponent(schoolEmail)}`);
+  apiClient.get(`/applications?schoolEmail=${encodeURIComponent(schoolEmail)}`);
 
 export const getAllStudentApplications = () =>
-  apiClient.get('/api/applications');
+  apiClient.get('/applications');

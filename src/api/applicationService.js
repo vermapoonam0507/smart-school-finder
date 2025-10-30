@@ -33,7 +33,7 @@ import apiClient from './axios';
  */
 export const checkApplicationExists = async (studId) => {
   try {
-    const response = await apiClient.get(`/api/applications/${studId}`);
+    const response = await apiClient.get(`/applications/${studId}`);
     return response.data;
   } catch (error) {
     if (error.response?.status === 404) {
@@ -53,7 +53,7 @@ export const checkApplicationExists = async (studId) => {
  */
 export const createApplication = async (applicationData) => {
   try {
-    const response = await apiClient.post('/api/applications/', applicationData);
+    const response = await apiClient.post('/applications/', applicationData);
     return response.data;
   } catch (error) {
     console.error('Error creating application:', error.response?.data || error.message);
@@ -68,7 +68,7 @@ export const createApplication = async (applicationData) => {
  */
 export const getApplicationByStudentId = async (studId) => {
   try {
-    const response = await apiClient.get(`/api/applications/${studId}`);
+    const response = await apiClient.get(`/applications/${studId}`);
     return response.data;
   } catch (error) {
     console.error('Error fetching application:', error.response?.data || error.message);
@@ -84,7 +84,7 @@ export const getApplicationByStudentId = async (studId) => {
  */
 export const updateApplication = async (studId, updateData) => {
   try {
-    const response = await apiClient.put(`/api/applications/${studId}`, updateData);
+    const response = await apiClient.put(`/applications/${studId}`, updateData);
     return response.data;
   } catch (error) {
     console.error('Error updating application:', error.response?.data || error.message);
@@ -99,7 +99,7 @@ export const updateApplication = async (studId, updateData) => {
  */
 export const deleteApplication = async (studId) => {
   try {
-    const response = await apiClient.delete(`/api/applications/${studId}`);
+    const response = await apiClient.delete(`/applications/${studId}`);
     return response.data;
   } catch (error) {
     console.error('Error deleting application:', error.response?.data || error.message);
@@ -480,7 +480,7 @@ export const handleApplicationFlow = async (studId, schoolId, applicationData = 
  */
 export const updateExistingApplication = async (studId, updateData) => {
   try {
-    const response = await apiClient.put(`/api/applications/${studId}`, updateData);
+    const response = await apiClient.put(`/applications/${studId}`, updateData);
     return response.data;
   } catch (error) {
     console.error('Error updating application:', error.response?.data || error.message);

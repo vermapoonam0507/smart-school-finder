@@ -255,7 +255,7 @@ export const saveUserPreferences = async (studentId, preferenceData) => {
 
 export const submitApplication = async (applicationData) => {
   try {
-    const response = await apiClient.post('/api/applications/', applicationData);
+    const response = await apiClient.post('/applications/', applicationData);
     return response.data;
   } catch (error) {
     console.error("Error submitting application:", error.response?.data || error.message);
@@ -265,7 +265,7 @@ export const submitApplication = async (applicationData) => {
 
 export const getApplication = async (studId) => {
   try {
-    const response = await apiClient.get(`/api/applications/${studId}`);
+    const response = await apiClient.get(`/applications/${studId}`);
     return response.data;
   } catch (error) {
     if (error.response?.status === 404) return { data: null, status: 'Not Found' };
