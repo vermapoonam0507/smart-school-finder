@@ -11,7 +11,7 @@ import apiClient from './axios';
 
 export const getShortlist = async (authId) => {
   try {
-    const response = await apiClient.get(`users/shortlist/${authId}`);
+    const response = await apiClient.get(`/users/shortlist/${authId}`);
     return response.data;
   } catch (error) {
     // Handle "Student not found" error gracefully
@@ -28,7 +28,7 @@ export const getShortlist = async (authId) => {
 
 export const addToShortlist = async (authId, schoolId) => {
   try {
-    const response = await apiClient.post('/api/users/shortlist', { authId, schoolId });
+    const response = await apiClient.post('/users/shortlist', { authId, schoolId });
     return response.data;
   } catch (error) {
     console.error("Error adding to shortlist:", error.response?.data || error.message);
@@ -38,7 +38,7 @@ export const addToShortlist = async (authId, schoolId) => {
 
 export const removeFromShortlist = async (authId, schoolId) => {
   try {
-    const response = await apiClient.post('/api/users/shortlist/remove', { authId, schoolId });
+    const response = await apiClient.post('/users/shortlist/remove', { authId, schoolId });
     return response.data;
   } catch (error) {
     console.error("Error removing from shortlist:", error.response?.data || error.message);
@@ -48,7 +48,7 @@ export const removeFromShortlist = async (authId, schoolId) => {
 
 export const getShortlistCount = async (authId) => {
   try {
-    const response = await apiClient.get(`/api/users/shortlist/count/${authId}`);
+    const response = await apiClient.get(`/users/shortlist/count/${authId}`);
     return response.data;
   } catch (error) {
     console.error("Error fetching shortlist count:", error.response?.data || error.message);

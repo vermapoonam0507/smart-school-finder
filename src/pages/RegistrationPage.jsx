@@ -63,7 +63,7 @@ const FormField = ({
     required,
     onChange,
     className:
-      "w-full px-4 py-3 mt-2 border-2 border-gray-200 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-300 hover:border-gray-300 hover:shadow-md bg-white/80 backdrop-blur-sm",
+      "w-full px-4 py-3 mt-2 border-2 border-gray-200 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white",
   };
 
   const renderInput = () => {
@@ -105,14 +105,13 @@ const FormField = ({
   };
 
   return (
-    <div className="group">
-      <label htmlFor={name} className="block text-sm font-semibold text-gray-700 mb-2 group-hover:text-indigo-600 transition-colors duration-300">
+    <div>
+      <label htmlFor={name} className="block text-sm font-semibold text-gray-700 mb-2">
         {label}
         {required && <span className="text-red-500 ml-1">*</span>}
       </label>
-      <div className="relative">
+      <div>
         {renderInput()}
-        <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-indigo-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
       </div>
     </div>
   );
@@ -947,14 +946,18 @@ const RegistrationPage = () => {
 
       // Add/Update Academics
       if (formData.averageClass10Result || formData.averageClass12Result || formData.averageSchoolMarks || 
-          formData.specialExamsTraining?.length > 0 || formData.extraCurricularActivities?.length > 0) {
+          formData.specialExamsTraining?.length > 0 || formData.extraCurricularActivities?.length > 0 ||
+          examQualifiers?.length > 0 || academicResults?.length > 0) {
         const payloadAcademics = {
           schoolId,
           averageClass10Result: formData.averageClass10Result ? Number(formData.averageClass10Result) : undefined,
           averageClass12Result: formData.averageClass12Result ? Number(formData.averageClass12Result) : undefined,
           averageSchoolMarks: formData.averageSchoolMarks ? Number(formData.averageSchoolMarks) : 75, // Required field, default to 75
           specialExamsTraining: formData.specialExamsTraining || [],
-          extraCurricularActivities: formData.extraCurricularActivities || []
+          extraCurricularActivities: formData.extraCurricularActivities || [],
+          // Add exam qualifiers and academic results
+          examQualifiers: examQualifiers || [],
+          academicResults: academicResults || []
         };
         promises.push(isEditMode ? updateAcademics(schoolId, payloadAcademics) : addAcademics(payloadAcademics));
       }
@@ -1224,12 +1227,25 @@ const RegistrationPage = () => {
           school = schools.find(s => s.authId === currentUser._id);
           
           if (school) {
-            console.log('✅ Found school by filtering schools with authId');
-            // Cache it for future use
+            console.log('✅ Found school by authId match');
             localStorage.setItem('lastCreatedSchoolId', school._id);
           } else {
-            console.log('❌ No school found with authId:', currentUser._id);
-            console.log('Available schools authIds:', schools.map(s => s.authId));
+            console.log('⚠️ No school found with authId, trying email match...');
+            
+            // Fallback: Try to match by email (for schools created before authId was added)
+            if (currentUser.email) {
+              school = schools.find(s => s.email && s.email.toLowerCase() === currentUser.email.toLowerCase());
+              
+              if (school) {
+                console.log('✅ Found school by email match');
+                localStorage.setItem('lastCreatedSchoolId', school._id);
+              } else {
+                console.log('❌ No school found with authId or email');
+                console.log('Your authId:', currentUser._id);
+                console.log('Your email:', currentUser.email);
+                console.log('Sample school data:', schools[0]);
+              }
+            }
           }
         } catch (e) {
           console.log('❌ Could not fetch schools:', e.message);
@@ -1624,12 +1640,14 @@ const RegistrationPage = () => {
                   name="latitude"
                   value={formData.latitude}
                   onChange={handleInputChange}
+                  required
                 />
                 <FormField
                   label="Longitude (GPS)"
                   name="longitude"
                   value={formData.longitude}
                   onChange={handleInputChange}
+                  required
                 />
                 <button
                   type="button"

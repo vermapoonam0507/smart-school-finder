@@ -1062,31 +1062,6 @@ const SchoolDetailsPage = ({ shortlist, onShortlistToggle }) => {
                 )}
               </div>
 
-              {/* Library Resources */}
-              <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Library Resources</h3>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Total Books</span>
-                    <span className="text-sm font-medium text-gray-800">
-                      {infrastructure.libraryBooks ? infrastructure.libraryBooks.toLocaleString() : 'N/A'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Digital Resources</span>
-                    <span className="text-sm font-medium text-gray-800">
-                      {infrastructure.digitalResources || 'N/A'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Reading Rooms</span>
-                    <span className="text-sm font-medium text-gray-800">
-                      {infrastructure.readingRooms || 'N/A'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
               {/* Sports Grounds */}
               <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Sports Grounds</h3>
@@ -1238,7 +1213,9 @@ const SchoolDetailsPage = ({ shortlist, onShortlistToggle }) => {
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">Routes Available</span>
                     <span className="text-sm font-medium text-gray-800">
-                      {safetyAndSecurity.transportSafety?.routesAvailable || 'N/A'}
+                      {safetyAndSecurity.transportRoutes && Array.isArray(safetyAndSecurity.transportRoutes) && safetyAndSecurity.transportRoutes.length > 0
+                        ? `${safetyAndSecurity.transportRoutes.length} routes`
+                        : safetyAndSecurity.transportSafety?.routesAvailable || 'N/A'}
                     </span>
                   </div>
                 </div>
@@ -1450,59 +1427,6 @@ const SchoolDetailsPage = ({ shortlist, onShortlistToggle }) => {
               </div>
             </div>
 
-            {/* Digital Learning Tools Section */}
-            <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-              <div className="flex items-center mb-6">
-                <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mr-3">
-                  <CheckCircle size={16} className="text-purple-600" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-800">Digital Learning Tools</h3>
-              </div>
-              
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                
-                {/* Interactive Whiteboards */}
-                <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                  <div className="flex items-center">
-                    <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center mr-3">
-                      <CheckCircle size={12} className="text-purple-600" />
-                    </div>
-                    <span className="text-sm font-medium text-gray-700">Interactive Whiteboards</span>
-                  </div>
-                </div>
-
-                {/* Tablets for Learning */}
-                <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                  <div className="flex items-center">
-                    <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center mr-3">
-                      <CheckCircle size={12} className="text-purple-600" />
-                    </div>
-                    <span className="text-sm font-medium text-gray-700">Tablets for Learning</span>
-                  </div>
-                </div>
-
-                {/* Online Assessment Tools */}
-                <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                  <div className="flex items-center">
-                    <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center mr-3">
-                      <CheckCircle size={12} className="text-purple-600" />
-                    </div>
-                    <span className="text-sm font-medium text-gray-700">Online Assessment Tools</span>
-                  </div>
-                </div>
-
-                {/* Virtual Labs */}
-                <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                  <div className="flex items-center">
-                    <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center mr-3">
-                      <CheckCircle size={12} className="text-purple-600" />
-                    </div>
-                    <span className="text-sm font-medium text-gray-700">Virtual Labs</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             {/* Technology Integration Details */}
             {technologyAdoption?.technologyIntegration && (
               <div className="mt-6 bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
@@ -1569,81 +1493,6 @@ const SchoolDetailsPage = ({ shortlist, onShortlistToggle }) => {
                 </div>
               </div>
 
-              {/* Performance Trends Card */}
-              <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-                <div className="flex items-center mb-4">
-                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                    <BookOpen size={16} className="text-blue-600" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-800">Performance Trends (Last 4 Years)</h3>
-                </div>
-                
-                {school.academicResults && school.academicResults.length > 0 ? (
-                  <div className="space-y-3">
-                    {school.academicResults
-                      .filter(result => result.year && (result.passPercent || result.averageMarksPercent))
-                      .sort((a, b) => Number(b.year) - Number(a.year))
-                      .slice(0, 4)
-                      .map((result, index) => (
-                        <div key={index} className="flex justify-between items-center">
-                          <span className="text-sm font-medium text-gray-700">{result.year}</span>
-                          <div className="flex gap-4 text-sm">
-                            <span className="text-gray-600">
-                              Pass: <span className="font-semibold text-gray-800">{result.passPercent || 'N/A'}%</span>
-                            </span>
-                            <span className="text-gray-600">
-                              Avg: <span className="font-semibold text-gray-800">{result.averageMarksPercent || 'N/A'}%</span>
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                ) : (
-                  <div className="text-sm text-gray-500 text-center py-4">
-                    No performance data available
-                  </div>
-                )}
-              </div>
-
-              {/* Competitive Exam Qualifiers Card */}
-              <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-                <div className="flex items-center mb-4">
-                  <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mr-3">
-                    <Award size={16} className="text-purple-600" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-800">Competitive Exam Qualifiers</h3>
-                </div>
-                
-                {school.examQualifiers && school.examQualifiers.length > 0 ? (
-                  <div className="space-y-3">
-                    {school.examQualifiers
-                      .filter(qualifier => qualifier.year && qualifier.exam)
-                      .slice(0, 3)
-                      .map((qualifier, index) => {
-                        const colors = ['text-green-600', 'text-blue-600', 'text-purple-600'];
-                        const examColors = {
-                          'NEET': 'text-green-600',
-                          'IIT-JEE': 'text-blue-600', 
-                          'JEE': 'text-blue-600',
-                          'Olympiad': 'text-purple-600',
-                          'Olympiads': 'text-purple-600'
-                        };
-                        return (
-                          <div key={index} className="flex justify-between items-center">
-                            <span className="text-sm font-medium text-gray-700">{qualifier.exam}</span>
-                            <span className={`text-sm font-semibold ${examColors[qualifier.exam] || colors[index % colors.length]}`}>
-                              {qualifier.participation || 'N/A'}
-                            </span>
-                          </div>
-                        );
-                      })}
-                  </div>
-                ) : (
-                  <div className="text-sm text-gray-500 text-center py-4">
-                    No exam qualifier data available
-                  </div>
-                )}
-              </div>
             </div>
 
             {/* Board Results by Year */}

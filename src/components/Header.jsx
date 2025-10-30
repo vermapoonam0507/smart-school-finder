@@ -61,8 +61,14 @@ const Header = ({ isMobileMenuOpen, setMobileMenuOpen, compareCount, shortlistCo
             </>
         ) : (
             <>
-                <Link to="/login" className="text-gray-600 hover:text-blue-600">Sign In</Link>
-                <button onClick={handleRegisterClick} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Register Your School</button>
+                <div className="flex items-center gap-2 border-r border-gray-300 pr-4">
+                  <User size={16} className="text-gray-500" />
+                  <Link to="/login" className="text-gray-600 hover:text-blue-600 font-medium">User/Parent Login</Link>
+                </div>
+                <div className="flex items-center gap-2">
+                  <School size={16} className="text-blue-600" />
+                  <Link to="/signup-school" className="text-blue-600 hover:text-blue-700 font-medium">School Login</Link>
+                </div>
             </>
         )}
       </div>
@@ -108,8 +114,14 @@ const Header = ({ isMobileMenuOpen, setMobileMenuOpen, compareCount, shortlistCo
             </>
           ) : (
             <>
-              
-              <Link to="/login" className="block w-full text-center text-gray-600 hover:text-blue-600 mb-2 py-2" onClick={() => setMobileMenuOpen(false)}>Sign In</Link>
+              <Link to="/login" className="flex items-center justify-center gap-2 w-full text-center text-gray-600 hover:text-blue-600 mb-3 py-2 border-b border-gray-200" onClick={() => setMobileMenuOpen(false)}>
+                <User size={16} />
+                <span className="font-medium">User/Parent Login</span>
+              </Link>
+              <Link to="/signup-school" className="flex items-center justify-center gap-2 w-full text-center text-blue-600 hover:text-blue-700 py-2" onClick={() => setMobileMenuOpen(false)}>
+                <School size={16} />
+                <span className="font-medium">School Login</span>
+              </Link>
             </>
           )}
         </div>

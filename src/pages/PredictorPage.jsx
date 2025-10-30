@@ -11,12 +11,11 @@ const schoolTypes = [
 ];
 
 const shiftOptions = [
-  'Morning Shift', 'Afternoon Shift', 'Evening Shift', 'Full Day',
-  'morning', 'afternoon', 'night school'
+  'Morning Shift', 'Afternoon Shift', 'Evening Shift', 'Full Day'
 ];
 
 const genderOptions = [
-  'Male', 'Female', 'Co-educational', 'boy', 'girl', 'co-ed'
+  'Male', 'Female', 'Co-educational'
 ];
 
 const stateOptions = [
@@ -156,8 +155,15 @@ const PredictorPage = () => {
     );
   };
 
-  const handleGetSchools = async () => {
+  const handleGetSchools = async (e) => {
+    // Prevent any default form behavior
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
     if (!validateForm()) {
+      toast.error('Please fill in all required fields');
       return;
     }
 
@@ -182,12 +188,18 @@ const PredictorPage = () => {
         activities: formData.interests ? [formData.interests] : []
       };
 
+      console.log('🔍 School Predictor - Searching with payload:', payload);
       const resp = await predictSchools(payload);
       const list = Array.isArray(resp?.data) ? resp.data : Array.isArray(resp) ? resp : [];
+      console.log('✅ School Predictor - Found', list.length, 'schools');
       setSearchResults(list);
+      
+      if (list.length === 0) {
+        toast.info('No schools found matching your criteria. Try adjusting your preferences.');
+      }
     } catch (error) {
-      console.error('Prediction error:', error);
-      toast.error('Failed to fetch school predictions');
+      console.error('❌ Prediction error:', error);
+      toast.error('Failed to fetch school predictions. Please try again.');
       setSearchResults([]);
     } finally {
       setIsLoading(false);
@@ -294,7 +306,7 @@ const PredictorPage = () => {
             </p>
           </div>
 
-          <form onSubmit={(e) => { e.preventDefault(); handleGetSchools(); }} className="space-y-6">
+          <form onSubmit={handleGetSchools} className="space-y-6">
             <DropdownField
               label="Select School Type"
               field="schoolType"

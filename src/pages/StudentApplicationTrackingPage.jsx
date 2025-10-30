@@ -228,7 +228,13 @@ const StudentApplicationTrackingPage = () => {
 
     if (studId) {
       console.log('🔗 Opening PDF for student:', studId, 'Type:', typeof studId);
-      window.open(`/api/users/pdf/view/${studId}`, '_blank');
+      // Construct URL properly for both dev and production
+      const apiBaseURL = import.meta.env.DEV ? '' : import.meta.env.VITE_API_BASE_URL || 'https://backend-tc-sa-v2.onrender.com/api';
+      const pdfUrl = import.meta.env.DEV
+        ? `/api/users/pdf/view/${studId}`
+        : `${apiBaseURL}/users/pdf/view/${studId}`;
+      console.log('📄 PDF URL:', pdfUrl);
+      window.open(pdfUrl, '_blank');
     } else {
       toast.error('Unable to view details: Student ID not found');
       console.warn('No student ID found for application:', application);

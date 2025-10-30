@@ -213,6 +213,68 @@ const SchoolProfileView = () => {
         </div>
       </Section>
 
+      {academics && academics.examQualifiers && academics.examQualifiers.length > 0 && (
+        <Section title="🏆 Competitive Exam Qualifiers">
+          <div className="overflow-x-auto">
+            <table className="min-w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Year</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Exam</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Students Participated</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {academics.examQualifiers.map((qualifier, index) => (
+                  <tr key={index}>
+                    <td className="px-4 py-2 text-sm text-gray-900">{qualifier.year}</td>
+                    <td className="px-4 py-2 text-sm">
+                      <span className="bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full text-xs font-medium">
+                        {qualifier.exam}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2 text-sm text-gray-600">{qualifier.participation}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Section>
+      )}
+
+      {academics && academics.academicResults && academics.academicResults.length > 0 && (
+        <Section title="📊 Yearly Performance Data">
+          <div className="overflow-x-auto">
+            <table className="min-w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Year</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Pass Percentage</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Average Marks %</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {academics.academicResults.map((result, index) => (
+                  <tr key={index}>
+                    <td className="px-4 py-2 text-sm text-gray-900">{result.year}</td>
+                    <td className="px-4 py-2 text-sm">
+                      <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium">
+                        {result.passPercent}%
+                      </span>
+                    </td>
+                    <td className="px-4 py-2 text-sm">
+                      <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium">
+                        {result.averageMarksPercent}%
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Section>
+      )}
+
       {amenities && (
         <Section title="Amenities">
           <div className="divide-y">

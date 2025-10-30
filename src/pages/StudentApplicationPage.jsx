@@ -316,17 +316,33 @@ const StudentApplicationPage = () => {
     const loadExistingApplication = async () => {
         try {
             const response = await checkApplicationExists(currentUser._id);
-            if (response) {
+            if (response && response.data) {
                 setExistingApplication(response.data);
-                // Pre-populate form with existing data
+                const appData = response.data;
+                
+                // Pre-populate form with existing data, ensuring all fields are properly mapped
                 setFormData(prevData => ({
                     ...prevData,
-                    ...response.data
+                    ...appData,
+                    // Ensure specific fields are properly set even if they're undefined
+                    name: appData.name || prevData.name,
+                    location: appData.location || prevData.location,
+                    dob: appData.dob || prevData.dob,
+                    age: appData.age || prevData.age,
+                    gender: appData.gender || prevData.gender,
+                    motherTongue: appData.motherTongue || prevData.motherTongue
                 }));
+                
+                // Handle siblings separately as it's an array
+                if (appData.siblings && Array.isArray(appData.siblings) && appData.siblings.length > 0) {
+                    setSiblings(appData.siblings);
+                }
+                
+                console.log('✅ Existing application loaded successfully:', appData);
                 toast.info('Existing application loaded. You can update the information.');
             }
         } catch (error) {
-            console.error('Error loading existing application:', error);
+            console.error('❌ Error loading existing application:', error);
             toast.error('Failed to load existing application');
         }
     };

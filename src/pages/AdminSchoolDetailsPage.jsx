@@ -13,7 +13,8 @@ import {
   getAdmissionTimelineById,
   getTechnologyAdoptionById,
   getSafetyAndSecurityById,
-  getInternationalExposureById
+  getInternationalExposureById,
+  updateSchoolStatus
 } from "../api/adminService";
 import { toast } from "react-toastify";
 import {
@@ -37,6 +38,7 @@ import {
   Instagram,
   Twitter,
   Linkedin,
+  XCircle,
 } from "lucide-react";
 
 const InfoBox = ({ icon, label, value }) => (
@@ -69,6 +71,8 @@ const AdminSchoolDetailsPage = () => {
   const [technologyAdoption, setTechnologyAdoption] = useState(null);
   const [safetyAndSecurity, setSafetyAndSecurity] = useState(null);
   const [internationalExposure, setInternationalExposure] = useState(null);
+  const [isAccepting, setIsAccepting] = useState(false);
+  const [isRejecting, setIsRejecting] = useState(false);
 
   useEffect(() => {
     if (!schoolId) return;
@@ -385,6 +389,51 @@ const AdminSchoolDetailsPage = () => {
     fetchAdditionalDetails();
   }, [schoolId, navigate]);
 
+  const handleAcceptSchool = async () => {
+    if (!schoolId) {
+      toast.error('School ID is missing');
+      return;
+    }
+    try {
+      setIsAccepting(true);
+      await updateSchoolStatus(schoolId, 'accepted');
+      toast.success('School accepted successfully!');
+      // Update local state to reflect the change
+      setSchool(prev => ({ ...prev, status: 'accepted' }));
+      // Optionally navigate back to dashboard after a short delay
+      setTimeout(() => {
+        navigate('/admin/dashboard');
+      }, 1500);
+    } catch (error) {
+      console.error('Failed to accept school:', error);
+      toast.error('Failed to accept school');
+    } finally {
+      setIsAccepting(false);
+    }
+  };
+
+  const handleRejectSchool = async () => {
+    if (!schoolId) {
+      toast.error('School ID is missing');
+      return;
+    }
+    try {
+      setIsRejecting(true);
+      await updateSchoolStatus(schoolId, 'rejected');
+      toast.success('School rejected successfully!');
+      // Update local state to reflect the change
+      setSchool(prev => ({ ...prev, status: 'rejected' }));
+      // Optionally navigate back to dashboard after a short delay
+      setTimeout(() => {
+        navigate('/admin/dashboard');
+      }, 1500);
+    } catch (error) {
+      console.error('Failed to reject school:', error);
+      toast.error('Failed to reject school');
+    } finally {
+      setIsRejecting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -528,12 +577,72 @@ const AdminSchoolDetailsPage = () => {
           </div>
           
           <div className="mt-6 flex flex-wrap gap-3">
+            {/* Status Badge */}
+            {school.status && (
+              <div className="w-full mb-2">
+                <span className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium ${
+                  school.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                  school.status === 'accepted' ? 'bg-green-100 text-green-800' :
+                  school.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                  'bg-gray-100 text-gray-800'
+                }`}>
+                  {school.status === 'pending' && <Clock className="h-4 w-4 mr-2" />}
+                  {school.status === 'accepted' && <CheckCircle className="h-4 w-4 mr-2" />}
+                  {school.status === 'rejected' && <XCircle className="h-4 w-4 mr-2" />}
+                  Status: {school.status ? school.status.charAt(0).toUpperCase() + school.status.slice(1) : 'Unknown'}
+                </span>
+              </div>
+            )}
+
+            {/* Approval Buttons - Only show if status is pending */}
+            {school.status === 'pending' && (
+              <>
+                <button
+                  onClick={handleAcceptSchool}
+                  disabled={isAccepting || isRejecting}
+                  className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-md"
+                >
+                  {isAccepting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Accepting...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="h-5 w-5 mr-2" />
+                      Accept School
+                    </>
+                  )}
+                </button>
+                
+                <button
+                  onClick={handleRejectSchool}
+                  disabled={isAccepting || isRejecting}
+                  className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-md"
+                >
+                  {isRejecting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Rejecting...
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="h-5 w-5 mr-2" />
+                      Reject School
+                    </>
+                  )}
+                </button>
+              </>
+            )}
+
+            {/* Visit Website Button */}
             <a
               href={school.website}
               target="_blank"
               rel="noopener noreferrer"
-              className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+              className="inline-flex items-center justify-center px-6 py-3 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-md"
             >
+              <Globe className="h-5 w-5 mr-2" />
               Visit Website
             </a>
           </div>
@@ -908,6 +1017,72 @@ const AdminSchoolDetailsPage = () => {
                       {activity}
                     </span>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {/* Competitive Exam Qualifiers */}
+            {academics.examQualifiers && academics.examQualifiers.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-700 mb-3">🏆 Competitive Exam Qualifiers</h3>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full bg-gray-50 rounded-lg">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Year</th>
+                        <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Exam</th>
+                        <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Students Participated</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {academics.examQualifiers.map((qualifier, index) => (
+                        <tr key={index} className="border-b">
+                          <td className="px-4 py-2 text-sm font-medium text-gray-900">{qualifier.year}</td>
+                          <td className="px-4 py-2 text-sm text-gray-600">
+                            <span className="bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full text-xs font-medium">
+                              {qualifier.exam}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2 text-sm text-gray-600">{qualifier.participation}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Yearly Academic Performance */}
+            {academics.academicResults && academics.academicResults.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-700 mb-3">📊 Yearly Performance Data</h3>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full bg-gray-50 rounded-lg">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Year</th>
+                        <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Pass Percentage</th>
+                        <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Average Marks %</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {academics.academicResults.map((result, index) => (
+                        <tr key={index} className="border-b">
+                          <td className="px-4 py-2 text-sm font-medium text-gray-900">{result.year}</td>
+                          <td className="px-4 py-2 text-sm text-gray-600">
+                            <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium">
+                              {result.passPercent}%
+                            </span>
+                          </td>
+                          <td className="px-4 py-2 text-sm text-gray-600">
+                            <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium">
+                              {result.averageMarksPercent}%
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}
