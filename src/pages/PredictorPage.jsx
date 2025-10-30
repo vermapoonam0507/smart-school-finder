@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ArrowLeft, ChevronDown, User, MapPin, Building, Navigation, Heart } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ChevronDown, User, MapPin, Building, Navigation, Heart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { predictSchools } from '../api/predictorService';
 import SchoolCard from '../components/SchoolCard';
@@ -19,12 +19,16 @@ const genderOptions = [
 ];
 
 const stateOptions = [
+  // States (28)
   'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
-  'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka',
-  'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram',
-  'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu',
-  'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
-  'Delhi', 'Chandigarh', 'Puducherry', 'Jammu and Kashmir', 'Ladakh'
+  'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 
+  'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 
+  'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 
+  'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura', 'Uttar Pradesh', 
+  'Uttarakhand', 'West Bengal',
+  // Union Territories (8)
+  'Andaman and Nicobar Islands', 'Chandigarh', 'Dadra and Nagar Haveli and Daman and Diu',
+  'Delhi', 'Jammu and Kashmir', 'Ladakh', 'Lakshadweep', 'Puducherry'
 ];
 
 const cityOptions = [
@@ -64,6 +68,23 @@ const PredictorPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
   const [hasSearched, setHasSearched] = useState(false);
+  const [openDropdown, setOpenDropdown] = useState(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      // Don't close if clicking on scrollbar or inside dropdown
+      if (openDropdown && 
+          !event.target.closest('.dropdown-container') &&
+          !event.target.closest('.dropdown-scroll')) {
+        setOpenDropdown(null);
+      }
+    };
+
+    // Use mousedown instead of click to prevent interference with scrolling
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [openDropdown]);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
@@ -221,77 +242,102 @@ const PredictorPage = () => {
     setHasSearched(false);
   };
 
-  const DropdownField = ({ label, field, icon, required = false }) => (
-    <div className="mb-6">
-      <label className="block text-sm font-semibold text-gray-700 mb-2">
-        {required && <span className="text-red-500">*</span>}
-        {label}
-      </label>
-      <div className="relative">
-        {icon && (
-          <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-            {icon}
-          </div>
-        )}
-        <select
-          value={formData[field]}
-          onChange={(e) => handleInputChange(field, e.target.value)}
-          className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-            icon ? 'pl-10' : ''
-          } ${errors[field] ? 'border-red-500' : ''}`}
-        >
-          <option value="">
-            {field === 'schoolType' ? 'Select School Type' :
-             field === 'preferredShifts' ? 'Select Shift' :
-             field === 'gender' ? 'Select' :
-             field === 'state' ? 'Select' :
-             field === 'city' ? 'Select' :
-             field === 'area' ? 'Select' :
-             field === 'interests' ? 'Select Interest' : 'Select'}
-          </option>
-          {field === 'schoolType' && schoolTypes.map((option) => (
-            <option key={`schoolType-${option}`} value={option}>
-              {option}
-            </option>
-          ))}
-          {field === 'preferredShifts' && shiftOptions.map((option) => (
-            <option key={`preferredShifts-${option}`} value={option}>
-              {option}
-            </option>
-          ))}
-          {field === 'gender' && genderOptions.map((option) => (
-            <option key={`gender-${option}`} value={option}>
-              {option}
-            </option>
-          ))}
-          {field === 'state' && stateOptions.map((option) => (
-            <option key={`state-${option}`} value={option}>
-              {option}
-            </option>
-          ))}
-          {field === 'city' && cityOptions.map((option) => (
-            <option key={`city-${option}`} value={option}>
-              {option}
-            </option>
-          ))}
-          {field === 'area' && areaOptions.map((option) => (
-            <option key={`area-${option}`} value={option}>
-              {option}
-            </option>
-          ))}
-          {field === 'interests' && interestsOptions.map((option) => (
-            <option key={`interests-${option}`} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
-        <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
-        {errors[field] && (
-          <p className="text-red-500 text-sm mt-1">{errors[field]}</p>
-        )}
+  const DropdownField = ({ label, field, icon, required = false }) => {
+    const isOpen = openDropdown === field;
+    const dropdownRef = useRef(null);
+    const options = 
+      field === 'schoolType' ? schoolTypes :
+      field === 'preferredShifts' ? shiftOptions :
+      field === 'gender' ? genderOptions :
+      field === 'state' ? stateOptions :
+      field === 'city' ? cityOptions :
+      field === 'area' ? areaOptions :
+      field === 'interests' ? interestsOptions : [];
+    
+    const placeholder = 
+      field === 'schoolType' ? 'Select School Type' :
+      field === 'preferredShifts' ? 'Select Shift' :
+      field === 'gender' ? 'Select' :
+      field === 'state' ? 'Select' :
+      field === 'city' ? 'Select' :
+      field === 'area' ? 'Select' :
+      field === 'interests' ? 'Select Interest' : 'Select';
+
+    const handleSelect = (value) => {
+      handleInputChange(field, value);
+      setOpenDropdown(null);
+    };
+
+    return (
+      <div className="mb-6">
+        <label className="block text-sm font-semibold text-gray-700 mb-2">
+          {required && <span className="text-red-500">*</span>}
+          {label}
+        </label>
+        <div className="relative dropdown-container">
+          {icon && (
+            <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none z-10">
+              {icon}
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => setOpenDropdown(isOpen ? null : field)}
+            className={`w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white text-left ${
+              icon ? 'pl-10' : ''
+            } ${errors[field] ? 'border-red-500' : ''} ${!formData[field] ? 'text-gray-400' : 'text-gray-900'}`}
+          >
+            {formData[field] || placeholder}
+          </button>
+          <ChevronDown className={`absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none transition-transform ${
+            isOpen ? 'rotate-180' : ''
+          }`} />
+          
+          {isOpen && (
+            <div 
+              ref={dropdownRef}
+              className={`dropdown-scroll absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg ${
+                field === 'state' || field === 'city' || field === 'interests' ? 'max-h-80' : 'max-h-60'
+              }`}
+              style={{ 
+                overflow: 'auto'
+              }}
+            >
+              {!required && (
+                <div
+                  onClick={() => handleSelect('')}
+                  className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-gray-400 border-b border-gray-200"
+                >
+                  {placeholder}
+                </div>
+              )}
+              {options.length > 0 ? (
+                options.map((option) => (
+                  <div
+                    key={`${field}-${option}`}
+                    onClick={() => handleSelect(option)}
+                    className={`px-4 py-2 hover:bg-blue-50 cursor-pointer transition-colors ${
+                      formData[field] === option ? 'bg-blue-100 text-blue-700 font-medium' : 'text-gray-900'
+                    }`}
+                  >
+                    {option}
+                  </div>
+                ))
+              ) : (
+                <div className="px-4 py-2 text-gray-400 text-center">
+                  No options available
+                </div>
+              )}
+            </div>
+          )}
+          
+          {errors[field] && (
+            <p className="text-red-500 text-sm mt-1">{errors[field]}</p>
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 py-4 sm:py-8">

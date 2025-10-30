@@ -662,6 +662,22 @@ const RegistrationPage = () => {
       if (!formData.email?.trim()) requiredErrors.push('Email');
       if (!formData.phoneNo?.trim()) requiredErrors.push('Phone Number');
       if (!Array.isArray(formData.languageMedium) || formData.languageMedium.length === 0) requiredErrors.push('Language Medium');
+      
+      // GPS Location validation (mandatory for distance calculation)
+      if (!formData.latitude || isNaN(Number(formData.latitude))) requiredErrors.push('Latitude (GPS)');
+      if (!formData.longitude || isNaN(Number(formData.longitude))) requiredErrors.push('Longitude (GPS)');
+      
+      // Validate latitude and longitude ranges
+      if (formData.latitude && (Number(formData.latitude) < -90 || Number(formData.latitude) > 90)) {
+        toast.error('Latitude must be between -90 and 90 degrees');
+        setIsSubmitting(false);
+        return;
+      }
+      if (formData.longitude && (Number(formData.longitude) < -180 || Number(formData.longitude) > 180)) {
+        toast.error('Longitude must be between -180 and 180 degrees');
+        setIsSubmitting(false);
+        return;
+      }
 
       if (requiredErrors.length > 0) {
         toast.error(`Please fill valid values for: ${requiredErrors.join(', ')}`);
@@ -689,8 +705,8 @@ const RegistrationPage = () => {
         shifts: (Array.isArray(formData.shifts) ? formData.shifts : [formData.shifts].filter(Boolean)).map(s => String(s).toLowerCase()),
         languageMedium: Array.isArray(formData.languageMedium) ? formData.languageMedium : [formData.languageMedium].filter(Boolean),
         transportAvailable: formData.transportAvailable,
-        latitude: formData.latitude ? Number(formData.latitude) : undefined,
-        longitude: formData.longitude ? Number(formData.longitude) : undefined,
+        latitude: Number(formData.latitude), // Mandatory for distance calculation
+        longitude: Number(formData.longitude), // Mandatory for distance calculation
         TeacherToStudentRatio: formData.TeacherToStudentRatio,
         rank: formData.rank,
         specialist: Array.isArray(formData.specialist) ? formData.specialist : [],
@@ -1657,6 +1673,15 @@ const RegistrationPage = () => {
                   Use Current Location
                 </button>
               </div>
+              <div className="md:col-span-2 bg-blue-50 border-l-4 border-blue-500 p-3 rounded-md">
+                <div className="flex items-start">
+                  <Info className="w-5 h-5 text-blue-600 mt-0.5 mr-2 flex-shrink-0" />
+                  <p className="text-sm text-blue-800">
+                    <strong>GPS Location Required:</strong> Latitude and Longitude are mandatory for accurate distance calculation. 
+                    This helps parents find schools near their location. Click "Use Current Location" to automatically fill these fields.
+                  </p>
+                </div>
+              </div>
               <FormField
                 label="City"
                 name="city"
@@ -2527,7 +2552,7 @@ const RegistrationPage = () => {
                   <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
                     💻 Technology Adoption
                   </h2>
-                  <p className="text-gray-600 mt-1">Digital tools and e-learning platforms</p>
+                  <p className="text-gray-600 mt-1">Smart classrooms and digital infrastructure</p>
                 </div>
               </div>
           <div className="space-y-8">

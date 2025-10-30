@@ -59,41 +59,6 @@ const SchoolCard = ({ school, onCardClick, onCompareToggle, isCompared, currentU
           </div>
         )}
 
-        {school.elearningPlatforms && school.elearningPlatforms.length > 0 && (
-          <div className="mt-2">
-            <div className="flex items-center justify-between mb-1">
-              <span 
-                className="text-xs text-gray-600 cursor-help"
-                title="Digital learning platforms enhance student engagement and accessibility"
-              >
-                💻 E-learning
-              </span>
-              <span className="text-xs font-medium text-green-600">
-                {Math.round(school.elearningPlatforms.reduce((sum, p) => sum + (parseInt(p.usagePercentage) || 0), 0) / school.elearningPlatforms.length)}%
-              </span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-1.5">
-              <div 
-                className="bg-green-500 h-1.5 rounded-full transition-all duration-300"
-                style={{ 
-                  width: `${Math.round(school.elearningPlatforms.reduce((sum, p) => sum + (parseInt(p.usagePercentage) || 0), 0) / school.elearningPlatforms.length)}%` 
-                }}
-              ></div>
-            </div>
-            {/* Platform logos for parent view */}
-            <div className="mt-1 flex flex-wrap gap-1">
-              {school.elearningPlatforms.slice(0, 3).map((platform, index) => (
-                <span key={index} className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">
-                  {platform.platform}
-                </span>
-              ))}
-              {school.elearningPlatforms.length > 3 && (
-                <span className="text-xs text-gray-500">+{school.elearningPlatforms.length - 3} more</span>
-              )}
-            </div>
-          </div>
-        )}
-
         {/* International Exposure Display */}
         {(school.exchangePrograms && school.exchangePrograms.length > 0) || (school.globalTieups && school.globalTieups.length > 0) || school.studentsBenefitingPercentage ? (
           <div className="mt-3 space-y-2">
