@@ -1718,6 +1718,104 @@ const SchoolDetailsPage = ({ shortlist, onShortlistToggle }) => {
           )}
         </div>
 
+        {/* Fees & Scholarships Section */}
+        {feesAndScholarships && (
+          <div className="bg-white shadow-lg rounded-lg p-6">
+            <div className="flex items-center mb-6">
+              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                <Award size={16} className="text-green-600" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-800">Fees & Scholarships</h2>
+                <p className="text-sm text-gray-600">Financial Information</p>
+              </div>
+            </div>
+            
+            {/* Fee Transparency Indicator */}
+            {feesAndScholarships.feesTransparency && (
+              <div className="mb-6 bg-gradient-to-r from-green-50 to-blue-50 p-6 rounded-lg border border-green-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-800 mb-2">Fee Transparency</h3>
+                    <p className="text-sm text-gray-600">School's commitment to transparent fee structure</p>
+                  </div>
+                  <div className="text-center">
+                    <div className={`inline-flex items-center px-6 py-3 rounded-full text-lg font-bold ${
+                      feesAndScholarships.feesTransparency === 'full' ? 'bg-green-500 text-white' :
+                      feesAndScholarships.feesTransparency === 'partial' ? 'bg-yellow-500 text-white' :
+                      'bg-red-500 text-white'
+                    }`}>
+                      {feesAndScholarships.feesTransparency === 'full' ? '🟢 Fully Transparent' :
+                       feesAndScholarships.feesTransparency === 'partial' ? '🟡 Partial Transparency' :
+                       '🔴 Limited Transparency'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Class Fees */}
+            {feesAndScholarships.classFees && feesAndScholarships.classFees.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Class-wise Fee Structure</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {feesAndScholarships.classFees.map((fee, index) => (
+                    <div key={index} className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="font-semibold text-gray-800">{fee.className}</span>
+                        <span className="text-lg font-bold text-green-600">₹{fee.tuition?.toLocaleString()}</span>
+                      </div>
+                      {fee.otherCharges > 0 && (
+                        <div className="text-sm text-gray-600">
+                          Other Charges: ₹{fee.otherCharges?.toLocaleString()}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Scholarships */}
+            {feesAndScholarships.scholarships && feesAndScholarships.scholarships.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Available Scholarships</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {feesAndScholarships.scholarships.map((scholarship, index) => (
+                    <div key={index} className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <h4 className="font-semibold text-gray-800">{scholarship.name}</h4>
+                          <span className="text-xs px-2 py-1 bg-blue-200 text-blue-800 rounded-full">{scholarship.type}</span>
+                        </div>
+                        <span className="text-lg font-bold text-blue-600">₹{scholarship.amount?.toLocaleString()}</span>
+                      </div>
+                      {scholarship.documentsRequired && scholarship.documentsRequired.length > 0 && (
+                        <div className="mt-2">
+                          <p className="text-xs text-gray-600 mb-1">Documents Required:</p>
+                          <div className="flex flex-wrap gap-1">
+                            {scholarship.documentsRequired.map((doc, idx) => (
+                              <span key={idx} className="text-xs bg-white px-2 py-1 rounded border border-gray-200">
+                                {doc}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {!feesAndScholarships.classFees?.length && !feesAndScholarships.scholarships?.length && !feesAndScholarships.feesTransparency && (
+              <div className="text-gray-500 text-center py-8">
+                <p>No fee or scholarship information available.</p>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Special Exam Training Section */}
         {academics && academics.specialExamsTraining && academics.specialExamsTraining.length > 0 && (
           <div className="bg-white shadow-lg rounded-lg p-6">

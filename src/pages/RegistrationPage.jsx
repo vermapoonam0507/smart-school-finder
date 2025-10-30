@@ -165,7 +165,7 @@ const DynamicListField = ({ label, fields, value, onChange, type = "famous" }) =
           <button
             type="button"
             onClick={() => handleRemoveItem(index)}
-            className="absolute top-2 right-2 text-red-500 hover:text-red-700"
+            className="absolute top-2 right-2 text-red-500"
           >
             <Trash2 size={18} />
           </button>
@@ -174,7 +174,7 @@ const DynamicListField = ({ label, fields, value, onChange, type = "famous" }) =
       <button
         type="button"
         onClick={handleAddItem}
-        className="mt-2 flex items-center text-sm text-indigo-600 hover:text-indigo-800"
+        className="mt-2 flex items-center text-sm text-indigo-600"
       >
         <PlusCircle size={16} className="mr-1" /> Add Alumni
       </button>
@@ -214,7 +214,7 @@ const DynamicActivitiesField = ({ label, value, onChange }) => {
           <button
             type="button"
             onClick={() => handleRemoveActivity(index)}
-            className="text-red-500 hover:text-red-700"
+            className="text-red-500"
           >
             <Trash2 size={18} />
           </button>
@@ -223,7 +223,7 @@ const DynamicActivitiesField = ({ label, value, onChange }) => {
       <button
         type="button"
         onClick={handleAddActivity}
-        className="mt-2 flex items-center text-sm text-indigo-600 hover:text-indigo-800"
+        className="mt-2 flex items-center text-sm text-indigo-600"
       >
         <PlusCircle size={16} className="mr-1" /> Add Activity
       </button>
@@ -263,7 +263,7 @@ const DynamicAmenitiesField = ({ label, value, onChange }) => {
           <button
             type="button"
             onClick={() => handleRemoveAmenity(index)}
-            className="text-red-500 hover:text-red-700"
+            className="text-red-500"
           >
             <Trash2 size={18} />
           </button>
@@ -272,7 +272,7 @@ const DynamicAmenitiesField = ({ label, value, onChange }) => {
       <button
         type="button"
         onClick={handleAddAmenity}
-        className="mt-2 flex items-center text-sm text-indigo-600 hover:text-indigo-800"
+        className="mt-2 flex items-center text-sm text-indigo-600"
       >
         <PlusCircle size={16} className="mr-1" /> Add Amenity
       </button>
@@ -322,7 +322,7 @@ const DynamicElearningField = ({ label, value, onChange }) => {
           <button
             type="button"
             onClick={() => handleRemove(index)}
-            className="text-red-500 hover:text-red-700 mb-2"
+            className="text-red-500 mb-2"
             aria-label={`Remove e-learning row ${index + 1}`}
           >
             <Trash2 size={18} />
@@ -332,7 +332,7 @@ const DynamicElearningField = ({ label, value, onChange }) => {
       <button
         type="button"
         onClick={handleAdd}
-        className="mt-2 flex items-center text-sm text-indigo-600 hover:text-indigo-800"
+        className="mt-2 flex items-center text-sm text-indigo-600"
       >
         <PlusCircle size={16} className="mr-1" /> Add Platform
       </button>
@@ -616,6 +616,25 @@ const RegistrationPage = () => {
     return Math.round(Math.min(100, score));
   };
 
+  // Helper function to handle update/add with fallback
+  const updateOrAdd = async (updateFn, addFn, schoolId, payload) => {
+    try {
+      if (isEditMode) {
+        await updateFn(schoolId, payload);
+      } else {
+        await addFn(payload);
+      }
+    } catch (error) {
+      // If update fails with 404, the resource doesn't exist yet, so add it instead
+      if (error.response?.status === 404 && isEditMode) {
+        console.log('⚠️ Resource not found, creating new one instead of updating');
+        await addFn(payload);
+      } else {
+        throw error; // Re-throw other errors
+      }
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!currentUser?._id) return toast.error("You must be logged in.");
@@ -738,7 +757,7 @@ const RegistrationPage = () => {
           predefinedAmenities: formData.predefinedAmenities || [],
           customAmenities: customAmenities || []
         };
-        promises.push(isEditMode ? updateAmenities(schoolId, payloadAmenities) : addAmenities(payloadAmenities));
+        promises.push(updateOrAdd(updateAmenities, addAmenities, schoolId, payloadAmenities));
       }
 
       // Add/Update activities
@@ -748,7 +767,7 @@ const RegistrationPage = () => {
           activities: formData.activities || [],
           customActivities: customActivities || []
         };
-        promises.push(isEditMode ? updateActivities(schoolId, payloadActivities) : addActivities(payloadActivities));
+        promises.push(updateOrAdd(updateActivities, addActivities, schoolId, payloadActivities));
       }
 
       // Add alumni if any
@@ -811,7 +830,7 @@ const RegistrationPage = () => {
             classFees: validClassFees,
             scholarships: validScholarships
           };
-          promises.push(isEditMode ? updateFeesAndScholarshipsById(schoolId, payloadFees) : addFeesAndScholarships(payloadFees));
+          promises.push(updateOrAdd(updateFeesAndScholarshipsById, addFeesAndScholarships, schoolId, payloadFees));
         }
       }
 
@@ -829,7 +848,7 @@ const RegistrationPage = () => {
         
         if (cleanFaculty.length > 0) {
           const payloadFaculty = { schoolId, facultyMembers: cleanFaculty };
-          promises.push(isEditMode ? updateFaculty(schoolId, payloadFaculty) : addFaculty(payloadFaculty));
+          promises.push(updateOrAdd(updateFaculty, addFaculty, schoolId, payloadFaculty));
         }
       }
 
@@ -851,7 +870,7 @@ const RegistrationPage = () => {
         
         if (cleanTimelines.length > 0) {
           const payloadTimeline = { schoolId, timelines: cleanTimelines };
-          promises.push(isEditMode ? updateAdmissionTimeline(schoolId, payloadTimeline) : addAdmissionTimeline(payloadTimeline));
+          promises.push(updateOrAdd(updateAdmissionTimeline, addAdmissionTimeline, schoolId, payloadTimeline));
         }
       }
 
@@ -862,7 +881,7 @@ const RegistrationPage = () => {
           smartClassroomsPercentage: formData.smartClassroomsPercentage ? Number(formData.smartClassroomsPercentage) : undefined,
           eLearningPlatforms: formData.eLearningPlatforms || []
         };
-        promises.push(isEditMode ? updateTechnologyAdoption(schoolId, payloadTech) : addTechnologyAdoption(payloadTech));
+        promises.push(updateOrAdd(updateTechnologyAdoption, addTechnologyAdoption, schoolId, payloadTech));
       }
 
       // Add/Update Safety & Security
@@ -885,7 +904,7 @@ const RegistrationPage = () => {
           fireSafetyMeasures: formData.fireSafetyMeasures || [],
           visitorManagementSystem: formData.visitorManagementSystem || false
         };
-        promises.push(isEditMode ? updateSafetyAndSecurity(schoolId, payloadSafety) : addSafetyAndSecurity(payloadSafety));
+        promises.push(updateOrAdd(updateSafetyAndSecurity, addSafetyAndSecurity, schoolId, payloadSafety));
       }
 
       // Add International Exposure if any (matching backend InternationalExposure model)
@@ -955,7 +974,7 @@ const RegistrationPage = () => {
         });
         
         const payloadIntl = { schoolId, exchangePrograms: validExchangePrograms, globalTieUps: validGlobalTieUps };
-        promises.push(isEditMode ? updateInternationalExposure(schoolId, payloadIntl) : addInternationalExposure(payloadIntl));
+        promises.push(updateOrAdd(updateInternationalExposure, addInternationalExposure, schoolId, payloadIntl));
       } else {
         console.log('No valid international exposure data to send');
       }
@@ -975,7 +994,7 @@ const RegistrationPage = () => {
           examQualifiers: examQualifiers || [],
           academicResults: academicResults || []
         };
-        promises.push(isEditMode ? updateAcademics(schoolId, payloadAcademics) : addAcademics(payloadAcademics));
+        promises.push(updateOrAdd(updateAcademics, addAcademics, schoolId, payloadAcademics));
       }
 
       // Add/Update other details (matching backend OtherDetails model)
@@ -983,12 +1002,18 @@ const RegistrationPage = () => {
           formData.scholarshipDiversityTypes?.length > 0 || formData.scholarshipDiversityCoverage ||
           formData.specialNeedsStaff || formData.specialNeedsSupportPercentage ||
           formData.specialNeedsFacilities?.length > 0) {
+        
+        // Ensure non-negative values for gender ratios
+        const maleRatio = formData.genderRatioMale ? Math.max(0, Number(formData.genderRatioMale)) : 0;
+        const femaleRatio = formData.genderRatioFemale ? Math.max(0, Number(formData.genderRatioFemale)) : 0;
+        const othersRatio = formData.genderRatioOthers ? Math.max(0, Number(formData.genderRatioOthers)) : 0;
+        
         const payloadOther = {
           schoolId,
           genderRatio: {
-            male: formData.genderRatioMale ? Number(formData.genderRatioMale) : 0,
-            female: formData.genderRatioFemale ? Number(formData.genderRatioFemale) : 0,
-            others: formData.genderRatioOthers ? Number(formData.genderRatioOthers) : 0
+            male: maleRatio,
+            female: femaleRatio,
+            others: othersRatio
           },
           scholarshipDiversity: {
             types: formData.scholarshipDiversityTypes || [],
@@ -1000,7 +1025,7 @@ const RegistrationPage = () => {
             facilitiesAvailable: formData.specialNeedsFacilities || []
           }
         };
-        promises.push(isEditMode ? updateOtherDetailsById(schoolId, payloadOther) : addOtherDetails(payloadOther));
+        promises.push(updateOrAdd(updateOtherDetailsById, addOtherDetails, schoolId, payloadOther));
       }
 
       // Wait for all related data to be created
@@ -1399,13 +1424,6 @@ const RegistrationPage = () => {
         specialNeedsFacilities: Array.isArray(other.specialNeedsSupport?.facilitiesAvailable) ? other.specialNeedsSupport.facilitiesAvailable : prev.specialNeedsFacilities,
         specialNeedsSupportPercentage: other.specialNeedsSupport && other.specialNeedsSupport.studentsSupportedPercentage != null ? String(other.specialNeedsSupport.studentsSupportedPercentage) : prev.specialNeedsSupportPercentage,
         specialNeedsStaff: other.specialNeedsSupport ? !!other.specialNeedsSupport.dedicatedStaff : prev.specialNeedsStaff,
-        // Prefill Board Results visualization if available
-        academicResults: (prev.academicResults && prev.academicResults.length > 0) ? prev.academicResults : (
-          (academics && (academics.averageClass10Result || academics.averageClass12Result || academics.averageSchoolMarks)) ? [
-            { year: 'Class 10', passPercent: String(academics.averageClass10Result ?? ''), averageMarksPercent: String(academics.averageSchoolMarks ?? '') },
-            { year: 'Class 12', passPercent: String(academics.averageClass12Result ?? ''), averageMarksPercent: '' }
-          ] : prev.academicResults
-        ),
         // International Exposure
         exchangePrograms: Array.isArray(intl.exchangePrograms) ? intl.exchangePrograms : prev.exchangePrograms,
         globalTieUps: Array.isArray(intl.globalTieUps) ? intl.globalTieUps : prev.globalTieUps,
@@ -1424,6 +1442,10 @@ const RegistrationPage = () => {
         experience: m.experience ?? ''
       })) : facultyQuality);
       setAdmissionSteps(Array.isArray(timeline.timelines) ? timeline.timelines : Array.isArray(timeline) ? timeline : []);
+      
+      // Load academic performance trends and exam qualifiers
+      setAcademicResults(Array.isArray(academics.academicResults) ? academics.academicResults : academicResults);
+      setExamQualifiers(Array.isArray(academics.examQualifiers) ? academics.examQualifiers : examQualifiers);
 
       toast.success("Loaded your existing school details. You can update and save.");
     } catch (e) {
@@ -1445,7 +1467,7 @@ const RegistrationPage = () => {
       <div className="container mx-auto max-w-7xl px-6 relative z-10">
         <form
           onSubmit={handleSubmit}
-          className="bg-white/95 backdrop-blur-xl p-8 rounded-3xl shadow-2xl border border-white/20 transform transition-all duration-500 hover:shadow-3xl hover:scale-[1.01]"
+          className="bg-white/95 backdrop-blur-xl p-8 rounded-3xl shadow-2xl border border-white/20"
         >
           <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent text-center mb-2 animate-fade-in">
             🎓 School Registration Portal
@@ -1457,7 +1479,7 @@ const RegistrationPage = () => {
             <button
               type="button"
               onClick={handleEnterEditMode}
-              className="px-4 py-2 rounded-lg text-sm bg-indigo-600 text-white hover:bg-indigo-700"
+              className="px-4 py-2 rounded-lg text-sm bg-indigo-600 text-white"
               disabled={isSubmitting}
             >
               Edit Existing Details
@@ -1476,7 +1498,7 @@ const RegistrationPage = () => {
                 className={`w-3 h-3 rounded-full transition-all duration-300 ${
                   activeSection === section.id
                     ? 'bg-gradient-to-r from-indigo-500 to-purple-500 scale-125'
-                    : 'bg-gray-300 hover:bg-gray-400'
+                    : 'bg-gray-300'
                 }`}
                 title={`Go to ${section.label}`}
               />
@@ -1508,24 +1530,24 @@ const RegistrationPage = () => {
                     console.log('Navigation clicked:', id); // Debug log
                     scrollToSection(id);
                   }}
-                  className={`group flex items-center gap-3 whitespace-nowrap rounded-2xl px-6 py-4 text-sm font-medium border-2 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 ${
+                  className={`flex items-center gap-3 whitespace-nowrap rounded-2xl px-6 py-4 text-sm font-medium border-2 ${
                     activeSection === id
                       ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-transparent shadow-lg shadow-indigo-500/25"
-                      : "bg-white/80 text-gray-700 hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 border-gray-200 hover:border-indigo-300 shadow-md hover:shadow-lg"
+                      : "bg-white/80 text-gray-700 border-gray-200 shadow-md"
                   }`}
                 >
                   <div className={`p-2 rounded-xl transition-all duration-300 ${
                     activeSection === id 
                       ? "bg-white/20" 
-                      : "bg-gray-100 group-hover:bg-indigo-100"
+                      : "bg-gray-100"
                   }`}>
-                    {Icon ? <Icon size={20} className={activeSection === id ? "text-white" : "text-gray-600 group-hover:text-indigo-600"} /> : null}
+                    {Icon ? <Icon size={20} className={activeSection === id ? "text-white" : "text-gray-600"} /> : null}
                   </div>
                   <span className="font-semibold">{label}</span>
                   <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
                     activeSection === id 
                       ? "bg-white/20 text-white" 
-                      : "bg-gray-200 text-gray-600 group-hover:bg-indigo-200 group-hover:text-indigo-600"
+                      : "bg-gray-200 text-gray-600"
                   }`}>
                     {index + 1}
                   </div>
@@ -1567,7 +1589,7 @@ const RegistrationPage = () => {
                  </div>
                  <div>
                    <input id="logo-input" type="file" accept="image/png,image/jpeg" className="hidden" onChange={handleLogoChange} />
-                   <button type="button" onClick={() => document.getElementById("logo-input").click()} className="px-3 py-2 text-sm rounded-md border border-gray-300 bg-white hover:bg-gray-50">Upload Logo</button>
+                   <button type="button" onClick={() => document.getElementById("logo-input").click()} className="px-3 py-2 text-sm rounded-md border border-gray-300 bg-white">Upload Logo</button>
                    {logoFile && <div className="text-xs text-gray-500 mt-1">{logoFile.name}</div>}
                  </div>
                </div>
@@ -1668,7 +1690,7 @@ const RegistrationPage = () => {
                 <button
                   type="button"
                   onClick={handleUseCurrentLocation}
-                  className="h-10 mt-7 bg-indigo-600 text-white rounded-md px-4 hover:bg-indigo-700"
+                  className="h-10 mt-7 bg-indigo-600 text-white rounded-md px-4"
                 >
                   Use Current Location
                 </button>
@@ -1936,7 +1958,7 @@ const RegistrationPage = () => {
                 <button
                   type="button"
                   onClick={() => setFacultyQuality(facultyQuality.filter((_, i) => i !== index))}
-                  className="text-red-500 hover:text-red-700 mb-2"
+                  className="text-red-500 mb-2"
                   aria-label={`Remove faculty row ${index + 1}`}
                 >
                   <Trash2 size={18} />
@@ -1946,7 +1968,7 @@ const RegistrationPage = () => {
             <button
               type="button"
               onClick={() => setFacultyQuality([...facultyQuality, { name: '', qualification: '', awards: '', experience: '' }])}
-              className="mt-2 flex items-center text-sm text-indigo-600 hover:text-indigo-800"
+              className="mt-2 flex items-center text-sm text-indigo-600"
             >
               <PlusCircle size={16} className="mr-1" /> Add Faculty
             </button>
@@ -2198,7 +2220,7 @@ const RegistrationPage = () => {
               <h3 className="text-lg font-semibold text-gray-800 mb-4">Fire Safety Measures</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {['Extinguishers', 'Alarms', 'Sprinklers', 'Evacuation Drills'].map((measure) => (
-                  <label key={measure} className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                  <label key={measure} className="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer">
                           <input
                             type="checkbox"
                       checked={(formData.fireSafetyMeasures || []).includes(measure)}
@@ -2287,7 +2309,7 @@ const RegistrationPage = () => {
                   const newFees = [...(formData.classWiseFees || []), { class: '', tuition: '', activity: '', transport: '', hostel: '', misc: '' }];
                   setFormData(prev => ({ ...prev, classWiseFees: newFees }));
                 }}
-                className="flex items-center text-sm text-indigo-600 hover:text-indigo-800"
+                className="flex items-center text-sm text-indigo-600"
               >
                 <PlusCircle size={16} className="mr-1" /> Add Class
               </button>
@@ -2309,7 +2331,7 @@ const RegistrationPage = () => {
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {(formData.classWiseFees || []).map((fee, index) => (
-                    <tr key={index} className="hover:bg-gray-50">
+                    <tr key={index} className="">
                       <td className="px-4 py-3">
                         <input
                           type="text"
@@ -2405,7 +2427,7 @@ const RegistrationPage = () => {
                             const newFees = (formData.classWiseFees || []).filter((_, i) => i !== index);
                             setFormData(prev => ({ ...prev, classWiseFees: newFees }));
                           }}
-                          className="text-red-500 hover:text-red-700"
+                          className="text-red-500"
                         >
                           <Trash2 size={16} />
                         </button>
@@ -2427,7 +2449,7 @@ const RegistrationPage = () => {
                   const newScholarships = [...(formData.scholarships || []), { type: '', eligibility: '', reduction: '', description: '' }];
                   setFormData(prev => ({ ...prev, scholarships: newScholarships }));
                 }}
-                className="flex items-center text-sm text-indigo-600 hover:text-indigo-800"
+                className="flex items-center text-sm text-indigo-600"
               >
                 <PlusCircle size={16} className="mr-1" /> Add Scholarship
               </button>
@@ -2507,7 +2529,7 @@ const RegistrationPage = () => {
                         const newScholarships = (formData.scholarships || []).filter((_, i) => i !== index);
                         setFormData(prev => ({ ...prev, scholarships: newScholarships }));
                       }}
-                      className="text-red-500 hover:text-red-700 text-sm"
+                      className="text-red-500 text-sm"
                     >
                       <Trash2 size={16} className="inline mr-1" /> Remove
                     </button>
@@ -2623,7 +2645,7 @@ const RegistrationPage = () => {
                       const next = [...(formData.eLearningPlatforms || []), ''];
                       setFormData(prev => ({ ...prev, eLearningPlatforms: next }));
                     }}
-                    className="flex items-center text-sm text-indigo-600 hover:text-indigo-800"
+                    className="flex items-center text-sm text-indigo-600"
                   >
                     <PlusCircle size={16} className="mr-1" /> Add Platform
                   </button>
@@ -2724,7 +2746,7 @@ const RegistrationPage = () => {
               <button
                 type="button"
                 onClick={() => setAcademicResults([...academicResults, { year: '', passPercent: '', averageMarksPercent: '' }])}
-                className="flex items-center text-sm text-indigo-600 hover:text-indigo-800"
+                className="flex items-center text-sm text-indigo-600"
               >
                 <PlusCircle size={16} className="mr-1" /> Add Year
               </button>
@@ -2741,7 +2763,7 @@ const RegistrationPage = () => {
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {academicResults.map((row, index) => (
-                    <tr key={index} className="hover:bg-gray-50">
+                    <tr key={index} className="">
                       <td className="px-4 py-3">
                         <input
                           type="number"
@@ -2785,7 +2807,7 @@ const RegistrationPage = () => {
                         <button
                           type="button"
                           onClick={() => setAcademicResults(academicResults.filter((_, i) => i !== index))}
-                          className="text-red-500 hover:text-red-700"
+                          className="text-red-500"
                         >
                           <Trash2 size={16} />
                         </button>
@@ -2804,7 +2826,7 @@ const RegistrationPage = () => {
               <button
                 type="button"
                 onClick={() => setExamQualifiers([...examQualifiers, { year: '', exam: '', participation: '' }])}
-                className="flex items-center text-sm text-indigo-600 hover:text-indigo-800"
+                className="flex items-center text-sm text-indigo-600"
               >
                 <PlusCircle size={16} className="mr-1" /> Add Entry
               </button>
@@ -2850,7 +2872,7 @@ const RegistrationPage = () => {
                   <button
                     type="button"
                     onClick={() => setExamQualifiers(examQualifiers.filter((_, i) => i !== index))}
-                    className="text-red-500 hover:text-red-700 mb-2"
+                    className="text-red-500 mb-2"
                   >
                     <Trash2 size={18} />
                   </button>
@@ -2929,7 +2951,7 @@ const RegistrationPage = () => {
                   ...prev,
                   exchangePrograms: [...(prev.exchangePrograms || []), { partnerSchool: '', country: '', type: '', duration: '', studentsParticipated: '', activeSince: '' }]
                 }))}
-                className="flex items-center text-sm text-indigo-600 hover:text-indigo-800"
+                className="flex items-center text-sm text-indigo-600"
               >
                 <PlusCircle size={16} className="mr-1" /> Add Program
               </button>
@@ -3006,7 +3028,7 @@ const RegistrationPage = () => {
                     <button
                       type="button"
                       onClick={() => setFormData(prev => ({ ...prev, exchangePrograms: (prev.exchangePrograms || []).filter((_, i) => i !== index) }))}
-                      className="text-red-500 hover:text-red-700 mb-2"
+                      className="text-red-500 mb-2"
                     >
                       <Trash2 size={18} />
                     </button>
@@ -3026,7 +3048,7 @@ const RegistrationPage = () => {
                   ...prev,
                   globalTieUps: [...(prev.globalTieUps || []), { partnerName: '', nature: '', activeSince: '', description: '' }]
                 }))}
-                className="flex items-center text-sm text-indigo-600 hover:text-indigo-800"
+                className="flex items-center text-sm text-indigo-600"
               >
                 <PlusCircle size={16} className="mr-1" /> Add Tie-up
               </button>
@@ -3081,7 +3103,7 @@ const RegistrationPage = () => {
                       <button
                         type="button"
                         onClick={() => setFormData(prev => ({ ...prev, globalTieUps: (prev.globalTieUps || []).filter((_, i) => i !== index) }))}
-                        className="text-red-500 hover:text-red-700"
+                        className="text-red-500"
                       >
                         <Trash2 size={18} />
                       </button>
@@ -3390,7 +3412,7 @@ const RegistrationPage = () => {
                                   next[index] = { ...next[index], documentsRequired: nextDocs };
                                   setAdmissionSteps(next);
                                 }}
-                                className="text-red-500 hover:text-red-700 p-1"
+                                className="text-red-500 p-1"
                               >
                                 <Trash2 size={16} />
                               </button>
@@ -3404,7 +3426,7 @@ const RegistrationPage = () => {
                               next[index] = { ...next[index], documentsRequired: nextDocs };
                           setAdmissionSteps(next);
                         }}
-                            className="flex items-center text-sm text-indigo-600 hover:text-indigo-800"
+                className="flex items-center text-sm text-indigo-600"
                       >
                             <PlusCircle size={16} className="mr-1" /> Add Document
                       </button>
