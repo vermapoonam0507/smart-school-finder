@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { toast } from "react-toastify";
-import { getAdminStats } from "../api/adminService";
+import apiClient from "../api/axios";
 import PendingSchoolsSection from "../components/PendingSchoolsSection";
 import PendingReviewsSection from "../components/PendingReviewsSection";
 import DebugAPI from "../components/DebugAPI";
@@ -30,19 +30,26 @@ const AdminDashboardPage = () => {
       return;
     }
 
-    // Load stats from API
+    // Load stats from new API endpoints
     const loadStats = async () => {
       try {
-        const response = await getAdminStats();
-        console.log('📊 Admin Stats Response:', response.data);
-        
-        // Handle different response structures
-        const data = response.data?.data || response.data;
-        
+        // Call the new endpoints using configured apiClient
+        const [schoolsRes, studentsRes] = await Promise.all([
+          apiClient.get('/admin/count/all'),      // Total Schools
+          apiClient.get('/admin/count')           // Total Users/Students
+        ]);
+
+        console.log('📊 Schools Response:', schoolsRes.data);
+        console.log('📊 Students Response:', studentsRes.data);
+
+        // Extract count from responses
+        const totalSchools = schoolsRes.data?.totalSchools || 0;
+        const totalUsers = studentsRes.data?.totalStudents || 0;
+
         setStats({
-          totalUsers: data.totalUsers || 0,
-          totalSchools: data.totalSchools || 0,
-          activeUsers: data.activeUsers || 0
+          totalUsers: totalUsers,
+          totalSchools: totalSchools,
+          activeUsers: totalUsers  // Using total users as active users (adjust if you have different logic)
         });
       } catch (error) {
         console.error('Failed to load admin stats:', error);
@@ -144,8 +151,6 @@ const AdminDashboardPage = () => {
               </div>
             </div>
           </div>
-
-          {/* Removed Pending Schools top card */}
         </div>
 
         {/* Debug API Section */}
@@ -162,8 +167,6 @@ const AdminDashboardPage = () => {
         <div className="mb-8">
           <PendingReviewsSection />
         </div>
-
-        {/* Removed Blog Management and Quick Actions per requirements */}
       </main>
     </div>
   );
