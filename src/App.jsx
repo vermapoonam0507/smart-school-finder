@@ -344,6 +344,7 @@ useEffect(() => {
           onClose={dismissNotification}
           interviewData={interviewNotification.interviewData}
           schoolName={interviewNotification.schoolName}
+          notificationType={interviewNotification.notificationType}
         />
       )}
       

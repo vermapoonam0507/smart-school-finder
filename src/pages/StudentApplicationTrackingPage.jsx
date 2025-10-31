@@ -23,6 +23,7 @@ const StatusBadge = ({ status }) => {
     'Pending': { color: 'bg-yellow-100 text-yellow-800', icon: Clock },
     'Reviewed': { color: 'bg-blue-100 text-blue-800', icon: Eye },
     'Interview': { color: 'bg-purple-100 text-purple-800', icon: Calendar },
+    'WrittenExam': { color: 'bg-indigo-100 text-indigo-800', icon: FileText },
     'Accepted': { color: 'bg-green-100 text-green-800', icon: CheckCircle },
     'Rejected': { color: 'bg-red-100 text-red-800', icon: XCircle }
   };
@@ -161,7 +162,7 @@ const StudentApplicationTrackingPage = () => {
   const [showInterviewDetailsModal, setShowInterviewDetailsModal] = useState(false);
   const [selectedInterviewApplication, setSelectedInterviewApplication] = useState(null);
 
-  const statusOptions = ['All', 'Pending', 'Reviewed', 'Interview', 'Accepted', 'Rejected'];
+  const statusOptions = ['All', 'Pending', 'Reviewed', 'Interview', 'WrittenExam', 'Accepted', 'Rejected'];
 
   const fetchApplications = async (isRefresh = false) => {
     try {
@@ -200,7 +201,7 @@ const StudentApplicationTrackingPage = () => {
     const statusLower = (application.status || '').toString().toLowerCase();
 
     // If status is Interview, show interview details instead of PDF
-    if (statusLower === 'interview') {
+    if (statusLower === 'interview' || statusLower === 'writtenexam' || statusLower.includes('written')) {
       showInterviewDetails(application);
       return;
     }
@@ -318,6 +319,7 @@ const StudentApplicationTrackingPage = () => {
       Pending: 0,
       Reviewed: 0,
       Interview: 0,
+      WrittenExam: 0,
       Accepted: 0,
       Rejected: 0
     };

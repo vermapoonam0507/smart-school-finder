@@ -11,6 +11,7 @@ import SchoolProfileView from "./SchoolProfileView";
 import { fetchStudentApplications, updateApplicationStatus } from "../api/apiService";
 import { getSchoolForms, updateFormStatus } from "../api/applicationService";
 import InterviewSchedulingModal from "../components/InterviewSchedulingModal";
+import WrittenExamSchedulingModal from "../components/WrittenExamSchedulingModal";
 import { useAuth } from "../context/AuthContext";
 import ErrorBoundary from "../components/ErrorBoundary";
 import { toast } from "react-toastify";
@@ -71,9 +72,20 @@ const StatusBadge = ({ status }) => {
     pending: "bg-yellow-100 text-yellow-800",
     accepted: "bg-green-100 text-green-800",
     rejected: "bg-red-100 text-red-800",
+    interview: "bg-purple-100 text-purple-800",
+    writtenexam: "bg-indigo-100 text-indigo-800",
   };
-  const label = (status || "unknown").toString();
-  const cls = map[status] || "bg-gray-100 text-gray-800";
+  // Friendly label mapping
+  const labelMap = {
+    pending: 'Pending',
+    accepted: 'Accepted',
+    rejected: 'Rejected',
+    interview: 'Interview',
+    writtenexam: 'Written Exam'
+  };
+  const key = (status || 'unknown').toString().toLowerCase();
+  const cls = map[key] || "bg-gray-100 text-gray-800";
+  const label = labelMap[key] || (status || 'Unknown');
   return <span className={`px-2 py-1 rounded text-xs font-semibold ${cls}`}>{label}</span>;
 };
 
@@ -90,6 +102,8 @@ const ViewStudentApplications = ({ schoolId }) => {
   const [selectedInterviewApplication, setSelectedInterviewApplication] = useState(null);
   const [showInterviewModal, setShowInterviewModal] = useState(false);
   const [selectedApplication, setSelectedApplication] = useState(null);
+  const [showWrittenExamModal, setShowWrittenExamModal] = useState(false);
+  const [selectedWrittenExamApplication, setSelectedWrittenExamApplication] = useState(null);
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
 
@@ -213,6 +227,18 @@ const ViewStudentApplications = ({ schoolId }) => {
     setShowInterviewModal(true);
   };
 
+  const handleScheduleWrittenExam = (app) => {
+    const formId = app?._id || app?.formId || app?.id || app?._raw?._id;
+    if (!formId) {
+      console.warn('No valid form id for written exam scheduling:', app);
+      toast.error('Cannot schedule written exam: Invalid application data');
+      return;
+    }
+    const appWithFormId = { ...app, formId };
+    setSelectedWrittenExamApplication(appWithFormId);
+    setShowWrittenExamModal(true);
+  };
+
   const handleInterviewScheduled = async (formId, status, note) => {
     try {
       console.log('📝 Scheduling interview with note:', note);
@@ -228,6 +254,21 @@ const ViewStudentApplications = ({ schoolId }) => {
     } catch (error) {
       console.error('Error scheduling interview:', error);
       toast.error('Failed to schedule interview');
+    }
+  };
+
+  const handleWrittenExamScheduled = async (formId, status, note) => {
+    try {
+      console.log('📝 Scheduling written exam with note:', note);
+      console.log('🔄 Calling updateFormStatus with:', { formId, status, note });
+      const result = await updateFormStatus(formId, status, note);
+      console.log('✅ API Response:', result);
+      toast.success('Written exam scheduled successfully!');
+      console.log('🔄 Refreshing applications data...');
+      await fetchApplications(true);
+    } catch (error) {
+      console.error('Error scheduling written exam:', error);
+      toast.error('Failed to schedule written exam');
     }
   };
 
@@ -371,7 +412,7 @@ const ViewStudentApplications = ({ schoolId }) => {
 
   const rows = applications;
 
-  const statusOptions = ['All', 'Pending', 'Reviewed', 'Interview', 'Accepted', 'Rejected'];
+  const statusOptions = ['All', 'Pending', 'Reviewed', 'Interview', 'WrittenExam', 'Accepted', 'Rejected'];
 
   const handleStatusFilter = (status) => {
     setSelectedStatus(status);
@@ -436,7 +477,7 @@ const ViewStudentApplications = ({ schoolId }) => {
           </thead>
           <tbody>
             {(() => {
-              return applications.map((app) => {
+              return applications.map((app, index) => {
                 const statusLower = (app.status || '').toString().toLowerCase();
                 const isAccepted = statusLower === 'accepted';
                 const isRejected = statusLower === 'rejected';
@@ -451,13 +492,8 @@ const ViewStudentApplications = ({ schoolId }) => {
                   </button>
                 </td>
                 <td className="p-4 align-top">
-                  <span
-                    className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${
-                      isAccepted ? 'bg-green-100 text-green-800' : isRejected ? 'bg-red-100 text-red-800' : statusLower === 'interview' ? 'bg-purple-100 text-purple-800' : 'bg-yellow-100 text-yellow-800'
-                    }`}
-                  >
-                    {isAccepted ? 'Accepted' : isRejected ? 'Rejected' : statusLower === 'interview' ? 'Interview' : 'Pending'}
-                  </span>
+                  {/* Replaced inline badge with StatusBadge component for consistency */}
+                  <StatusBadge status={statusLower} />
                 </td>
                 <td className="p-4 flex flex-wrap gap-2 items-center">
                   <button
@@ -473,6 +509,13 @@ const ViewStudentApplications = ({ schoolId }) => {
                     title="Schedule Interview"
                   >
                     <Calendar size={16} />
+                  </button>
+                  <button
+                    onClick={() => handleScheduleWrittenExam(app)}
+                    className="p-2 text-indigo-600 bg-indigo-100 rounded-full hover:bg-indigo-200"
+                    title="Schedule Written Exam"
+                  >
+                    <FileText size={16} />
                   </button>
                   <button
                     onClick={() => handleStatusChange(app, "Accepted")}
@@ -504,6 +547,7 @@ const ViewStudentApplications = ({ schoolId }) => {
           const total = applications.length;
           const pending = applications.filter(a => (a.status || '').toString().toLowerCase() === 'pending').length;
           const interview = applications.filter(a => (a.status || '').toString().toLowerCase() === 'interview').length;
+          const writtenExam = applications.filter(a => (a.status || '').toString().toLowerCase() === 'writtenexam').length;
           const accepted = applications.filter(a => (a.status || '').toString().toLowerCase() === 'accepted').length;
           const rejected = applications.filter(a => (a.status || '').toString().toLowerCase() === 'rejected').length;
           return (
@@ -512,6 +556,7 @@ const ViewStudentApplications = ({ schoolId }) => {
               <div className="flex items-center gap-6">
                 <span>Pending: <span className="font-semibold">{pending}</span></span>
                 <span>Interview: <span className="font-semibold">{interview}</span></span>
+                <span>Written Exam: <span className="font-semibold">{writtenExam}</span></span>
                 <span>Accepted: <span className="font-semibold">{accepted}</span></span>
                 <span>Rejected: <span className="font-semibold">{rejected}</span></span>
               </div>
@@ -527,6 +572,16 @@ const ViewStudentApplications = ({ schoolId }) => {
           onClose={() => setShowInterviewModal(false)}
           application={selectedApplication}
           onSchedule={handleInterviewScheduled}
+        />
+      )}
+
+      {/* Written Exam Scheduling Modal */}
+      {showWrittenExamModal && selectedWrittenExamApplication && (
+        <WrittenExamSchedulingModal
+          isOpen={showWrittenExamModal}
+          onClose={() => setShowWrittenExamModal(false)}
+          application={selectedWrittenExamApplication}
+          onSchedule={handleWrittenExamScheduled}
         />
       )}
 

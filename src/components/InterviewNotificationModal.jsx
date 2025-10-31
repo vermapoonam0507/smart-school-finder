@@ -2,7 +2,7 @@ import React from 'react';
 import { X, Calendar, Clock, MapPin, User, Phone, FileText, CheckCircle, AlertCircle } from 'lucide-react';
 import { toast } from 'react-toastify';
 
-const InterviewNotificationModal = ({ isOpen, onClose, interviewData, schoolName }) => {
+const InterviewNotificationModal = ({ isOpen, onClose, interviewData, schoolName, notificationType }) => {
   if (!isOpen || !interviewData) return null;
 
   // Parse interview details from the note field
@@ -62,6 +62,8 @@ const InterviewNotificationModal = ({ isOpen, onClose, interviewData, schoolName
   const interviewDetails = parseInterviewDetails(interviewData.note);
   const hasInterviewDetails = interviewDetails && (interviewDetails.date || interviewDetails.time || interviewDetails.venue);
 
+  const isWrittenExam = (notificationType || interviewData?.status || '').toString().toLowerCase().includes('written');
+
   const formatDate = (dateString) => {
     if (!dateString) return 'Not specified';
     
@@ -111,7 +113,7 @@ const InterviewNotificationModal = ({ isOpen, onClose, interviewData, schoolName
               <CheckCircle className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold">Interview Scheduled! 🎉</h2>
+              <h2 className="text-2xl font-bold">{isWrittenExam ? 'Written Exam Scheduled! 🎯' : 'Interview Scheduled! 🎉'}</h2>
               <p className="text-purple-100">{schoolName}</p>
             </div>
           </div>
@@ -130,7 +132,7 @@ const InterviewNotificationModal = ({ isOpen, onClose, interviewData, schoolName
             <div className="flex items-center space-x-2">
               <CheckCircle className="w-5 h-5 text-green-600" />
               <p className="text-green-800 font-medium">
-                Congratulations! You have been selected for an interview at {schoolName}.
+                {isWrittenExam ? `You have been scheduled for a written exam at ${schoolName}.` : `Congratulations! You have been selected for an interview at ${schoolName}.`}
               </p>
             </div>
           </div>
@@ -140,7 +142,7 @@ const InterviewNotificationModal = ({ isOpen, onClose, interviewData, schoolName
             <div className="mb-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                 <Calendar className="w-5 h-5 mr-2 text-purple-600" />
-                Interview Details
+                {isWrittenExam ? 'Written Exam Details' : 'Interview Details'}
               </h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -149,7 +151,7 @@ const InterviewNotificationModal = ({ isOpen, onClose, interviewData, schoolName
                   <div className="flex items-start space-x-3">
                     <Calendar className="w-5 h-5 text-blue-600 mt-1" />
                     <div>
-                      <p className="text-sm font-medium text-gray-700">Interview Date</p>
+                      <p className="text-sm font-medium text-gray-700">{isWrittenExam ? 'Exam Date' : 'Interview Date'}</p>
                       <p className="text-gray-900 font-semibold">{formatDate(interviewDetails.date)}</p>
                     </div>
                   </div>
@@ -157,7 +159,7 @@ const InterviewNotificationModal = ({ isOpen, onClose, interviewData, schoolName
                   <div className="flex items-start space-x-3">
                     <Clock className="w-5 h-5 text-blue-600 mt-1" />
                     <div>
-                      <p className="text-sm font-medium text-gray-700">Interview Time</p>
+                      <p className="text-sm font-medium text-gray-700">{isWrittenExam ? 'Exam Time' : 'Interview Time'}</p>
                       <p className="text-gray-900 font-semibold">{formatTime(interviewDetails.time)}</p>
                     </div>
                   </div>
@@ -243,8 +245,7 @@ const InterviewNotificationModal = ({ isOpen, onClose, interviewData, schoolName
                 <div className="flex items-center">
                   <AlertCircle className="w-5 h-5 text-yellow-600 mr-2" />
                   <p className="text-yellow-800">
-                    Interview has been scheduled, but detailed information is not available yet. 
-                    Please contact the school for more details.
+                    {isWrittenExam ? 'Written exam has been scheduled, but detailed information is not available yet. Please contact the school for more details.' : 'Interview has been scheduled, but detailed information is not available yet. Please contact the school for more details.'}
                   </p>
                 </div>
               </div>

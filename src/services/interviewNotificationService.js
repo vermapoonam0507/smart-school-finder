@@ -21,8 +21,11 @@ export const checkForInterviewNotifications = async (studentId) => {
     const response = await getStudentForms(studentId);
     const applications = response.data || [];
 
-    // Find applications with "Interview" status
-    const interviewApplications = applications.filter(app => app.status === 'Interview');
+    // Find applications with "Interview" or "WrittenExam" status (case-insensitive)
+    const interviewApplications = applications.filter(app => {
+      const st = (app.status || '').toString().toLowerCase();
+      return st === 'interview' || st === 'writtenexam' || st === 'written exam' || st === 'exam';
+    });
 
     if (interviewApplications.length === 0) {
       return null;
@@ -43,17 +46,22 @@ export const checkForInterviewNotifications = async (studentId) => {
       return null;
     }
 
-    // Return the most recent interview application
+    // Return the most recent interview/written-exam application
     const latestInterview = interviewApplications.sort((a, b) => {
       const dateA = new Date(a.updatedAt || a.createdAt);
       const dateB = new Date(b.updatedAt || b.createdAt);
       return dateB - dateA;
     })[0];
 
+    // Determine notification type based on status
+    const statusKey = (latestInterview.status || '').toString().toLowerCase();
+    const notificationType = statusKey === 'writtenexam' || statusKey === 'written exam' || statusKey === 'exam' ? 'WrittenExam' : 'Interview';
+
     return {
       application: latestInterview,
       schoolName: latestInterview.schoolId?.name || latestInterview.schoolName || 'Unknown School',
-      interviewData: latestInterview
+      interviewData: latestInterview,
+      notificationType
     };
 
   } catch (error) {
