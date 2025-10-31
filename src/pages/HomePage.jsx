@@ -172,15 +172,15 @@ const HomePage = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {schools.map((school) => (
               <SchoolCard
-                key={school._id || school.id}
+                key={school._id || school.id || school.schoolId}
                 school={school}
-                onCardClick={() => navigate(`/school/${school._id || school.id}`)}
+                onCardClick={() => navigate(`/school/${school._id || school.id || school.schoolId}`)}
                 onCompareToggle={() => {}}
                 isCompared={false}
                 currentUser={currentUser}
                 onShortlistToggle={() => {}}
                 isShortlisted={false}
-                onApply={() => navigate(`/apply/${school._id || school.id}`)}
+                onApply={() => navigate(`/apply/${school._id || school.id || school.schoolId}`)}
               />
             ))}
           </div>

@@ -8,11 +8,11 @@ const ShortlistPage = ({ shortlist, onShortlistToggle, comparisonList, onCompare
   const { user: currentUser } = useAuth();
 
   const handleCardClick = (school) => {
-    navigate(`/school/${school._id || school.schoolId}`);
+    navigate(`/school/${school._id || school.id || school.schoolId}`);
   };
 
   const handleApplyClick = (school) => {
-    const schoolId = school._id || school.schoolId;
+    const schoolId = school._id || school.id || school.schoolId;
     if (!schoolId) return;
     try { localStorage.setItem('lastAppliedSchoolId', String(schoolId)); } catch (_) {}
     navigate(`/apply/${schoolId}`);

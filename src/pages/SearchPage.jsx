@@ -652,15 +652,15 @@ const SearchPage = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {searchResults.map((school, idx) => (
                   <SchoolCard
-                    key={`${school._id || school.id || 'school'}-${idx}`}
+                    key={`${school._id || school.id || school.schoolId || 'school'}-${idx}`}
                     school={school}
-                    onCardClick={() => navigate(`/school/${school._id || school.id}`)}
+                    onCardClick={() => navigate(`/school/${school._id || school.id || school.schoolId}`)}
                     onCompareToggle={() => {}}
                     isCompared={false}
                     currentUser={null}
                     onShortlistToggle={() => {}}
                     isShortlisted={false}
-                    onApply={() => navigate(`/apply/${school._id || school.id}`)}
+                    onApply={() => navigate(`/apply/${school._id || school.id || school.schoolId}`)}
                   />
                 ))}
               </div>

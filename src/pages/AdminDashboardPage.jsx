@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { toast } from "react-toastify";
+import { getAdminStats } from "../api/adminService";
 import PendingSchoolsSection from "../components/PendingSchoolsSection";
 import PendingReviewsSection from "../components/PendingReviewsSection";
 import DebugAPI from "../components/DebugAPI";
@@ -29,21 +30,29 @@ const AdminDashboardPage = () => {
       return;
     }
 
-    // Simulate loading stats (replace with actual API call)
+    // Load stats from API
     const loadStats = async () => {
       try {
-        // const response = await getAdminStats();
-        // setStats(response.data);
+        const response = await getAdminStats();
+        console.log('📊 Admin Stats Response:', response.data);
         
-        // Mock data for now
+        // Handle different response structures
+        const data = response.data?.data || response.data;
+        
         setStats({
-          totalUsers: 1250,
-          totalSchools: 85,
-          activeUsers: 1100
+          totalUsers: data.totalUsers || 0,
+          totalSchools: data.totalSchools || 0,
+          activeUsers: data.activeUsers || 0
         });
       } catch (error) {
         console.error('Failed to load admin stats:', error);
         toast.error('Failed to load dashboard data');
+        // Set to 0 if API fails
+        setStats({
+          totalUsers: 0,
+          totalSchools: 0,
+          activeUsers: 0
+        });
       } finally {
         setIsLoading(false);
       }

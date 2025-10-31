@@ -6,12 +6,22 @@ import SchoolCard from '../components/SchoolCard';
 import { toast } from 'react-toastify';
 
 const schoolTypes = [
-  'Day School', 'Boarding School', 'Day-cum-Boarding', 'International School',
-  'Convent School', 'Private School', 'Government School'
+  'Government',
+  'Private',
+  'Convent'
 ];
 
 const shiftOptions = [
-  'Morning Shift', 'Afternoon Shift', 'Evening Shift', 'Full Day'
+  'Morning',
+  'Afternoon',
+  'Night School'
+];
+
+const standardOptions = [
+  'Playschool',
+  'Pre-Primary',
+  'Primary',
+  'Secondary'
 ];
 
 const genderOptions = [
@@ -57,6 +67,7 @@ const PredictorPage = () => {
   const [formData, setFormData] = useState({
     schoolType: '',
     preferredShifts: '',
+    preferredStandard: '',
     gender: '',
     state: '',
     city: '',
@@ -85,6 +96,18 @@ const PredictorPage = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [openDropdown]);
+
+  // Prevent scroll event from bubbling and causing unwanted behavior
+  useEffect(() => {
+    const preventScrollBubble = (e) => {
+      if (e.target.closest('.dropdown-scroll')) {
+        e.stopPropagation();
+      }
+    };
+    
+    document.addEventListener('wheel', preventScrollBubble, { passive: false });
+    return () => document.removeEventListener('wheel', preventScrollBubble);
+  }, []);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
@@ -194,15 +217,16 @@ const PredictorPage = () => {
     try {
       // Map frontend field names to backend field names
       const payload = {
-        schoolMode: formData.schoolType === 'Convent School' ? 'convent' :
-                   formData.schoolType === 'Private School' ? 'private' :
-                   formData.schoolType === 'Government School' ? 'government' : formData.schoolType,
+        schoolMode: formData.schoolType === 'Convent' ? 'convent' :
+                   formData.schoolType === 'Private' ? 'private' :
+                   formData.schoolType === 'Government' ? 'government' : formData.schoolType,
         genderType: formData.gender === 'Male' ? 'boy' :
                    formData.gender === 'Female' ? 'girl' :
                    formData.gender === 'Co-educational' ? 'co-ed' : formData.gender,
-        shifts: formData.preferredShifts === 'Morning Shift' ? 'morning' :
-                formData.preferredShifts === 'Afternoon Shift' ? 'afternoon' :
-                formData.preferredShifts === 'Evening Shift' ? 'night school' : formData.preferredShifts,
+        shifts: formData.preferredShifts === 'Morning' ? 'morning' :
+                formData.preferredShifts === 'Afternoon' ? 'afternoon' :
+                formData.preferredShifts === 'Night School' ? 'night school' : formData.preferredShifts,
+        standard: formData.preferredStandard ? formData.preferredStandard.toLowerCase() : undefined,
         state: formData.state,
         city: formData.city,
         area: formData.area,
@@ -231,6 +255,7 @@ const PredictorPage = () => {
     setFormData({
       schoolType: '',
       preferredShifts: '',
+      preferredStandard: '',
       gender: '',
       state: '',
       city: '',
@@ -248,6 +273,7 @@ const PredictorPage = () => {
     const options = 
       field === 'schoolType' ? schoolTypes :
       field === 'preferredShifts' ? shiftOptions :
+      field === 'preferredStandard' ? standardOptions :
       field === 'gender' ? genderOptions :
       field === 'state' ? stateOptions :
       field === 'city' ? cityOptions :
@@ -257,6 +283,7 @@ const PredictorPage = () => {
     const placeholder = 
       field === 'schoolType' ? 'Select School Type' :
       field === 'preferredShifts' ? 'Select Shift' :
+      field === 'preferredStandard' ? 'Select Standard' :
       field === 'gender' ? 'Select' :
       field === 'state' ? 'Select' :
       field === 'city' ? 'Select' :
@@ -298,10 +325,12 @@ const PredictorPage = () => {
               ref={dropdownRef}
               className={`dropdown-scroll absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg ${
                 field === 'state' || field === 'city' || field === 'interests' ? 'max-h-80' : 'max-h-60'
-              }`}
+              } overflow-y-auto`}
               style={{ 
-                overflow: 'auto'
+                scrollBehavior: 'smooth',
+                overflowX: 'hidden'
               }}
+              onWheel={(e) => e.stopPropagation()}
             >
               {!required && (
                 <div
@@ -361,6 +390,11 @@ const PredictorPage = () => {
             <DropdownField
               label="Preferred Shifts"
               field="preferredShifts"
+            />
+            
+            <DropdownField
+              label="Preferred Standard"
+              field="preferredStandard"
             />
             
             <DropdownField
@@ -460,15 +494,15 @@ const PredictorPage = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {searchResults.map((school, index) => (
                   <SchoolCard
-                    key={school._id || school.id || `school-${index}`}
+                    key={school._id || school.id || school.schoolId || `school-${index}`}
                     school={school}
-                    onCardClick={() => navigate(`/school/${school._id || school.id}`)}
+                    onCardClick={() => navigate(`/school/${school._id || school.id || school.schoolId}`)}
                     onCompareToggle={() => {}}
                     isCompared={false}
                     currentUser={null}
                     onShortlistToggle={() => {}}
                     isShortlisted={false}
-                    onApply={() => navigate(`/apply/${school._id || school.id}`)}
+                    onApply={() => navigate(`/apply/${school._id || school.id || school.schoolId}`)}
                   />
                 ))}
               </div>
