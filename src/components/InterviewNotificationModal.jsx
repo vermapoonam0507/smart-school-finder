@@ -1,15 +1,21 @@
 import React from 'react';
 import { X, Calendar, Clock, MapPin, User, Phone, FileText, CheckCircle, AlertCircle } from 'lucide-react';
 import { toast } from 'react-toastify';
+import { useNavigate } from 'react-router-dom';
 
 const InterviewNotificationModal = ({ isOpen, onClose, interviewData, schoolName, notificationType }) => {
+  const navigate = useNavigate();
   if (!isOpen || !interviewData) return null;
 
-  // Parse interview details from the note field
+  // Check if this is a written exam notification
+  const eventStatus = (interviewData?.status || notificationType || '').toLowerCase();
+  const isWrittenExam = eventStatus === 'writtenexam' || eventStatus === 'written exam' || eventStatus === 'exam';
+
   const parseInterviewDetails = (note) => {
     if (!note) return null;
 
     const details = {
+      type: isWrittenExam ? 'WrittenExam' : 'Interview',
       date: '',
       time: '',
       venue: '',
@@ -21,7 +27,9 @@ const InterviewNotificationModal = ({ isOpen, onClose, interviewData, schoolName
     };
 
     try {
-      const lines = note.split('\n');
+      // Replace "Interview Scheduled:" with empty string to handle both interview and written exam notes
+      const cleanedNote = note.replace(/^(Interview|Written Exam) Scheduled:/, '').trim();
+      const lines = cleanedNote.split('\n');
       let currentSection = '';
 
       lines.forEach(line => {
@@ -62,7 +70,7 @@ const InterviewNotificationModal = ({ isOpen, onClose, interviewData, schoolName
   const interviewDetails = parseInterviewDetails(interviewData.note);
   const hasInterviewDetails = interviewDetails && (interviewDetails.date || interviewDetails.time || interviewDetails.venue);
 
-  const isWrittenExam = (notificationType || interviewData?.status || '').toString().toLowerCase().includes('written');
+  // Format date and time
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Not specified';
@@ -253,20 +261,20 @@ const InterviewNotificationModal = ({ isOpen, onClose, interviewData, schoolName
           )}
 
           {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-3 mt-6">
+          <div className="flex flex-col gap-3 mt-6">
             <button
               onClick={() => {
-                // Navigate to applications page
-                window.location.href = '/my-applications';
+                onClose();
+                navigate('/my-applications');
               }}
-              className="flex-1 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center"
+              className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center font-medium"
             >
-              <FileText className="w-4 h-4 mr-2" />
-              View My Applications
+              <FileText className="w-5 h-5 mr-2" />
+              View All Applications
             </button>
             <button
               onClick={onClose}
-              className="flex-1 bg-gray-100 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-200 transition-colors"
+              className="w-full bg-gray-100 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-200 transition-colors font-medium"
             >
               Close
             </button>

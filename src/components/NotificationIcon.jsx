@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell, X, Check, CheckCheck } from 'lucide-react';
+import { Bell, X, Check, CheckCheck, FileText } from 'lucide-react';
 import { getStudentNotifications, markNotificationAsRead, markAllNotificationsAsRead } from '../api/notificationService';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const NotificationIcon = () => {
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -143,7 +145,7 @@ const NotificationIcon = () => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-96 overflow-hidden">
+        <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50 flex flex-col">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
@@ -214,17 +216,19 @@ const NotificationIcon = () => {
             )}
           </div>
 
-          {/* Footer */}
-          {notifications.length > 0 && (
-            <div className="p-3 border-t border-gray-200 bg-gray-50">
-              <button
-                onClick={() => window.location.href = '/my-applications'}
-                className="w-full text-center text-sm text-blue-600 hover:text-blue-800 font-medium"
-              >
-                View All Applications
-              </button>
-            </div>
-          )}
+          {/* Footer - Always visible at bottom */}
+          <div className="sticky bottom-0 p-3 border-t border-gray-200 bg-white mt-auto">
+            <button
+              onClick={() => {
+                setIsOpen(false);
+                navigate('/my-applications');
+              }}
+              className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm"
+            >
+              <FileText className="w-4 h-4" />
+              View All Applications
+            </button>
+          </div>
         </div>
       )}
     </div>
