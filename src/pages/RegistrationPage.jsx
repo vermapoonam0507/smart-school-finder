@@ -346,6 +346,8 @@ const RegistrationPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingSchoolId, setEditingSchoolId] = useState("");
+  const [hasExistingSchool, setHasExistingSchool] = useState(false);
+  const [isLoadingExistingData, setIsLoadingExistingData] = useState(true);
 
   // State with all the fields required by the backend schema
   const [formData, setFormData] = useState({
@@ -360,7 +362,7 @@ const RegistrationPage = () => {
     board: "",
     feeRange: "",
     upto: "",
-    email: "",
+    email: currentUser?.email || "",
     website: "",
     phoneNo: "",
     genderType: "co-ed",
@@ -464,13 +466,7 @@ const RegistrationPage = () => {
   const [facultyQuality, setFacultyQuality] = useState([
     { name: '', qualification: '', awards: '', experience: '' }
   ]);
-  // Academics (frontend-only; backend fields not present yet)
-  const [academicResults, setAcademicResults] = useState([
-    { year: new Date().getFullYear() - 2, passPercent: '', averageMarksPercent: '' },
-    { year: new Date().getFullYear() - 1, passPercent: '', averageMarksPercent: '' },
-    { year: new Date().getFullYear(), passPercent: '', averageMarksPercent: '' },
-  ]);
-  const [examQualifiers, setExamQualifiers] = useState([]); // { year, exam, participation }
+  // Removed academicResults and examQualifiers as they're not in backend schema
   const [admissionSteps, setAdmissionSteps] = useState([]); // { title, type, deadline, amount, file, toggle }
 
   // Faculty Quality array: each entry will contain { name, qualification, awards, experience }
@@ -620,7 +616,9 @@ const RegistrationPage = () => {
   const updateOrAdd = async (updateFn, addFn, schoolId, payload) => {
     try {
       if (isEditMode) {
-        await updateFn(schoolId, payload);
+        // Remove schoolId from payload for update (it's only needed in URL)
+        const { schoolId: _, ...updatePayload } = payload;
+        await updateFn(schoolId, updatePayload);
       } else {
         await addFn(payload);
       }
@@ -723,10 +721,12 @@ const RegistrationPage = () => {
         genderType: normalizedGender,
         shifts: (Array.isArray(formData.shifts) ? formData.shifts : [formData.shifts].filter(Boolean)).map(s => String(s).toLowerCase()),
         languageMedium: Array.isArray(formData.languageMedium) ? formData.languageMedium : [formData.languageMedium].filter(Boolean),
-        transportAvailable: formData.transportAvailable,
+        // Backend expects enum string for transportAvailable ('yes' | 'no')
+        transportAvailable: (String(formData.transportAvailable).toLowerCase() === 'yes' || formData.transportAvailable === true) ? 'yes' : 'no',
         latitude: Number(formData.latitude), // Mandatory for distance calculation
         longitude: Number(formData.longitude), // Mandatory for distance calculation
-        TeacherToStudentRatio: formData.TeacherToStudentRatio,
+        // Match backend field casing
+        teacherToStudentRatio: formData.TeacherToStudentRatio,
         rank: formData.rank,
         specialist: Array.isArray(formData.specialist) ? formData.specialist : [],
         tags: Array.isArray(formData.tags) ? formData.tags : []
@@ -740,7 +740,11 @@ const RegistrationPage = () => {
       // Create or update school and resolve schoolId
       let schoolId = editingSchoolId;
       if (isEditMode && editingSchoolId) {
-        await updateSchoolInfo(editingSchoolId, payload);
+        try {
+          await updateSchoolInfo(editingSchoolId, payload);
+        } catch (err) {
+          console.warn('⚠️ Core school update failed, proceeding with subresource saves:', err?.response?.data || err?.message || err);
+        }
       } else {
         const schoolResponse = await addSchool(payload);
         schoolId = schoolResponse.data.data._id;
@@ -800,7 +804,7 @@ const RegistrationPage = () => {
       }
 
       // Add fees and scholarships if any (matching backend FeesAndScholarships model)
-      if (formData.classFees?.length > 0 || formData.scholarships?.length > 0 || formData.feesTransparency) {
+      if (formData.classFees?.length > 0 || formData.scholarships?.length > 0 || (formData.feesTransparency !== '' && formData.feesTransparency != null)) {
         // Validate and clean classFees
         const validClassFees = (formData.classFees || []).filter(fee => 
           fee.className && fee.tuition !== undefined && fee.tuition >= 0
@@ -823,13 +827,24 @@ const RegistrationPage = () => {
           documentsRequired: Array.isArray(sch.documentsRequired) ? sch.documentsRequired : []
         }));
 
-        if (validClassFees.length > 0 || validScholarships.length > 0 || formData.feesTransparency) {
+        if (validClassFees.length > 0 || validScholarships.length > 0 || (formData.feesTransparency !== '' && formData.feesTransparency != null)) {
+          // Map transparency string values to numbers (if backend expects numbers)
+          let transparencyValue;
+          if (formData.feesTransparency === 'full') transparencyValue = 100;
+          else if (formData.feesTransparency === 'partial') transparencyValue = 50;
+          else if (formData.feesTransparency === 'low') transparencyValue = 0;
+          else if (formData.feesTransparency !== '' && formData.feesTransparency != null) {
+            // If it's already a number, use it
+            transparencyValue = Number(formData.feesTransparency);
+          }
+          
           const payloadFees = {
             schoolId,
-            feesTransparency: formData.feesTransparency ? Number(formData.feesTransparency) : undefined,
+            feesTransparency: transparencyValue,
             classFees: validClassFees,
             scholarships: validScholarships
           };
+          console.log('💰 Sending Fees & Scholarships:', payloadFees);
           promises.push(updateOrAdd(updateFeesAndScholarshipsById, addFeesAndScholarships, schoolId, payloadFees));
         }
       }
@@ -875,23 +890,23 @@ const RegistrationPage = () => {
       }
 
       // Add/Update Technology Adoption
-      if (formData.smartClassroomsPercentage || formData.eLearningPlatforms?.length > 0) {
+      if ((formData.smartClassroomsPercentage !== '' && formData.smartClassroomsPercentage != null) || (formData.eLearningPlatforms?.length > 0)) {
         const payloadTech = {
           schoolId,
-          smartClassroomsPercentage: formData.smartClassroomsPercentage ? Number(formData.smartClassroomsPercentage) : undefined,
+          smartClassroomsPercentage: (formData.smartClassroomsPercentage === '' || formData.smartClassroomsPercentage == null) ? undefined : Number(formData.smartClassroomsPercentage),
           eLearningPlatforms: formData.eLearningPlatforms || []
         };
         promises.push(updateOrAdd(updateTechnologyAdoption, addTechnologyAdoption, schoolId, payloadTech));
       }
 
       // Add/Update Safety & Security
-      if (formData.cctvCoveragePercentage || formData.medicalFacility?.doctorAvailability || 
+      if ((formData.cctvCoveragePercentage !== '' && formData.cctvCoveragePercentage != null) || formData.medicalFacility?.doctorAvailability || 
           formData.medicalFacility?.medkitAvailable || formData.medicalFacility?.ambulanceAvailable ||
           formData.transportSafety?.gpsTrackerAvailable || formData.transportSafety?.driversVerified ||
           formData.fireSafetyMeasures?.length > 0 || formData.visitorManagementSystem) {
         const payloadSafety = {
           schoolId,
-          cctvCoveragePercentage: formData.cctvCoveragePercentage ? Number(formData.cctvCoveragePercentage) : undefined,
+          cctvCoveragePercentage: (formData.cctvCoveragePercentage === '' || formData.cctvCoveragePercentage == null) ? undefined : Number(formData.cctvCoveragePercentage),
           medicalFacility: {
             doctorAvailability: formData.medicalFacility?.doctorAvailability || undefined,
             medkitAvailable: formData.medicalFacility?.medkitAvailable || false,
@@ -979,53 +994,25 @@ const RegistrationPage = () => {
         console.log('No valid international exposure data to send');
       }
 
-      // Add/Update Academics
-      // Validate and clean academic results (Board Results)
-      const validAcademicResults = (academicResults || []).filter(result => 
-        result.year && (result.passPercent || result.averageMarksPercent)
-      ).map(result => ({
-        year: result.year,
-        passPercent: result.passPercent ? Number(result.passPercent) : undefined,
-        averageMarksPercent: result.averageMarksPercent ? Number(result.averageMarksPercent) : undefined
-      }));
-
-      // Validate and clean exam qualifiers
-      const validExamQualifiers = (examQualifiers || []).filter(qualifier => 
-        qualifier.year && qualifier.exam && qualifier.participation
-      ).map(qualifier => ({
-        year: qualifier.year,
-        exam: qualifier.exam,
-        participation: qualifier.participation
-      }));
-
-      console.log('📊 Academics Data to Save:', {
-        validAcademicResults,
-        validExamQualifiers,
-        rawAcademicResults: academicResults,
-        rawExamQualifiers: examQualifiers
-      });
-
-      if (formData.averageClass10Result || formData.averageClass12Result || formData.averageSchoolMarks || 
-          formData.specialExamsTraining?.length > 0 || formData.extraCurricularActivities?.length > 0 ||
-          validExamQualifiers.length > 0 || validAcademicResults.length > 0) {
+      // Add/Update Academics (simplified - only summary fields)
+      if ((formData.averageClass10Result !== '' && formData.averageClass10Result != null) || (formData.averageClass12Result !== '' && formData.averageClass12Result != null) || (formData.averageSchoolMarks !== '' && formData.averageSchoolMarks != null) || 
+          formData.specialExamsTraining?.length > 0 || formData.extraCurricularActivities?.length > 0) {
         const payloadAcademics = {
           schoolId,
-          averageClass10Result: formData.averageClass10Result ? Number(formData.averageClass10Result) : undefined,
-          averageClass12Result: formData.averageClass12Result ? Number(formData.averageClass12Result) : undefined,
-          averageSchoolMarks: formData.averageSchoolMarks ? Number(formData.averageSchoolMarks) : 75, // Required field, default to 75
+          averageClass10Result: (formData.averageClass10Result === '' || formData.averageClass10Result == null) ? undefined : Number(formData.averageClass10Result),
+          averageClass12Result: (formData.averageClass12Result === '' || formData.averageClass12Result == null) ? undefined : Number(formData.averageClass12Result),
+          averageSchoolMarks: (formData.averageSchoolMarks === '' || formData.averageSchoolMarks == null) ? 75 : Number(formData.averageSchoolMarks), // Required field, default to 75
           specialExamsTraining: formData.specialExamsTraining || [],
-          extraCurricularActivities: formData.extraCurricularActivities || [],
-          // Add validated exam qualifiers and academic results
-          examQualifiers: validExamQualifiers,
-          academicResults: validAcademicResults
+          extraCurricularActivities: formData.extraCurricularActivities || []
         };
+        console.log('📚 Sending Academics payload:', payloadAcademics);
         promises.push(updateOrAdd(updateAcademics, addAcademics, schoolId, payloadAcademics));
       }
 
       // Add/Update other details (matching backend OtherDetails model)
-      if (formData.genderRatioMale || formData.genderRatioFemale || formData.genderRatioOthers ||
-          formData.scholarshipDiversityTypes?.length > 0 || formData.scholarshipDiversityCoverage ||
-          formData.specialNeedsStaff || formData.specialNeedsSupportPercentage ||
+      if ((formData.genderRatioMale !== '' && formData.genderRatioMale != null) || (formData.genderRatioFemale !== '' && formData.genderRatioFemale != null) || (formData.genderRatioOthers !== '' && formData.genderRatioOthers != null) ||
+          formData.scholarshipDiversityTypes?.length > 0 || (formData.scholarshipDiversityCoverage !== '' && formData.scholarshipDiversityCoverage != null) ||
+          formData.specialNeedsStaff || (formData.specialNeedsSupportPercentage !== '' && formData.specialNeedsSupportPercentage != null) ||
           formData.specialNeedsFacilities?.length > 0) {
         
         // Ensure non-negative values for gender ratios
@@ -1042,11 +1029,11 @@ const RegistrationPage = () => {
           },
           scholarshipDiversity: {
             types: formData.scholarshipDiversityTypes || [],
-            studentsCoveredPercentage: formData.scholarshipDiversityCoverage ? Number(formData.scholarshipDiversityCoverage) : undefined
+            studentsCoveredPercentage: (formData.scholarshipDiversityCoverage === '' || formData.scholarshipDiversityCoverage == null) ? undefined : Number(formData.scholarshipDiversityCoverage)
           },
           specialNeedsSupport: {
             dedicatedStaff: formData.specialNeedsStaff || false,
-            studentsSupportedPercentage: formData.specialNeedsSupportPercentage ? Number(formData.specialNeedsSupportPercentage) : undefined,
+            studentsSupportedPercentage: (formData.specialNeedsSupportPercentage === '' || formData.specialNeedsSupportPercentage == null) ? undefined : Number(formData.specialNeedsSupportPercentage),
             facilitiesAvailable: formData.specialNeedsFacilities || []
           }
         };
@@ -1085,7 +1072,27 @@ const RegistrationPage = () => {
         updateUserContext({ userType: 'school', schoolId: schoolId });
       }
 
-      navigate("/school-portal/profile-view");
+      // Update state to reflect that school now exists
+      if (!isEditMode) {
+        console.log('🎉 School registration successful! Switching to edit mode:', {
+          schoolId,
+          previousState: { hasExistingSchool, isEditMode },
+          newState: { hasExistingSchool: true, isEditMode: true }
+        });
+        setHasExistingSchool(true);
+        setIsEditMode(true);
+        setEditingSchoolId(schoolId);
+        // Clear any draft data since we now have a real school profile
+        try {
+          localStorage.removeItem("schoolRegDraft");
+        } catch (error) {
+          console.error("Could not clear draft:", error);
+        }
+      }
+
+      // Stay on the same page instead of navigating away
+      // This allows the user to continue editing their profile
+      // navigate("/school-portal/profile-view");
     } catch (error) {
       console.error('Submission error:', error);
       console.error('Error response:', error.response);
@@ -1183,6 +1190,449 @@ const RegistrationPage = () => {
       toast.error("Could not save draft");
     }
   };
+
+  const loadDraft = () => {
+    try {
+      const savedDraft = localStorage.getItem("schoolRegDraft");
+      if (savedDraft) {
+        const draft = JSON.parse(savedDraft);
+        
+        // Restore form data
+        if (draft.formData) {
+          setFormData(draft.formData);
+        }
+        
+        // Restore alumni data
+        if (draft.famousAlumnies) {
+          setFamousAlumnies(draft.famousAlumnies);
+        }
+        if (draft.topAlumnies) {
+          setTopAlumnies(draft.topAlumnies);
+        }
+        if (draft.otherAlumnies) {
+          setOtherAlumnies(draft.otherAlumnies);
+        }
+        
+        // Restore activities and amenities
+        if (draft.customActivities) {
+          setCustomActivities(draft.customActivities);
+        }
+        if (draft.customAmenities) {
+          setCustomAmenities(draft.customAmenities);
+        }
+        
+        // Restore faculty and academic data
+        if (draft.facultyQuality) {
+          setFacultyQuality(draft.facultyQuality);
+        }
+        // academicResults and examQualifiers removed - not in backend schema
+        
+        // Restore active section
+        if (draft.activeSection) {
+          setActiveSection(draft.activeSection);
+        }
+        
+        // Only show toast if we actually have meaningful draft data
+        if (draft.formData?.name || draft.formData?.email || draft.formData?.description) {
+          toast.success("Draft loaded successfully!");
+        }
+        return true;
+      }
+    } catch (error) {
+      console.error("Error loading draft:", error);
+      toast.error("Could not load draft");
+    }
+    return false;
+  };
+
+  const clearDraft = () => {
+    try {
+      localStorage.removeItem("schoolRegDraft");
+      toast.success("Draft cleared");
+    } catch (error) {
+      toast.error("Could not clear draft");
+    }
+  };
+
+  // Check for existing school data on mount
+  useEffect(() => {
+    checkForExistingSchool();
+  }, []);
+
+  // Debug: Log state changes (remove this in production)
+  useEffect(() => {
+    console.log('🔍 State update:', {
+      hasExistingSchool,
+      isLoadingExistingData,
+      isEditMode,
+      hasCurrentUser: !!currentUser?._id
+    });
+  }, [hasExistingSchool, isLoadingExistingData, isEditMode, currentUser?._id]);
+
+  // Auto-fill user details when currentUser becomes available
+  useEffect(() => {
+    if (currentUser && !hasExistingSchool && !isLoadingExistingData) {
+      console.log('🔍 Auto-filling user details:', {
+        email: currentUser.email,
+        availableFields: Object.keys(currentUser)
+      });
+      
+      setFormData(prev => ({
+        ...prev,
+        email: currentUser.email || prev.email
+      }));
+    }
+  }, [currentUser, hasExistingSchool, isLoadingExistingData]);
+
+  // Check for existing school data automatically
+  const checkForExistingSchool = async () => {
+    if (!currentUser?._id) {
+      console.log('❌ No current user, treating as new school');
+      setHasExistingSchool(false);
+      setIsEditMode(false);
+      setIsLoadingExistingData(false);
+      // Load draft for new users
+      loadDraft();
+      return;
+    }
+    
+    try {
+      setIsLoadingExistingData(true);
+      let school;
+      
+      // Method 1: Try localStorage (works if same session)
+      const cachedSchoolId = typeof localStorage !== 'undefined' && localStorage.getItem('lastCreatedSchoolId');
+      if (cachedSchoolId) {
+        try {
+          const res = await getSchoolById(cachedSchoolId, { headers: { 'X-Silent-Request': '1' } });
+          school = res?.data?.data;
+          console.log('✅ Found existing school from localStorage');
+        } catch (e) {
+          console.log('❌ localStorage schoolId not valid, trying other methods...');
+        }
+      }
+      
+      // Method 2: Try currentUser.schoolId (works if backend returns it)
+      if (!school && currentUser?.schoolId) {
+        try {
+          const res = await getSchoolById(currentUser.schoolId, { headers: { 'X-Silent-Request': '1' } });
+          school = res?.data?.data;
+          console.log('✅ Found existing school from currentUser.schoolId');
+        } catch (e) {
+          console.log('❌ currentUser.schoolId not valid, trying other methods...');
+        }
+      }
+      
+      // Method 3: Fetch schools and filter by authId (frontend-only solution)
+      if (!school) {
+        try {
+          console.log('🔍 Fetching schools to find match by authId...');
+          
+          // Try multiple status endpoints since 'all' doesn't work
+          let schools = [];
+          const statuses = ['accepted', 'pending', 'rejected'];
+          
+          for (const status of statuses) {
+            try {
+              const res = await getSchoolsByStatus(status);
+              const statusSchools = res?.data?.data || res?.data || [];
+              schools = schools.concat(statusSchools);
+            } catch (statusErr) {
+              console.log(`Could not fetch ${status} schools:`, statusErr.message);
+            }
+          }
+          
+          console.log(`Found ${schools.length} total schools across all statuses`);
+          
+          // Find school where authId matches current user's _id
+          school = schools.find(s => s.authId === currentUser._id);
+          
+          if (school) {
+            console.log('✅ Found existing school by authId match');
+            localStorage.setItem('lastCreatedSchoolId', school._id);
+          } else {
+            console.log('⚠️ No school found with authId, trying email match...');
+            
+            // Fallback: Try to match by email (for schools created before authId was added)
+            if (currentUser.email) {
+              console.log('🔍 Searching for email match:', {
+                userEmail: currentUser.email,
+                totalSchools: schools.length,
+                sampleSchoolEmails: schools.slice(0, 3).map(s => ({ name: s.name, email: s.email, authId: s.authId }))
+              });
+              
+              school = schools.find(s => s.email && s.email.toLowerCase() === currentUser.email.toLowerCase());
+              
+              if (school) {
+                console.log('✅ Found existing school by email match:', {
+                  schoolName: school.name,
+                  schoolEmail: school.email,
+                  schoolId: school._id
+                });
+                localStorage.setItem('lastCreatedSchoolId', school._id);
+              } else {
+                console.log('❌ No school found with matching email');
+                console.log('🔍 All school emails in database:', schools.map(s => s.email).filter(Boolean));
+              }
+            }
+          }
+        } catch (e) {
+          console.log('❌ Could not fetch schools:', e.message);
+        }
+      }
+      
+      if (school) {
+        console.log('✅ Found existing school, entering edit mode');
+        setHasExistingSchool(true);
+        setEditingSchoolId(school._id);
+        setIsEditMode(true);
+        await loadExistingSchoolData(school);
+      } else {
+        console.log('❌ No existing school found, treating as new registration');
+        setHasExistingSchool(false);
+        setIsEditMode(false);
+        // Auto-fill user details for new schools
+        if (currentUser) {
+          setFormData(prev => ({
+            ...prev,
+            email: currentUser.email || prev.email
+          }));
+        }
+        // Only load draft if no existing school found
+        loadDraft();
+      }
+    } catch (error) {
+      console.error('Error checking for existing school:', error);
+      setHasExistingSchool(false);
+      setIsEditMode(false);
+      // Load draft on error as well (assuming new school)
+      loadDraft();
+    } finally {
+      setIsLoadingExistingData(false);
+    }
+  };
+
+  // Load existing school data into form
+  const loadExistingSchoolData = async (school) => {
+    // Clear any existing draft since we're loading real school data
+    try {
+      localStorage.removeItem("schoolRegDraft");
+    } catch (error) {
+      console.error("Could not clear draft:", error);
+    }
+    setFormData(prev => ({
+      ...prev,
+      name: school.name || "",
+      description: school.description || "",
+      address: school.address || "",
+      area: school.area || "",
+      city: school.city || "",
+      state: school.state || "",
+      pincode: school.pinCode ? String(school.pinCode) : "",
+      board: school.board || "",
+      feeRange: school.feeRange || "",
+      upto: school.upto || "",
+      email: school.email || "",
+      website: school.website || "",
+      phoneNo: school.mobileNo || "",
+      schoolMode: school.schoolMode || "convent",
+      genderType: school.genderType === 'boy' ? 'boys' : school.genderType === 'girl' ? 'girls' : (school.genderType || 'co-ed'),
+      shifts: Array.isArray(school.shifts) ? school.shifts : [],
+      languageMedium: Array.isArray(school.languageMedium) ? school.languageMedium : [],
+      transportAvailable: school.transportAvailable || "no",
+      latitude: school.latitude != null ? String(school.latitude) : "",
+      longitude: school.longitude != null ? String(school.longitude) : "",
+      TeacherToStudentRatio: school.TeacherToStudentRatio || "",
+      rank: school.rank || "",
+      specialist: Array.isArray(school.specialist) ? school.specialist : [],
+      tags: Array.isArray(school.tags) ? school.tags : []
+    }));
+    
+    // Load sub-resources in parallel and prefill form controls
+    try {
+      const [
+        amenitiesRes,
+        activitiesRes,
+        infraRes,
+        feesRes,
+        academicsRes,
+        otherRes,
+        safetyRes,
+        techRes,
+        intlRes,
+        facultyRes,
+        timelineRes
+      ] = await Promise.allSettled([
+        getAmenitiesById(school._id),
+        getActivitiesById(school._id),
+        getInfrastructureById(school._id),
+        getFeesAndScholarshipsById(school._id),
+        getAcademicsById(school._id),
+        getOtherDetailsById(school._id),
+        getSafetyAndSecurityById(school._id),
+        getTechnologyAdoptionById(school._id),
+        getInternationalExposureById(school._id),
+        getFacultyById(school._id),
+        getAdmissionTimelineById(school._id)
+      ]);
+
+      const val = (s) => (s && s.status === 'fulfilled') ? (s.value?.data?.data ?? s.value?.data) : null;
+      const amenities = val(amenitiesRes) || {};
+      const activities = val(activitiesRes) || {};
+      const infra = val(infraRes) || {};
+      const fees = val(feesRes) || {};
+      const academics = val(academicsRes) || {};
+      const other = val(otherRes) || {};
+      const safety = val(safetyRes) || {};
+      const tech = val(techRes) || {};
+      const intl = val(intlRes) || {};
+      const faculty = val(facultyRes) || {};
+      const timeline = val(timelineRes) || {};
+
+      // Prefill arrays/booleans safely (preserve 0/false values)
+      setFormData(prev => ({
+        ...prev,
+        predefinedAmenities: Array.isArray(amenities.predefinedAmenities) ? amenities.predefinedAmenities : (Array.isArray(amenities.amenities) ? amenities.amenities : prev.predefinedAmenities),
+        activities: Array.isArray(activities.activities) ? activities.activities : prev.activities,
+        infraLabTypes: Array.isArray(infra.labs) ? infra.labs : prev.infraLabTypes,
+        infraSportsTypes: Array.isArray(infra.sportsGrounds) ? infra.sportsGrounds : prev.infraSportsTypes,
+        infraLibraryBooks: infra.libraryBooks != null ? String(infra.libraryBooks) : prev.infraLibraryBooks,
+        infraSmartClassrooms: infra.smartClassrooms != null ? String(infra.smartClassrooms) : prev.infraSmartClassrooms,
+        // Safety & Security
+        cctvCoveragePercentage: safety.cctvCoveragePercentage != null ? String(safety.cctvCoveragePercentage) : prev.cctvCoveragePercentage,
+        medicalFacility: safety.medicalFacility ? {
+          doctorAvailability: safety.medicalFacility.doctorAvailability ?? prev.medicalFacility.doctorAvailability,
+          medkitAvailable: !!safety.medicalFacility.medkitAvailable,
+          ambulanceAvailable: !!safety.medicalFacility.ambulanceAvailable
+        } : prev.medicalFacility,
+        transportSafety: safety.transportSafety ? {
+          gpsTrackerAvailable: !!safety.transportSafety.gpsTrackerAvailable,
+          driversVerified: !!safety.transportSafety.driversVerified
+        } : prev.transportSafety,
+        fireSafetyMeasures: Array.isArray(safety.fireSafetyMeasures) ? safety.fireSafetyMeasures : prev.fireSafetyMeasures,
+        visitorManagementSystem: safety.visitorManagementSystem != null ? !!safety.visitorManagementSystem : prev.visitorManagementSystem,
+        // Technology Adoption
+        smartClassroomsPercentage: tech.smartClassroomsPercentage != null ? String(tech.smartClassroomsPercentage) : prev.smartClassroomsPercentage,
+        eLearningPlatforms: Array.isArray(tech.eLearningPlatforms) ? tech.eLearningPlatforms : prev.eLearningPlatforms,
+        // International Exposure
+        exchangePrograms: Array.isArray(intl.exchangePrograms) ? intl.exchangePrograms.map(prog => ({
+          partnerSchool: prog.partnerSchool ?? '',
+          type: prog.type ?? prog.programType ?? '',
+          duration: prog.duration ?? '',
+          studentsParticipated: prog.studentsParticipated ?? '',
+          activeSince: prog.activeSince ?? ''
+        })) : prev.exchangePrograms,
+        globalTieUps: Array.isArray(intl.globalTieUps) ? intl.globalTieUps.map(tie => ({
+          partnerName: tie.partnerName ?? '',
+          nature: tie.nature ?? tie.natureOfTieUp ?? '',
+          activeSince: tie.activeSince ?? '',
+          description: tie.description ?? ''
+        })) : prev.globalTieUps,
+        // Other Details
+        genderRatio: other.genderRatio ? {
+          male: other.genderRatio.male ?? prev.genderRatio.male,
+          female: other.genderRatio.female ?? prev.genderRatio.female,
+          others: other.genderRatio.others ?? prev.genderRatio.others
+        } : prev.genderRatio,
+        scholarshipDiversity: other.scholarshipDiversity ? {
+          types: Array.isArray(other.scholarshipDiversity.types) ? other.scholarshipDiversity.types : prev.scholarshipDiversity.types,
+          studentsCoveredPercentage: other.scholarshipDiversity.studentsCoveredPercentage ?? prev.scholarshipDiversity.studentsCoveredPercentage
+        } : prev.scholarshipDiversity,
+        specialNeedsSupport: other.specialNeedsSupport ? {
+          dedicatedStaff: !!other.specialNeedsSupport.dedicatedStaff,
+          studentsSupportedPercentage: other.specialNeedsSupport.studentsSupportedPercentage ?? prev.specialNeedsSupport.studentsSupportedPercentage,
+          facilitiesAvailable: Array.isArray(other.specialNeedsSupport.facilitiesAvailable) ? other.specialNeedsSupport.facilitiesAvailable : prev.specialNeedsSupport.facilitiesAvailable
+        } : prev.specialNeedsSupport,
+        // Academics summary fields
+        averageClass10Result: academics.averageClass10Result ?? prev.averageClass10Result,
+        averageClass12Result: academics.averageClass12Result ?? prev.averageClass12Result,
+        averageSchoolMarks: academics.averageSchoolMarks ?? prev.averageSchoolMarks,
+        specialExamsTraining: Array.isArray(academics.specialExamsTraining) ? academics.specialExamsTraining : prev.specialExamsTraining,
+        extraCurricularActivities: Array.isArray(academics.extraCurricularActivities) ? academics.extraCurricularActivities : prev.extraCurricularActivities,
+        // Fees & Scholarships
+        feesTransparency: fees.feesTransparency != null ? (
+          fees.feesTransparency === 100 || fees.feesTransparency === 'full' ? 'full' :
+          fees.feesTransparency === 50 || fees.feesTransparency === 'partial' ? 'partial' :
+          fees.feesTransparency === 0 || fees.feesTransparency === 'low' ? 'low' :
+          String(fees.feesTransparency)
+        ) : prev.feesTransparency,
+        classFees: Array.isArray(fees.classFees) ? fees.classFees : prev.classFees,
+        scholarships: Array.isArray(fees.scholarships) ? fees.scholarships : prev.scholarships,
+        // UI mirrors for Other Details
+        genderRatioMale: other.genderRatio && other.genderRatio.male != null ? String(other.genderRatio.male) : prev.genderRatioMale,
+        genderRatioFemale: other.genderRatio && other.genderRatio.female != null ? String(other.genderRatio.female) : prev.genderRatioFemale,
+        genderRatioOthers: other.genderRatio && other.genderRatio.others != null ? String(other.genderRatio.others) : prev.genderRatioOthers,
+        scholarshipDiversityTypes: Array.isArray(other.scholarshipDiversity?.types) ? other.scholarshipDiversity.types : prev.scholarshipDiversityTypes,
+        scholarshipDiversityCoverage: other.scholarshipDiversity && other.scholarshipDiversity.studentsCoveredPercentage != null ? String(other.scholarshipDiversity.studentsCoveredPercentage) : prev.scholarshipDiversityCoverage,
+        specialNeedsStaff: other.specialNeedsSupport ? !!other.specialNeedsSupport.dedicatedStaff : prev.specialNeedsStaff,
+        specialNeedsSupportPercentage: other.specialNeedsSupport && other.specialNeedsSupport.studentsSupportedPercentage != null ? String(other.specialNeedsSupport.studentsSupportedPercentage) : prev.specialNeedsSupportPercentage,
+        specialNeedsFacilities: Array.isArray(other.specialNeedsSupport?.facilitiesAvailable) ? other.specialNeedsSupport.facilitiesAvailable : prev.specialNeedsFacilities
+      }));
+
+      // academicResults and examQualifiers removed - not in backend schema
+
+      // Load additional data arrays
+      if (Array.isArray(amenities.customAmenities)) {
+        setCustomAmenities(amenities.customAmenities);
+      }
+      if (Array.isArray(activities.customActivities)) {
+        setCustomActivities(activities.customActivities);
+      }
+      if (Array.isArray(faculty.facultyMembers)) {
+        setFacultyQuality(faculty.facultyMembers.map(f => ({
+          name: f.name || '',
+          qualification: f.qualification || '',
+          awards: Array.isArray(f.awards) ? f.awards.join(', ') : (f.awards || ''),
+          experience: f.experience || ''
+        })));
+      }
+      if (Array.isArray(timeline.timelines)) {
+        setAdmissionSteps(timeline.timelines.map(t => ({
+          admissionStartDate: t.admissionStartDate ? new Date(t.admissionStartDate).toISOString().split('T')[0] : '',
+          admissionEndDate: t.admissionEndDate ? new Date(t.admissionEndDate).toISOString().split('T')[0] : '',
+          status: t.status || '',
+          documentsRequired: Array.isArray(t.documentsRequired) ? t.documentsRequired : [],
+          admissionLevel: t.eligibility?.admissionLevel || '',
+          ageCriteria: t.eligibility?.ageCriteria || '',
+          otherInfo: t.eligibility?.otherInfo || ''
+        })));
+      }
+
+      console.log('✅ Successfully loaded existing school data');
+    } catch (error) {
+      console.error('Error loading sub-resources:', error);
+    }
+  };
+
+  // Auto-save draft when form data changes (debounced) - only for new schools
+  useEffect(() => {
+    // Don't auto-save for existing schools to avoid overwriting their data
+    if (hasExistingSchool) return;
+    
+    const autoSaveTimer = setTimeout(() => {
+      if (formData.name || formData.description || formData.email) {
+        // Only auto-save if user has started filling the form
+        const draft = {
+          formData,
+          famousAlumnies,
+          topAlumnies,
+          otherAlumnies,
+          customActivities,
+          customAmenities,
+          facultyQuality,
+          activeSection,
+        };
+        try {
+          localStorage.setItem("schoolRegDraft", JSON.stringify(draft));
+          // Don't show toast for auto-save to avoid spam
+        } catch (error) {
+          console.error("Auto-save failed:", error);
+        }
+      }
+    }, 2000); // Auto-save after 2 seconds of inactivity
+
+    return () => clearTimeout(autoSaveTimer);
+  }, [formData, famousAlumnies, topAlumnies, otherAlumnies, customActivities, customAmenities, facultyQuality, activeSection, hasExistingSchool]);
 
   const goPrev = () => {
     if (isFirst) return;
@@ -1322,8 +1772,17 @@ const RegistrationPage = () => {
         toast.error("No linked school profile found for this account. Please create a school profile first.");
         return;
       }
+      
+      // Clear any existing draft since we're loading real school data
+      try {
+        localStorage.removeItem("schoolRegDraft");
+      } catch (error) {
+        console.error("Could not clear draft:", error);
+      }
+      
       setEditingSchoolId(school._id);
       setIsEditMode(true);
+      setHasExistingSchool(true);
 
       setFormData(prev => ({
         ...prev,
@@ -1405,7 +1864,12 @@ const RegistrationPage = () => {
         // Technology Adoption
         smartClassroomsPercentage: tech.smartClassroomsPercentage != null ? String(tech.smartClassroomsPercentage) : prev.smartClassroomsPercentage,
         eLearningPlatforms: Array.isArray(tech.eLearningPlatforms) ? tech.eLearningPlatforms : prev.eLearningPlatforms,
-        feesTransparency: fees.feesTransparency != null ? String(fees.feesTransparency) : prev.feesTransparency,
+        feesTransparency: fees.feesTransparency != null ? (
+          fees.feesTransparency === 100 || fees.feesTransparency === 'full' ? 'full' :
+          fees.feesTransparency === 50 || fees.feesTransparency === 'partial' ? 'partial' :
+          fees.feesTransparency === 0 || fees.feesTransparency === 'low' ? 'low' :
+          String(fees.feesTransparency)
+        ) : prev.feesTransparency,
         classFees: Array.isArray(fees.classFees) ? fees.classFees : prev.classFees,
         scholarships: Array.isArray(fees.scholarships) ? fees.scholarships : prev.scholarships,
         averageClass10Result: academics.averageClass10Result ?? prev.averageClass10Result,
@@ -1450,8 +1914,19 @@ const RegistrationPage = () => {
         specialNeedsSupportPercentage: other.specialNeedsSupport && other.specialNeedsSupport.studentsSupportedPercentage != null ? String(other.specialNeedsSupport.studentsSupportedPercentage) : prev.specialNeedsSupportPercentage,
         specialNeedsStaff: other.specialNeedsSupport ? !!other.specialNeedsSupport.dedicatedStaff : prev.specialNeedsStaff,
         // International Exposure
-        exchangePrograms: Array.isArray(intl.exchangePrograms) ? intl.exchangePrograms : prev.exchangePrograms,
-        globalTieUps: Array.isArray(intl.globalTieUps) ? intl.globalTieUps : prev.globalTieUps,
+        exchangePrograms: Array.isArray(intl.exchangePrograms) ? intl.exchangePrograms.map(prog => ({
+          partnerSchool: prog.partnerSchool ?? '',
+          type: prog.type ?? prog.programType ?? '',
+          duration: prog.duration ?? '',
+          studentsParticipated: prog.studentsParticipated ?? '',
+          activeSince: prog.activeSince ?? ''
+        })) : prev.exchangePrograms,
+        globalTieUps: Array.isArray(intl.globalTieUps) ? intl.globalTieUps.map(tie => ({
+          partnerName: tie.partnerName ?? '',
+          nature: tie.nature ?? tie.natureOfTieUp ?? '',
+          activeSince: tie.activeSince ?? '',
+          description: tie.description ?? ''
+        })) : prev.globalTieUps,
       }));
 
       // Prefill complex UI-specific states
@@ -1470,12 +1945,10 @@ const RegistrationPage = () => {
       
       // Load academic performance trends and exam qualifiers
       console.log('📚 Loading Academics from Backend:', {
-        academicResults: academics.academicResults,
-        examQualifiers: academics.examQualifiers,
         fullAcademics: academics
       });
-      setAcademicResults(Array.isArray(academics.academicResults) ? academics.academicResults : academicResults);
-      setExamQualifiers(Array.isArray(academics.examQualifiers) ? academics.examQualifiers : examQualifiers);
+      
+      // academicResults and examQualifiers removed - not in backend schema
 
       toast.success("Loaded your existing school details. You can update and save.");
     } catch (e) {
@@ -1499,22 +1972,26 @@ const RegistrationPage = () => {
           onSubmit={handleSubmit}
           className="bg-white/95 backdrop-blur-xl p-8 rounded-3xl shadow-2xl border border-white/20"
         >
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent text-center mb-2 animate-fade-in">
-            🎓 School Registration Portal
-          </h1>
-          <div className="flex items-center justify-center gap-3 mb-6">
-            <p className="text-center text-gray-600 animate-fade-in-delay">
-            Complete your school profile with our interactive presentation
-          </p>
-            <button
-              type="button"
-              onClick={handleEnterEditMode}
-              className="px-4 py-2 rounded-lg text-sm bg-indigo-600 text-white"
-              disabled={isSubmitting}
-            >
-              Edit Existing Details
-            </button>
-          </div>
+          {isLoadingExistingData ? (
+            <div className="text-center mb-6">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mb-4"></div>
+              <p className="text-gray-600">Loading your school information...</p>
+            </div>
+          ) : (
+            <>
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent text-center mb-2 animate-fade-in">
+                {hasExistingSchool ? '🏫 School Profile' : '🎓 School Registration Portal'}
+              </h1>
+              <div className="flex items-center justify-center gap-3 mb-6">
+                <p className="text-center text-gray-600 animate-fade-in-delay">
+                  {hasExistingSchool 
+                    ? 'Update your school profile information'
+                    : 'Complete your school profile with our interactive presentation'
+                  }
+                </p>
+              </div>
+            </>
+          )}
           
           {/* Slide Indicators */}
           <div className="flex justify-center gap-2 mb-6">
@@ -2769,193 +3246,7 @@ const RegistrationPage = () => {
             </div>
           </div>
 
-          {/* Board Results */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium text-gray-700">Board Results (Pass % and Average %)</h3>
-              <button
-                type="button"
-                onClick={() => setAcademicResults([...academicResults, { year: '', passPercent: '', averageMarksPercent: '' }])}
-                className="flex items-center text-sm text-indigo-600"
-              >
-                <PlusCircle size={16} className="mr-1" /> Add Year
-              </button>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full bg-white border border-gray-200 rounded-lg">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Year</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pass %</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Average Marks %</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {academicResults.map((row, index) => (
-                    <tr key={index} className="">
-                      <td className="px-4 py-3">
-                        <input
-                          type="number"
-                          value={row.year}
-                          onChange={(e) => {
-                            const next = academicResults.slice();
-                            next[index] = { ...next[index], year: e.target.value };
-                            setAcademicResults(next);
-                          }}
-                          placeholder="YYYY"
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-indigo-500 focus:border-indigo-500"
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        <input
-                          type="number"
-                          value={row.passPercent}
-                          onChange={(e) => {
-                            const next = academicResults.slice();
-                            next[index] = { ...next[index], passPercent: e.target.value };
-                            setAcademicResults(next);
-                          }}
-                          placeholder="0"
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-indigo-500 focus:border-indigo-500"
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        <input
-                          type="number"
-                          value={row.averageMarksPercent}
-                          onChange={(e) => {
-                            const next = academicResults.slice();
-                            next[index] = { ...next[index], averageMarksPercent: e.target.value };
-                            setAcademicResults(next);
-                          }}
-                          placeholder="0"
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-indigo-500 focus:border-indigo-500"
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        <button
-                          type="button"
-                          onClick={() => setAcademicResults(academicResults.filter((_, i) => i !== index))}
-                          className="text-red-500"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Exam & Qualifier Info */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium text-gray-700">Exam & Qualifier / Participation</h3>
-              <button
-                type="button"
-                onClick={() => setExamQualifiers([...examQualifiers, { year: '', exam: '', participation: '' }])}
-                className="flex items-center text-sm text-indigo-600"
-              >
-                <PlusCircle size={16} className="mr-1" /> Add Entry
-              </button>
-            </div>
-            <div className="space-y-3">
-              {examQualifiers.map((item, index) => (
-                <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end bg-gray-50 p-4 rounded-md">
-                  <FormField
-                    label="Year"
-                    name={`exam-year-${index}`}
-                    type="number"
-                    value={item.year}
-                    onChange={(e) => {
-                      const next = examQualifiers.slice();
-                      next[index] = { ...next[index], year: e.target.value };
-                      setExamQualifiers(next);
-                    }}
-                  />
-                  <FormField
-                    label="Exam"
-                    name={`exam-name-${index}`}
-                    type="select"
-                    options={[
-                      'NEET','IIT-JEE','Olympiads','School-level competitions','International education prep','English proficiency exams','Global entrance guidance','Other'
-                    ]}
-                    value={item.exam}
-                    onChange={(e) => {
-                      const next = examQualifiers.slice();
-                      next[index] = { ...next[index], exam: e.target.value };
-                      setExamQualifiers(next);
-                    }}
-                  />
-                  <FormField
-                    label="Qualifier/Participation"
-                    name={`exam-part-${index}`}
-                    value={item.participation}
-                    onChange={(e) => {
-                      const next = examQualifiers.slice();
-                      next[index] = { ...next[index], participation: e.target.value };
-                      setExamQualifiers(next);
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setExamQualifiers(examQualifiers.filter((_, i) => i !== index))}
-                    className="text-red-500 mb-2"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Visualization: Line Chart (inline SVG) */}
-          <div className="mt-6">
-            <h4 className="text-sm font-medium text-gray-700 mb-3">Visualization: Trends (Pass % vs Average %)</h4>
-            <div className="bg-white border rounded-lg p-4 overflow-x-auto">
-              {(() => {
-                const rows = academicResults
-                  .filter(r => r.year && (r.passPercent !== '' || r.averageMarksPercent !== ''))
-                  .sort((a,b) => Number(a.year) - Number(b.year));
-                if (rows.length === 0) {
-                  return <div className="text-sm text-gray-500">Add data to see the chart.</div>;
-                }
-                const width = 520; const height = 220; const padding = 32;
-                const years = rows.map(r => Number(r.year));
-                const minYear = Math.min(...years); const maxYear = Math.max(...years);
-                const xScale = (y) => padding + ((Number(y) - minYear) / Math.max(1, maxYear - minYear)) * (width - padding * 2);
-                const yScale = (v) => height - padding - (Number(v) / 100) * (height - padding * 2);
-                const toPath = (arr, key) => arr.map((r, i) => `${i === 0 ? 'M' : 'L'} ${xScale(r.year)} ${yScale(r[key] || 0)}`).join(' ');
-                const passPath = toPath(rows, 'passPercent');
-                const avgPath = toPath(rows, 'averageMarksPercent');
-                return (
-                  <svg width={width} height={height} className="min-w-[520px]">
-                    <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="#e5e7eb" />
-                    <line x1={padding} y1={padding} x2={padding} y2={height - padding} stroke="#e5e7eb" />
-                    <path d={passPath} fill="none" stroke="#4f46e5" strokeWidth="2" />
-                    <path d={avgPath} fill="none" stroke="#16a34a" strokeWidth="2" />
-                    {rows.map((r, i) => (
-                      <g key={i}>
-                        <circle cx={xScale(r.year)} cy={yScale(r.passPercent || 0)} r="3" fill="#4f46e5" />
-                        <circle cx={xScale(r.year)} cy={yScale(r.averageMarksPercent || 0)} r="3" fill="#16a34a" />
-                        <text x={xScale(r.year)} y={height - padding + 14} textAnchor="middle" fontSize="10" fill="#6b7280">{r.year}</text>
-                      </g>
-                    ))}
-                    <text x={width - padding} y={padding - 8} textAnchor="end" fontSize="10" fill="#6b7280">%</text>
-                    <g>
-                      <rect x={width - padding - 150} y={padding - 20} width="150" height="16" fill="white" />
-                      <circle cx={width - padding - 140} cy={padding - 12} r="3" fill="#4f46e5" />
-                      <text x={width - padding - 132} y={padding - 8} fontSize="10" fill="#374151">Pass %</text>
-                      <circle cx={width - padding - 80} cy={padding - 12} r="3" fill="#16a34a" />
-                      <text x={width - padding - 72} y={padding - 8} fontSize="10" fill="#374151">Average %</text>
-                    </g>
-                  </svg>
-                );
-              })()}
-            </div>
-          </div>
+          {/* Board Results and Exam Qualifiers removed - not in backend schema */}
             </div>
 
             <div className="block" id="international">
@@ -2979,7 +3270,7 @@ const RegistrationPage = () => {
                 type="button"
                 onClick={() => setFormData(prev => ({
                   ...prev,
-                  exchangePrograms: [...(prev.exchangePrograms || []), { partnerSchool: '', country: '', type: '', duration: '', studentsParticipated: '', activeSince: '' }]
+                  exchangePrograms: [...(prev.exchangePrograms || []), { partnerSchool: '', type: '', duration: '', studentsParticipated: '', activeSince: '' }]
                 }))}
                 className="flex items-center text-sm text-indigo-600"
               >
@@ -2996,16 +3287,6 @@ const RegistrationPage = () => {
                     onChange={(e) => {
                       const list = [...(formData.exchangePrograms || [])];
                       list[index] = { ...list[index], partnerSchool: e.target.value };
-                      setFormData(prev => ({ ...prev, exchangePrograms: list }));
-                    }}
-                  />
-                  <FormField
-                    label="Country"
-                    name={`ex-country-${index}`}
-                    value={prog.country}
-                    onChange={(e) => {
-                      const list = [...(formData.exchangePrograms || [])];
-                      list[index] = { ...list[index], country: e.target.value };
                       setFormData(prev => ({ ...prev, exchangePrograms: list }));
                     }}
                   />
@@ -3526,6 +3807,13 @@ const RegistrationPage = () => {
               </button>
               <button 
                 type="button" 
+                onClick={clearDraft} 
+                className="px-4 py-3 rounded-xl border-2 border-red-300 bg-red-50 hover:bg-red-100 hover:border-red-400 transition-all duration-300 transform hover:scale-105 hover:shadow-lg font-semibold text-red-700"
+              >
+                🗑️ Clear Draft
+              </button>
+              <button 
+                type="button" 
                 disabled={isFirst} 
                 onClick={goPrev} 
                 className={`px-6 py-3 rounded-xl border-2 font-semibold transition-all duration-300 transform hover:scale-105 ${
@@ -3550,7 +3838,14 @@ const RegistrationPage = () => {
                   className="mt-8 w-full inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-xl shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-transform transform hover:scale-[1.01]"
                   disabled={isSubmitting}
                 >
-                  {isEditMode ? 'Update School' : 'Submit Registration'}
+                  {isSubmitting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                      {hasExistingSchool ? 'Updating...' : 'Submitting...'}
+                    </>
+                  ) : (
+                    hasExistingSchool ? 'Update School Profile' : 'Submit Registration'
+                  )}
                 </button>
               )}
             </div>

@@ -7,7 +7,6 @@ import {
   checkSchoolProfileExists,
 } from "../api/adminService";
 import RegistrationPage from "./RegistrationPage";
-import SchoolProfileView from "./SchoolProfileView";
 import { fetchStudentApplications, updateApplicationStatus } from "../api/apiService";
 import { getSchoolForms, updateFormStatus } from "../api/applicationService";
 import InterviewSchedulingModal from "../components/InterviewSchedulingModal";
@@ -28,15 +27,9 @@ const SchoolHeader = ({ schoolName, onLogout, applicationsCount, hasProfile, cur
             to="/school-portal/register"
             className="text-gray-600 hover:text-blue-600 flex items-center"
           >
-            <FileText size={18} className="mr-2" /> School Registration
+            <FileText size={18} className="mr-2" /> {hasProfile ? 'School Profile' : 'School Registration'}
           </Link>
         )}
-        <Link
-          to="/school-portal/profile-view"
-          className="text-gray-600 hover:text-blue-600 flex items-center"
-        >
-          <FileText size={18} className="mr-2" /> School Profile
-        </Link>
         {/* Approval Status removed per request */}
         <Link
           to="/school-portal/shortlisted"
@@ -844,10 +837,6 @@ const SchoolPortalPage = ({ currentUser, onLogout, onRegister }) => {
           />
         )}
 
-        <Route
-          path="profile-view"
-          element={<SchoolProfileView />}
-        />
         
         <Route
           index
