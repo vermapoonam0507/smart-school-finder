@@ -44,10 +44,9 @@ const SchoolCard = ({ school, onCardClick, onCompareToggle, isCompared, currentU
           </div>
           <div className="text-right">
             <div className="text-sm text-gray-600 mb-1">Score</div>
-            <div className="flex items-center">
-              <Star size={16} className="text-yellow-500 mr-1" />
-              <span className="font-bold text-lg text-gray-800">
-                {school.score || school.rating || 'N/A'}
+            <div className="flex items-center justify-end">
+              <span className={`font-bold text-lg ${school.scoreColorClass || 'text-gray-800'}`}>
+                {school.scoreDisplay || school.score || school.rating || 'N/A'}
               </span>
             </div>
           </div>

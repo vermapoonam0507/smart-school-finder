@@ -7,6 +7,7 @@ import SchoolCard from "../components/SchoolCard";
 import { toast } from "react-toastify";
 import { useAuth } from "../context/AuthContext";
 import { getCurrentLocation, addDistanceToSchools } from "../utils/distanceUtils";
+import { addScoresToSchools } from "../utils/scoreUtils";
 
 const SchoolsPage = ({
   onCompareToggle,
@@ -19,6 +20,7 @@ const SchoolsPage = ({
   const [userLocation, setUserLocation] = useState(null);
   const [locationError, setLocationError] = useState(null);
   const [showLocationOptions, setShowLocationOptions] = useState(false);
+  const [sortBy, setSortBy] = useState('distance'); // 'distance', 'score', 'name'
   
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
@@ -95,19 +97,39 @@ const SchoolsPage = ({
           return school;
         });
 
+        // Add calculated scores to all schools
+        normalized = addScoresToSchools(normalized);
+
         // Add distance to schools if user location is available
         if (userLocation) {
           normalized = addDistanceToSchools(normalized, userLocation);
-          // Sort by distance (closest first)
-          normalized.sort((a, b) => {
-            if (a.distanceValue && b.distanceValue) {
-              return a.distanceValue - b.distanceValue;
-            }
-            if (a.distanceValue) return -1;
-            if (b.distanceValue) return 1;
-            return 0;
-          });
         }
+
+        // Sort schools based on selected criteria
+        normalized.sort((a, b) => {
+          switch (sortBy) {
+            case 'distance':
+              if (a.distanceValue && b.distanceValue) {
+                return a.distanceValue - b.distanceValue;
+              }
+              if (a.distanceValue) return -1;
+              if (b.distanceValue) return 1;
+              return 0;
+            
+            case 'score':
+              const scoreA = a.score || 0;
+              const scoreB = b.score || 0;
+              return scoreB - scoreA; // Higher score first
+            
+            case 'name':
+              const nameA = (a.name || '').toLowerCase();
+              const nameB = (b.name || '').toLowerCase();
+              return nameA.localeCompare(nameB);
+            
+            default:
+              return 0;
+          }
+        });
         
         setSchools(normalized);
       } catch (error) {
@@ -122,7 +144,7 @@ const SchoolsPage = ({
       }
     };
     loadSchools();
-  }, [userLocation]); // Re-run when user location changes
+  }, [userLocation, sortBy]); // Re-run when user location or sort criteria changes
 
   
 
@@ -157,7 +179,20 @@ const SchoolsPage = ({
       <div className="container mx-auto px-6 py-8">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-gray-800">Explore Schools</h1>
-          <div className="relative">
+          <div className="flex items-center gap-4">
+            {/* Sort Dropdown */}
+            <div className="relative">
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="distance">Sort by Distance</option>
+                <option value="score">Sort by Score</option>
+                <option value="name">Sort by Name</option>
+              </select>
+            </div>
+            <div className="relative">
             {userLocation && (
               <div className="text-sm text-green-600 bg-green-50 px-3 py-1 rounded-full">
                 📍 Distance calculated from your location
@@ -195,6 +230,7 @@ const SchoolsPage = ({
                 )}
               </div>
             )}
+            </div>
           </div>
         </div>
 

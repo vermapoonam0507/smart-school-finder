@@ -306,6 +306,18 @@ export const filterSchoolsByPreferences = (studentId) => {
   return apiClient.get(`/admin/filter/${encodeURIComponent(studentId)}`);
 };
 
+/**
+ * Get nearby schools based on location
+ * Backend: GET /api/admin/schools/nearby?longitude=...&latitude=...&state=...
+ */
+export const getNearbySchools = (longitude, latitude, state) => {
+  const params = new URLSearchParams();
+  if (longitude) params.append('longitude', longitude);
+  if (latitude) params.append('latitude', latitude);
+  if (state) params.append('state', state);
+  return apiClient.get(`/admin/schools/nearby?${params.toString()}`);
+};
+
 export default {
   getPublicSchoolsByStatus,
   getSchoolById,
@@ -339,5 +351,6 @@ export default {
   addAdmissionStatus,
   updateAdmissionStatus,
   deleteAdmissionStatus,
-  filterSchoolsByPreferences
+  filterSchoolsByPreferences,
+  getNearbySchools
 };
