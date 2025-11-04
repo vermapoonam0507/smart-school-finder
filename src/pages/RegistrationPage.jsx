@@ -820,12 +820,21 @@ const RegistrationPage = () => {
         // Validate and clean scholarships
         const validScholarships = (formData.scholarships || []).filter(sch => 
           sch.name && sch.amount !== undefined && sch.amount >= 0 && sch.type
-        ).map(sch => ({
-          name: sch.name,
-          amount: Number(sch.amount) || 0,
-          type: sch.type,
-          documentsRequired: Array.isArray(sch.documentsRequired) ? sch.documentsRequired : []
-        }));
+        ).map(sch => {
+          const scholarship = {
+            name: sch.name,
+            amount: Number(sch.amount) || 0,
+            type: sch.type
+          };
+          // Only include documentsRequired if it has valid values (non-empty strings)
+          const docs = Array.isArray(sch.documentsRequired) 
+            ? sch.documentsRequired.filter(d => d && d.trim()) 
+            : [];
+          if (docs.length > 0) {
+            scholarship.documentsRequired = docs;
+          }
+          return scholarship;
+        });
 
         if (validClassFees.length > 0 || validScholarships.length > 0 || (formData.feesTransparency !== '' && formData.feesTransparency != null)) {
           // Map transparency string values to numbers (if backend expects numbers)
@@ -2813,8 +2822,8 @@ const RegistrationPage = () => {
               <button
                 type="button"
                 onClick={() => {
-                  const newFees = [...(formData.classWiseFees || []), { class: '', tuition: '', activity: '', transport: '', hostel: '', misc: '' }];
-                  setFormData(prev => ({ ...prev, classWiseFees: newFees }));
+                  const newFees = [...(formData.classFees || []), { className: '', tuition: '', activity: '', transport: '', hostel: '', misc: '' }];
+                  setFormData(prev => ({ ...prev, classFees: newFees }));
                 }}
                 className="flex items-center text-sm text-indigo-600"
               >
@@ -2837,16 +2846,16 @@ const RegistrationPage = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {(formData.classWiseFees || []).map((fee, index) => (
+                  {(formData.classFees || []).map((fee, index) => (
                     <tr key={index} className="">
                       <td className="px-4 py-3">
                         <input
                           type="text"
-                          value={fee.class || ''}
+                          value={fee.className || ''}
                           onChange={(e) => {
-                            const newFees = [...(formData.classWiseFees || [])];
-                            newFees[index] = { ...newFees[index], class: e.target.value };
-                            setFormData(prev => ({ ...prev, classWiseFees: newFees }));
+                            const newFees = [...(formData.classFees || [])];
+                            newFees[index] = { ...newFees[index], className: e.target.value };
+                            setFormData(prev => ({ ...prev, classFees: newFees }));
                           }}
                           placeholder="e.g., Nursery, LKG, UKG, 1st"
                           className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-indigo-500 focus:border-indigo-500"
@@ -2857,9 +2866,9 @@ const RegistrationPage = () => {
                           type="number"
                           value={fee.tuition || ''}
                           onChange={(e) => {
-                            const newFees = [...(formData.classWiseFees || [])];
+                            const newFees = [...(formData.classFees || [])];
                             newFees[index] = { ...newFees[index], tuition: e.target.value };
-                            setFormData(prev => ({ ...prev, classWiseFees: newFees }));
+                            setFormData(prev => ({ ...prev, classFees: newFees }));
                           }}
                           placeholder="0"
                           className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-indigo-500 focus:border-indigo-500"
@@ -2870,9 +2879,9 @@ const RegistrationPage = () => {
                           type="number"
                           value={fee.activity || ''}
                           onChange={(e) => {
-                            const newFees = [...(formData.classWiseFees || [])];
+                            const newFees = [...(formData.classFees || [])];
                             newFees[index] = { ...newFees[index], activity: e.target.value };
-                            setFormData(prev => ({ ...prev, classWiseFees: newFees }));
+                            setFormData(prev => ({ ...prev, classFees: newFees }));
                           }}
                           placeholder="0"
                           className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-indigo-500 focus:border-indigo-500"
@@ -2883,9 +2892,9 @@ const RegistrationPage = () => {
                           type="number"
                           value={fee.transport || ''}
                           onChange={(e) => {
-                            const newFees = [...(formData.classWiseFees || [])];
+                            const newFees = [...(formData.classFees || [])];
                             newFees[index] = { ...newFees[index], transport: e.target.value };
-                            setFormData(prev => ({ ...prev, classWiseFees: newFees }));
+                            setFormData(prev => ({ ...prev, classFees: newFees }));
                           }}
                           placeholder="0"
                           className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-indigo-500 focus:border-indigo-500"
@@ -2896,9 +2905,9 @@ const RegistrationPage = () => {
                           type="number"
                           value={fee.hostel || ''}
                           onChange={(e) => {
-                            const newFees = [...(formData.classWiseFees || [])];
+                            const newFees = [...(formData.classFees || [])];
                             newFees[index] = { ...newFees[index], hostel: e.target.value };
-                            setFormData(prev => ({ ...prev, classWiseFees: newFees }));
+                            setFormData(prev => ({ ...prev, classFees: newFees }));
                           }}
                           placeholder="0"
                           className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-indigo-500 focus:border-indigo-500"
@@ -2909,9 +2918,9 @@ const RegistrationPage = () => {
                           type="number"
                           value={fee.misc || ''}
                           onChange={(e) => {
-                            const newFees = [...(formData.classWiseFees || [])];
+                            const newFees = [...(formData.classFees || [])];
                             newFees[index] = { ...newFees[index], misc: e.target.value };
-                            setFormData(prev => ({ ...prev, classWiseFees: newFees }));
+                            setFormData(prev => ({ ...prev, classFees: newFees }));
                           }}
                           placeholder="0"
                           className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-indigo-500 focus:border-indigo-500"
@@ -2931,8 +2940,8 @@ const RegistrationPage = () => {
                         <button
                           type="button"
                           onClick={() => {
-                            const newFees = (formData.classWiseFees || []).filter((_, i) => i !== index);
-                            setFormData(prev => ({ ...prev, classWiseFees: newFees }));
+                            const newFees = (formData.classFees || []).filter((_, i) => i !== index);
+                            setFormData(prev => ({ ...prev, classFees: newFees }));
                           }}
                           className="text-red-500"
                         >
@@ -2953,7 +2962,7 @@ const RegistrationPage = () => {
               <button
                 type="button"
                 onClick={() => {
-                  const newScholarships = [...(formData.scholarships || []), { type: '', eligibility: '', reduction: '', description: '' }];
+                  const newScholarships = [...(formData.scholarships || []), { name: '', type: '', amount: '', documentsRequired: [] }];
                   setFormData(prev => ({ ...prev, scholarships: newScholarships }));
                 }}
                 className="flex items-center text-sm text-indigo-600"
@@ -2967,7 +2976,21 @@ const RegistrationPage = () => {
                 <div key={index} className="bg-gray-50 p-4 rounded-lg border">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Scholarship Name *</label>
+                      <input
+                        type="text"
+                        value={scholarship.name || ''}
+                        onChange={(e) => {
+                          const newScholarships = [...(formData.scholarships || [])];
+                          newScholarships[index] = { ...newScholarships[index], name: e.target.value };
+                          setFormData(prev => ({ ...prev, scholarships: newScholarships }));
+                        }}
+                        placeholder="e.g., Merit Scholarship, Sports Excellence Award"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Type *</label>
                       <select
                         value={scholarship.type || ''}
                         onChange={(e) => {
@@ -2978,53 +3001,40 @@ const RegistrationPage = () => {
                         className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500"
                       >
                         <option value="">Select type</option>
-                        <option value="Merit-based">Merit-based</option>
+                        <option value="Merit">Merit</option>
                         <option value="Need-based">Need-based</option>
                         <option value="Sports">Sports</option>
-                        <option value="Sibling concession">Sibling concession</option>
-                        <option value="Staff concession">Staff concession</option>
+                        <option value="Sibling">Sibling</option>
+                        <option value="Staff">Staff</option>
                         <option value="Other">Other</option>
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Reduction</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Amount (₹) *</label>
                       <input
-                        type="text"
-                        value={scholarship.reduction || ''}
+                        type="number"
+                        value={scholarship.amount || ''}
                         onChange={(e) => {
                           const newScholarships = [...(formData.scholarships || [])];
-                          newScholarships[index] = { ...newScholarships[index], reduction: e.target.value };
+                          newScholarships[index] = { ...newScholarships[index], amount: e.target.value };
                           setFormData(prev => ({ ...prev, scholarships: newScholarships }));
                         }}
-                        placeholder="e.g., 25%, ₹5000, 50% off"
+                        placeholder="e.g., 5000, 10000"
                         className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500"
                       />
                     </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Eligibility Criteria</label>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Documents Required (Optional)</label>
                       <input
                         type="text"
-                        value={scholarship.eligibility || ''}
+                        value={(scholarship.documentsRequired || []).join(', ')}
                         onChange={(e) => {
                           const newScholarships = [...(formData.scholarships || [])];
-                          newScholarships[index] = { ...newScholarships[index], eligibility: e.target.value };
+                          const docs = e.target.value.split(',').map(d => d.trim()).filter(Boolean);
+                          newScholarships[index] = { ...newScholarships[index], documentsRequired: docs };
                           setFormData(prev => ({ ...prev, scholarships: newScholarships }));
                         }}
-                        placeholder="e.g., 90%+ marks, family income < ₹5L, sports achievements"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500"
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                      <textarea
-                        value={scholarship.description || ''}
-                        onChange={(e) => {
-                          const newScholarships = [...(formData.scholarships || [])];
-                          newScholarships[index] = { ...newScholarships[index], description: e.target.value };
-                          setFormData(prev => ({ ...prev, scholarships: newScholarships }));
-                        }}
-                        placeholder="Additional details about the scholarship"
-                        rows="2"
+                        placeholder="Leave empty or enter: Income certificate, Mark sheet (comma-separated)"
                         className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500"
                       />
                     </div>
@@ -3062,7 +3072,7 @@ const RegistrationPage = () => {
               </div>
               <div className="bg-white border rounded-lg p-4 text-center">
                 <div className="text-gray-500 text-sm">Classes</div>
-                <div className="text-lg font-semibold text-gray-900">{(formData.classWiseFees || []).length}</div>
+                <div className="text-lg font-semibold text-gray-900">{(formData.classFees || []).length}</div>
               </div>
               <div className="bg-white border rounded-lg p-4 text-center">
                 <div className="text-gray-500 text-sm">Scholarships</div>
