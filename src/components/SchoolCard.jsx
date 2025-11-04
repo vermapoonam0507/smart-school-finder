@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPin, PlusCircle, CheckCircle, Heart } from 'lucide-react';
+import { MapPin, PlusCircle, CheckCircle, Heart, Star, Navigation } from 'lucide-react';
 
 const SchoolCard = ({ school, onCardClick, onCompareToggle, isCompared, currentUser, onShortlistToggle, isShortlisted, onApply }) => {
   if (!school) {
@@ -21,19 +21,72 @@ const SchoolCard = ({ school, onCardClick, onCompareToggle, isCompared, currentU
         
         <div className="flex items-center text-gray-600 mb-4">
           <MapPin size={16} className="mr-2 text-blue-500" />
-          {/* FIX: Changed school.basicInfo.city and .state to direct properties */}
-
-
           <span>{school.location || `${school.city || 'N/A'}${school.state ? ', ' + school.state : ''}`}</span>
+        </div>
 
+        {/* Distance Display */}
+        {school.distance && (
+          <div className="flex items-center text-gray-600 mb-2">
+            <Navigation size={14} className="mr-2 text-green-500" />
+            <span className="text-sm font-medium">{school.distance}</span>
+          </div>
+        )}
 
+        {/* Fee Range and Score Section */}
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <div className="text-sm text-gray-600 mb-1">Fee Range</div>
+            <div className="font-semibold text-gray-800">
+              {school.feeRange || school.minFee && school.maxFee 
+                ? `${school.feeRange || `${school.minFee}L - ${school.maxFee}L`}`
+                : 'Contact School'}
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-sm text-gray-600 mb-1">Score</div>
+            <div className="flex items-center">
+              <Star size={16} className="text-yellow-500 mr-1" />
+              <span className="font-bold text-lg text-gray-800">
+                {school.score || school.rating || 'N/A'}
+              </span>
+            </div>
+          </div>
         </div>
         
-        <div className="flex flex-wrap gap-2">
-          
-          <span className="bg-blue-100 text-blue-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded-full">{school.board || 'N/A'}</span>
-          <span className="bg-green-100 text-green-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded-full">{school.genderType || 'N/A'}</span>
+        {/* School Type Badges */}
+        <div className="flex flex-wrap gap-2 mb-3">
+          {school.board && (
+            <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+              {school.board}
+            </span>
+          )}
+          {school.schoolType && (
+            <span className="bg-purple-100 text-purple-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+              {school.schoolType}
+            </span>
+          )}
+          {school.genderType && (
+            <span className="bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+              {school.genderType}
+            </span>
+          )}
         </div>
+
+        {/* Facilities Tags */}
+        {(school.facilities || school.amenities) && (
+          <div className="flex flex-wrap gap-1 mb-3">
+            {(school.facilities || school.amenities || []).slice(0, 3).map((facility, index) => (
+              <span key={index} className="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded">
+                {typeof facility === 'string' ? facility : facility.name || facility.type}
+              </span>
+            ))}
+            {(school.facilities || school.amenities || []).length > 3 && (
+              <span className="text-xs text-gray-500">
+                +{(school.facilities || school.amenities || []).length - 3} more
+              </span>
+            )}
+          </div>
+        )}
         
 
         {/* Technology Adoption Display */}

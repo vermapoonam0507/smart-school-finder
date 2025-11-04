@@ -99,6 +99,10 @@ export const AuthProvider = ({ children }) => {
           localStorage.setItem('authToken', token);
           setUser(adminUser);
           localStorage.setItem('userData', JSON.stringify(adminUser));
+          // Keep lastCreatedSchoolId for admin/school users, but remove for other account types
+          if (adminUser.userType !== 'school' && !adminUser.isAdmin) {
+            try { localStorage.removeItem('lastCreatedSchoolId'); } catch (_) {}
+          }
           
           toast.success('Admin login successful!');
           return;
@@ -120,6 +124,10 @@ export const AuthProvider = ({ children }) => {
       if (!userId || basicAuthData.userType === 'school') {
         setUser(basicAuthData);
         localStorage.setItem('userData', JSON.stringify(basicAuthData));
+        // If this is not a school account, clear any last-created-school id to avoid leaking another user's school
+        if (basicAuthData.userType !== 'school') {
+          try { localStorage.removeItem('lastCreatedSchoolId'); } catch (_) {}
+        }
         toast.success('Login successful!');
         return;
       }
@@ -153,6 +161,10 @@ export const AuthProvider = ({ children }) => {
 
       setUser(fullUserData);
       localStorage.setItem('userData', JSON.stringify(fullUserData));
+      // Clear lastCreatedSchoolId for non-school/non-admin users to prevent stale school visibility
+      if (fullUserData.userType !== 'school' && !fullUserData.isAdmin) {
+        try { localStorage.removeItem('lastCreatedSchoolId'); } catch (_) {}
+      }
       toast.success('Login successful!');
     } catch (error) {
       console.error('Login failed:', error);
@@ -170,6 +182,8 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
     localStorage.removeItem('authToken');
     localStorage.removeItem('userData');
+    // Also clear lastCreatedSchoolId on logout to avoid leaking it to next user
+    try { localStorage.removeItem('lastCreatedSchoolId'); } catch (_) {}
     toast.success('Logged out successfully');
   };
 

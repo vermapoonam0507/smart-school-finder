@@ -57,9 +57,46 @@ const SchoolProfileView = () => {
       try {
         setLoading(true);
         setError("");
-        const rawId = (typeof localStorage!=='undefined' && localStorage.getItem('lastCreatedSchoolId'))
-          || currentUser?.schoolId
-          || currentUser?._id;
+        // Resolve the school identifier.
+        // Previously we always fell back to a `lastCreatedSchoolId` stored in localStorage which
+        // could leak the last created school's profile into other users' views. For security and
+        // correctness, only use that localStorage fallback for school users or admins.
+        const lastCreatedId = (typeof localStorage !== 'undefined' && localStorage.getItem('lastCreatedSchoolId')) || '';
+        
+        // SECURITY FIX: Clear localStorage if it doesn't belong to current user
+        if (lastCreatedId && currentUser?._id) {
+          try {
+            const testRes = await getSchoolById(lastCreatedId, { headers: { 'X-Silent-Request': '1' } });
+            const testSchool = testRes?.data?.data || testRes?.data;
+            if (testSchool && testSchool.authId !== currentUser._id) {
+              console.log('🧹 Clearing stale school data that belongs to different user');
+              console.log('School authId:', testSchool.authId, 'Current user ID:', currentUser._id);
+              localStorage.removeItem('lastCreatedSchoolId');
+              // Force reload to get correct data
+              window.location.reload();
+              return;
+            }
+          } catch (e) {
+            console.log('🧹 Clearing invalid school ID from localStorage');
+            localStorage.removeItem('lastCreatedSchoolId');
+          }
+        }
+        
+        const rawIdCandidate = currentUser?.schoolId || currentUser?._id || '';
+
+        // Use lastCreatedId only when the signed-in user is a school account or an admin.
+        const shouldUseLastCreated = !!lastCreatedId && (currentUser?.userType === 'school' || currentUser?.isAdmin);
+
+        // For school/admin users prefer the lastCreatedId (it represents the school record)
+        // otherwise prefer the user's associated schoolId or user id. This avoids using
+        // the user._id (which is an account id) as a school id for school accounts.
+        let rawId = '';
+        if (shouldUseLastCreated) {
+          rawId = lastCreatedId || currentUser?.schoolId || currentUser?._id || '';
+        } else {
+          rawId = currentUser?.schoolId || currentUser?._id || '';
+        }
+
         const id = (typeof rawId === 'string' ? rawId : String(rawId || '')).trim();
         
         console.log('🔍 SchoolProfileView - Loading profile for ID:', id);
@@ -70,9 +107,60 @@ const SchoolProfileView = () => {
           setLoading(false);
           return;
         }
-        const res = await getSchoolById(id, { headers: { 'X-Silent-Request': '1' } });
-        const s = res?.data?.data || res?.data || {};
-        setSchool(s);
+        
+        let res, s = {};
+        try {
+          res = await getSchoolById(id, { headers: { 'X-Silent-Request': '1' } });
+          s = res?.data?.data || res?.data || {};
+        } catch (apiError) {
+          // If school doesn't exist yet (404), treat as new school with empty data
+          if (apiError?.response?.status === 404 || apiError?.response?.data?.message?.includes('not found')) {
+            console.log('School not found in database, treating as new school');
+            s = { _id: id, authId: currentUser?._id };
+          } else {
+            // For other errors, re-throw to be handled by outer catch
+            throw apiError;
+          }
+        }
+
+        // If the fetched school exists but contains no meaningful data (new school),
+        // treat it as "no profile" so the UI shows blank placeholders rather than
+        // pre-filled values from a previously created school.
+        const hasMeaningfulData = !!(
+          (s.name && s.name.toString().trim()) ||
+          (s.email && s.email.toString().trim()) ||
+          (s.mobileNo && s.mobileNo.toString().trim()) ||
+          (s.address && s.address.toString().trim()) ||
+          (s.description && s.description.toString().trim()) ||
+          (Array.isArray(s.languageMedium) && s.languageMedium.length > 0) ||
+          (Array.isArray(s.shifts) && s.shifts.length > 0) ||
+          (s.board && s.board.toString().trim()) ||
+          (s.upto && s.upto.toString().trim())
+        );
+
+        if (!hasMeaningfulData) {
+          // No meaningful profile data yet — show blank state instead of stale data
+          console.log('SchoolProfileView - fetched school is empty, rendering blank profile');
+          // Create a blank school object with the resolved ID for new schools
+          setSchool({
+            _id: s?._id || id,
+            authId: s?.authId || currentUser?._id,
+            name: '',
+            email: '',
+            mobileNo: '',
+            address: '',
+            description: '',
+            languageMedium: [],
+            shifts: [],
+            board: '',
+            upto: '',
+            city: '',
+            state: '',
+            status: 'Draft'
+          });
+        } else {
+          setSchool(s);
+        }
         // Remember the actual school id we should use for updates
         setResolvedSchoolId(s?._id || id);
 
@@ -128,8 +216,9 @@ const SchoolProfileView = () => {
     return <div className="p-8 text-center text-red-600">{error}</div>;
   }
 
+  // Safety check - should not happen with our new logic, but just in case
   if (!school) {
-    return <div className="p-8 text-center text-gray-600">No school profile found.</div>;
+    return <div className="p-8 text-center text-gray-600">Loading school profile...</div>;
   }
 
   const languageMedium = Array.isArray(school.languageMedium)
@@ -275,23 +364,19 @@ const SchoolProfileView = () => {
         </Section>
       )}
 
-      {amenities && (
-        <Section title="Amenities">
-          <div className="divide-y">
-            <Row label="Predefined Amenities" value={(amenities.predefinedAmenities || []).join(', ')} />
-            <Row label="Custom Amenities" value={(amenities.customAmenities || []).join(', ')} />
-          </div>
-        </Section>
-      )}
+      <Section title="Amenities">
+        <div className="divide-y">
+          <Row label="Predefined Amenities" value={(amenities?.predefinedAmenities || []).join(', ')} />
+          <Row label="Custom Amenities" value={(amenities?.customAmenities || []).join(', ')} />
+        </div>
+      </Section>
 
-      {activities && (
-        <Section title="Activities">
-          <div className="divide-y">
-            <Row label="Activities" value={(activities.activities || []).join(', ')} />
-            <Row label="Custom Activities" value={(activities.customActivities || []).join(', ')} />
-          </div>
-        </Section>
-      )}
+      <Section title="Activities">
+        <div className="divide-y">
+          <Row label="Activities" value={(activities?.activities || []).join(', ')} />
+          <Row label="Custom Activities" value={(activities?.customActivities || []).join(', ')} />
+        </div>
+      </Section>
 
       <Section title="Infrastructure">
         <div className="divide-y">
@@ -302,132 +387,125 @@ const SchoolProfileView = () => {
         </div>
       </Section>
 
-      {fees && (
-        <Section title="Fees & Scholarships">
-          <div className="divide-y">
-            <Row label="Fee Transparency %" value={fees.feesTransparency} />
-            {fees.scholarships && fees.scholarships.length > 0 && (
-              <div className="py-3">
-                <div className="font-semibold text-gray-700 mb-2">Scholarships</div>
-                <div className="space-y-2">
-                  {fees.scholarships.map((s, idx) => (
-                    <div key={idx} className="text-sm">
-                      <span className="font-medium">{s.name || s.type}</span>
-                      {s.amount && <span className="text-gray-600"> - ₹{s.amount}</span>}
-                      {s.type && s.name && <span className="text-gray-500"> ({s.type})</span>}
-                      {s.documentsRequired && s.documentsRequired.length > 0 && (
-                        <span className="text-gray-500 text-xs block ml-4">Docs: {s.documentsRequired.join(', ')}</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
+      <Section title="Fees & Scholarships">
+        <div className="divide-y">
+          <Row label="Fee Transparency %" value={fees?.feesTransparency} />
+          {fees?.scholarships && fees.scholarships.length > 0 && (
+            <div className="py-3">
+              <div className="font-semibold text-gray-700 mb-2">Scholarships</div>
+              <div className="space-y-2">
+                {fees.scholarships.map((s, idx) => (
+                  <div key={idx} className="text-sm">
+                    <span className="font-medium">{s.name || s.type}</span>
+                    {s.amount && <span className="text-gray-600"> - ₹{s.amount}</span>}
+                    {s.type && s.name && <span className="text-gray-500"> ({s.type})</span>}
+                    {s.documentsRequired && s.documentsRequired.length > 0 && (
+                      <span className="text-gray-500 text-xs block ml-4">Docs: {s.documentsRequired.join(', ')}</span>
+                    )}
+                  </div>
+                ))}
               </div>
-            )}
-            {fees.classFees && fees.classFees.length > 0 && (
-              <div className="py-3">
-                <div className="font-semibold text-gray-700 mb-2">Class-wise Fees</div>
-                <div className="space-y-2">
-                  {fees.classFees.map((f, idx) => (
-                    <div key={idx} className="text-sm">
-                      <div className="font-medium">{f.className || f.class}</div>
-                      <div className="ml-4 text-gray-600 text-xs">
-                        {f.tuition != null && <span>Tuition: ₹{f.tuition}</span>}
-                        {f.activity != null && f.activity > 0 && <span>, Activity: ₹{f.activity}</span>}
-                        {f.transport != null && f.transport > 0 && <span>, Transport: ₹{f.transport}</span>}
-                        {f.hostel != null && f.hostel > 0 && <span>, Hostel: ₹{f.hostel}</span>}
-                        {f.misc != null && f.misc > 0 && <span>, Misc: ₹{f.misc}</span>}
-                      </div>
+            </div>
+          )}
+          {fees?.classFees && fees.classFees.length > 0 && (
+            <div className="py-3">
+              <div className="font-semibold text-gray-700 mb-2">Class-wise Fees</div>
+              <div className="space-y-2">
+                {fees.classFees.map((f, idx) => (
+                  <div key={idx} className="text-sm">
+                    <div className="font-medium">{f.className || f.class}</div>
+                    <div className="ml-4 text-gray-600 text-xs">
+                      {f.tuition != null && <span>Tuition: ₹{f.tuition}</span>}
+                      {f.activity != null && f.activity > 0 && <span>, Activity: ₹{f.activity}</span>}
+                      {f.transport != null && f.transport > 0 && <span>, Transport: ₹{f.transport}</span>}
+                      {f.hostel != null && f.hostel > 0 && <span>, Hostel: ₹{f.hostel}</span>}
+                      {f.misc != null && f.misc > 0 && <span>, Misc: ₹{f.misc}</span>}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
-            )}
-          </div>
-        </Section>
-      )}
+            </div>
+          )}
+        </div>
+      </Section>
 
-      {tech && (
-        <Section title="Technology Adoption">
-          <div className="divide-y">
-            <Row label="Smart Classrooms %" value={tech.smartClassroomsPercentage} />
-            <Row label="E-Learning Platforms" value={
-              (tech.eLearningPlatforms || []).map(p => 
-                typeof p === 'string' ? p : (p.platform || '')
-              ).filter(Boolean).join(', ')
-            } />
-          </div>
-        </Section>
-      )}
+      <Section title="Technology Adoption">
+        <div className="divide-y">
+          <Row label="Smart Classrooms %" value={tech?.smartClassroomsPercentage} />
+          <Row label="E-Learning Platforms" value={
+            (tech?.eLearningPlatforms || []).map(p => 
+              typeof p === 'string' ? p : (p.platform || '')
+            ).filter(Boolean).join(', ')
+          } />
+        </div>
+      </Section>
 
-      {safety && (
-        <Section title="Safety & Security">
-          <div className="divide-y">
-            <Row label="CCTV Coverage %" value={safety.cctvCoveragePercentage} />
-            <Row label="Doctor Availability" value={safety.medicalFacility?.doctorAvailability} />
-            <Row label="Medkit Available" value={String(safety.medicalFacility?.medkitAvailable)} />
-            <Row label="Ambulance Available" value={String(safety.medicalFacility?.ambulanceAvailable)} />
-            <Row label="GPS Tracker" value={String(safety.transportSafety?.gpsTrackerAvailable)} />
-            <Row label="Drivers Verified" value={String(safety.transportSafety?.driversVerified)} />
-            <Row label="Fire Safety Measures" value={(safety.fireSafetyMeasures || []).join(', ')} />
-            <Row label="Visitor Management System" value={String(safety.visitorManagementSystem)} />
-          </div>
-        </Section>
-      )}
+      <Section title="Safety & Security">
+        <div className="divide-y">
+          <Row label="CCTV Coverage %" value={safety?.cctvCoveragePercentage} />
+          <Row label="Doctor Availability" value={safety?.medicalFacility?.doctorAvailability} />
+          <Row label="Medkit Available" value={String(safety?.medicalFacility?.medkitAvailable || '')} />
+          <Row label="Ambulance Available" value={String(safety?.medicalFacility?.ambulanceAvailable || '')} />
+          <Row label="GPS Tracker" value={String(safety?.transportSafety?.gpsTrackerAvailable || '')} />
+          <Row label="Drivers Verified" value={String(safety?.transportSafety?.driversVerified || '')} />
+          <Row label="Fire Safety Measures" value={(safety?.fireSafetyMeasures || []).join(', ')} />
+          <Row label="Visitor Management System" value={String(safety?.visitorManagementSystem || '')} />
+        </div>
+      </Section>
 
-      {intl && (
-        <Section title="International Exposure">
-          <div className="divide-y">
-            {intl.exchangePrograms && intl.exchangePrograms.length > 0 && (
-              <div className="py-3">
-                <div className="font-semibold text-gray-700 mb-2">Exchange Programs</div>
-                <div className="space-y-2">
-                  {intl.exchangePrograms.map((p, idx) => (
-                    <div key={idx} className="text-sm">
-                      <span className="font-medium">{p.partnerSchool || p.school}</span>
-                      {(p.programType || p.type) && <span className="text-gray-600"> - {p.programType || p.type}</span>}
-                      {p.duration && <span className="text-gray-500"> ({p.duration})</span>}
-                      {p.country && <span className="text-gray-500"> • {p.country}</span>}
-                    </div>
-                  ))}
-                </div>
+      <Section title="International Exposure">
+        <div className="divide-y">
+          {intl?.exchangePrograms && intl.exchangePrograms.length > 0 && (
+            <div className="py-3">
+              <div className="font-semibold text-gray-700 mb-2">Exchange Programs</div>
+              <div className="space-y-2">
+                {intl.exchangePrograms.map((p, idx) => (
+                  <div key={idx} className="text-sm">
+                    <span className="font-medium">{p.partnerSchool || p.school}</span>
+                    {(p.programType || p.type) && <span className="text-gray-600"> - {p.programType || p.type}</span>}
+                    {p.duration && <span className="text-gray-500"> ({p.duration})</span>}
+                    {p.country && <span className="text-gray-500"> • {p.country}</span>}
+                  </div>
+                ))}
               </div>
-            )}
-            {intl.globalTieUps && intl.globalTieUps.length > 0 && (
-              <div className="py-3">
-                <div className="font-semibold text-gray-700 mb-2">Global Tie-ups</div>
-                <div className="space-y-2">
-                  {intl.globalTieUps.map((t, idx) => (
-                    <div key={idx} className="text-sm">
-                      <span className="font-medium">{t.organization || t.name}</span>
-                      {(t.since || t.year) && <span className="text-gray-600"> (Since {t.since || t.year})</span>}
-                      {t.country && <span className="text-gray-500"> • {t.country}</span>}
-                      {t.purpose && <span className="text-gray-500 block ml-4 text-xs">{t.purpose}</span>}
-                    </div>
-                  ))}
-                </div>
+            </div>
+          )}
+          {intl?.globalTieUps && intl.globalTieUps.length > 0 && (
+            <div className="py-3">
+              <div className="font-semibold text-gray-700 mb-2">Global Tie-ups</div>
+              <div className="space-y-2">
+                {intl.globalTieUps.map((t, idx) => (
+                  <div key={idx} className="text-sm">
+                    <span className="font-medium">{t.organization || t.name}</span>
+                    {(t.since || t.year) && <span className="text-gray-600"> (Since {t.since || t.year})</span>}
+                    {t.country && <span className="text-gray-500"> • {t.country}</span>}
+                    {t.purpose && <span className="text-gray-500 block ml-4 text-xs">{t.purpose}</span>}
+                  </div>
+                ))}
               </div>
-            )}
-          </div>
-        </Section>
-      )}
+            </div>
+          )}
+          {(!intl?.exchangePrograms || intl.exchangePrograms.length === 0) && (!intl?.globalTieUps || intl.globalTieUps.length === 0) && (
+            <Row label="Exchange Programs" value="—" />
+          )}
+        </div>
+      </Section>
 
-      {otherDetails && (
-        <Section title="Diversity & Inclusivity">
-          <div className="divide-y">
-            <Row label="Gender Ratio" value={`Male ${otherDetails.genderRatio?.male || 0}%, Female ${otherDetails.genderRatio?.female || 0}%, Others ${otherDetails.genderRatio?.others || 0}%`} />
-            <Row label="Scholarship Types" value={(otherDetails.scholarshipDiversity?.types || []).join(', ')} />
-            <Row label="Students Covered %" value={otherDetails.scholarshipDiversity?.studentsCoveredPercentage} />
-            <Row label="Dedicated Staff" value={String(otherDetails.specialNeedsSupport?.dedicatedStaff)} />
-            <Row label="Students Supported %" value={otherDetails.specialNeedsSupport?.studentsSupportedPercentage} />
-            <Row label="Facilities Available" value={(otherDetails.specialNeedsSupport?.facilitiesAvailable || []).join(', ')} />
-          </div>
-        </Section>
-      )}
+      <Section title="Diversity & Inclusivity">
+        <div className="divide-y">
+          <Row label="Gender Ratio" value={`Male ${otherDetails?.genderRatio?.male || 0}%, Female ${otherDetails?.genderRatio?.female || 0}%, Others ${otherDetails?.genderRatio?.others || 0}%`} />
+          <Row label="Scholarship Types" value={(otherDetails?.scholarshipDiversity?.types || []).join(', ')} />
+          <Row label="Students Covered %" value={otherDetails?.scholarshipDiversity?.studentsCoveredPercentage} />
+          <Row label="Dedicated Staff" value={String(otherDetails?.specialNeedsSupport?.dedicatedStaff || '')} />
+          <Row label="Students Supported %" value={otherDetails?.specialNeedsSupport?.studentsSupportedPercentage} />
+          <Row label="Facilities Available" value={(otherDetails?.specialNeedsSupport?.facilitiesAvailable || []).join(', ')} />
+        </div>
+      </Section>
 
-      {timeline && timeline.timelines && timeline.timelines.length > 0 && (
-        <Section title="Admission Process Timeline">
-          <div className="space-y-4">
-            {timeline.timelines.map((t, idx) => (
+      <Section title="Admission Process Timeline">
+        <div className="space-y-4">
+          {timeline?.timelines && timeline.timelines.length > 0 ? (
+            timeline.timelines.map((t, idx) => (
               <div key={idx} className="border-b pb-4 last:border-b-0">
                 <div className="font-semibold text-gray-800 mb-2">Admission Period {idx + 1}</div>
                 <div className="grid grid-cols-2 gap-2 text-sm">
@@ -463,26 +541,30 @@ const SchoolProfileView = () => {
                   )}
                 </div>
               </div>
-            ))}
-          </div>
-        </Section>
-      )}
+            ))
+          ) : (
+            <Row label="Admission Timeline" value="—" />
+          )}
+        </div>
+      </Section>
 
-      {faculty && (
-        <Section title="Faculty">
-          <div className="divide-y">
-            {(faculty.facultyMembers || faculty.members || []).map((m, idx) => (
+      <Section title="Faculty">
+        <div className="divide-y">
+          {faculty && (faculty.facultyMembers || faculty.members) && (faculty.facultyMembers || faculty.members).length > 0 ? (
+            (faculty.facultyMembers || faculty.members || []).map((m, idx) => (
               <Row key={idx} label={m.name || `Faculty ${idx+1}`} value={`${m.qualification || ''}${m.experience ? `, ${m.experience} yrs` : ''}${m.awards ? `, Awards: ${m.awards}` : ''}`} />
-            ))}
-          </div>
-        </Section>
-      )}
+            ))
+          ) : (
+            <Row label="Faculty Information" value="—" />
+          )}
+        </div>
+      </Section>
 
-      {alumni && (alumni.famousAlumnies?.length > 0 || alumni.topAlumnies?.length > 0 || alumni.otherAlumnies?.length > 0) && (
-        <Section title="Alumni">
-          <div className="divide-y">
-            {alumni.famousAlumnies && alumni.famousAlumnies.length > 0 && (
-              <>
+      <Section title="Alumni">
+        <div className="divide-y">
+          {alumni && (alumni.famousAlumnies?.length > 0 || alumni.topAlumnies?.length > 0 || alumni.otherAlumnies?.length > 0) ? (
+            <>
+              {alumni.famousAlumnies && alumni.famousAlumnies.length > 0 && (
                 <div className="py-3">
                   <div className="font-semibold text-gray-700 mb-2">Famous Alumni</div>
                   <div className="space-y-2">
@@ -494,10 +576,8 @@ const SchoolProfileView = () => {
                     ))}
                   </div>
                 </div>
-              </>
-            )}
-            {alumni.topAlumnies && alumni.topAlumnies.length > 0 && (
-              <>
+              )}
+              {alumni.topAlumnies && alumni.topAlumnies.length > 0 && (
                 <div className="py-3">
                   <div className="font-semibold text-gray-700 mb-2">Top Performers</div>
                   <div className="space-y-2">
@@ -509,10 +589,8 @@ const SchoolProfileView = () => {
                     ))}
                   </div>
                 </div>
-              </>
-            )}
-            {alumni.otherAlumnies && alumni.otherAlumnies.length > 0 && (
-              <>
+              )}
+              {alumni.otherAlumnies && alumni.otherAlumnies.length > 0 && (
                 <div className="py-3">
                   <div className="font-semibold text-gray-700 mb-2">Other Alumni</div>
                   <div className="space-y-2">
@@ -524,11 +602,13 @@ const SchoolProfileView = () => {
                     ))}
                   </div>
                 </div>
-              </>
-            )}
-          </div>
-        </Section>
-      )}
+              )}
+            </>
+          ) : (
+            <Row label="Alumni Information" value="—" />
+          )}
+        </div>
+      </Section>
 
       <Section title="Location">
         <div className="divide-y">
