@@ -99,7 +99,6 @@ const GuestResultsPage = () => {
           <div className="flex justify-between items-start mb-2">
             <h3 className="text-xl font-bold text-gray-800">{school.name}</h3>
             <div className="flex items-center gap-1">
-              <Star className="w-4 h-4 text-yellow-500 fill-current" />
               <span className="text-sm font-medium">{school.rating}</span>
             </div>
           </div>

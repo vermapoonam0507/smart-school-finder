@@ -239,7 +239,7 @@ const ApplicationStatusPage = () => {
                     </div>
                     <div className="flex items-center gap-2 ml-3 flex-shrink-0">
                       <button onClick={handleViewPdf} className="px-2 py-1 text-sm rounded border border-gray-300 hover:bg-gray-50">View PDF</button>
-                      <button onClick={() => navigate(`/school/${idStr}`)} className="px-2 py-1 text-sm rounded bg-gray-900 text-white hover:bg-gray-800">Open</button>
+                      <button onClick={() => navigate('/my-applications')} className="px-2 py-1 text-sm rounded bg-gray-900 text-white hover:bg-gray-800">Open</button>
                     </div>
                   </div>
                 </div>

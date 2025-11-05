@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPin, PlusCircle, CheckCircle, Heart, Star, Navigation } from 'lucide-react';
+import { MapPin, PlusCircle, CheckCircle, Heart, Navigation } from 'lucide-react';
 
 const SchoolCard = ({ school, onCardClick, onCompareToggle, isCompared, currentUser, onShortlistToggle, isShortlisted, onApply }) => {
   if (!school) {
@@ -19,18 +19,20 @@ const SchoolCard = ({ school, onCardClick, onCompareToggle, isCompared, currentU
 
         <h3 className="text-xl font-bold text-gray-900 mb-2">{school.name || 'School Name Not Available'}</h3>
         
-        <div className="flex items-center text-gray-600 mb-4">
-          <MapPin size={16} className="mr-2 text-blue-500" />
-          <span>{school.location || `${school.city || 'N/A'}${school.state ? ', ' + school.state : ''}`}</span>
-        </div>
-
-        {/* Distance Display */}
-        {school.distance && (
-          <div className="flex items-center text-gray-600 mb-2">
-            <Navigation size={14} className="mr-2 text-green-500" />
-            <span className="text-sm font-medium">{school.distance}</span>
+        <div className="flex items-center text-gray-600 mb-4 flex-wrap gap-x-4">
+          <div className="flex items-center">
+            <MapPin size={16} className="mr-2 text-blue-500" />
+            <span>{school.location || `${school.city || 'N/A'}${school.state ? ', ' + school.state : ''}`}</span>
           </div>
-        )}
+          
+          {/* Distance Display beside location */}
+          {school.distance && (
+            <div className="flex items-center text-gray-600">
+              <Navigation size={14} className="mr-1 text-green-500" />
+              <span className="text-sm font-medium">{school.distance}</span>
+            </div>
+          )}
+        </div>
 
         {/* Fee Range and Score Section */}
         <div className="flex justify-between items-center mb-4">

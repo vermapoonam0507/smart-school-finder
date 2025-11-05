@@ -14,13 +14,12 @@ import WrittenExamSchedulingModal from "../components/WrittenExamSchedulingModal
 import { useAuth } from "../context/AuthContext";
 import ErrorBoundary from "../components/ErrorBoundary";
 import { toast } from "react-toastify";
+import Logo from "../components/Logo";
 
 const SchoolHeader = ({ schoolName, onLogout, applicationsCount, hasProfile, currentUser }) => (
   <header className="bg-white shadow-md">
     <nav className="container mx-auto px-6 py-4 flex justify-between items-center">
-      <div className="text-xl font-bold text-gray-800">
-        <School className="inline-block mr-2 text-blue-600" /> School Portal
-      </div>
+      <Logo to="/school-portal" size="default" />
       <div className="flex items-center space-x-6">
         {currentUser?.userType === 'school' && (
           <Link
@@ -131,7 +130,27 @@ const ViewStudentApplications = ({ schoolId }) => {
         });
       }
 
-      setApplications(response.data || []);
+      // Filter to show only PENDING, REJECTED, and REVIEWED applications
+      // Accepted, Interview, Written Exam, and Shortlisted go to "Shortlisted Applications"
+      const pendingApplications = (response.data || []).filter((a) => {
+        const status = (a.status || '').toString().toLowerCase();
+        const keepInViewStudent = status === 'pending' || 
+                                  status === 'rejected' || 
+                                  status === 'reviewed' || 
+                                  status === '';
+        
+        console.log(`📋 Application status check:`, {
+          id: a._id || a.id,
+          status: a.status,
+          normalizedStatus: status,
+          showInViewStudentApplications: keepInViewStudent
+        });
+        
+        return keepInViewStudent;
+      });
+
+      console.log(`📊 Showing ${pendingApplications.length} pending/rejected applications out of ${response.data?.length || 0} total`);
+      setApplications(pendingApplications);
     } catch (error) {
       console.error("❌ Error fetching applications:", error);
       setError(error.message || "Failed to fetch applications");
@@ -665,12 +684,27 @@ const ViewShortlistedApplications = ({ schoolId }) => {
         setLoading(true);
         const response = await fetchStudentApplications(schoolId);
         const all = response.data || [];
-        // Only show explicit 'Shortlisted'
-        const shortlisted = all.filter((a) => {
-          const st = (a.status || '').toString().toLowerCase();
-          return st === 'shortlisted';
+        
+        // Show applications that have been processed: accepted, interview, written exam, or shortlisted
+        const processedApplications = all.filter((a) => {
+          const status = (a.status || '').toString().toLowerCase();
+          const isProcessed = status === 'accepted' || 
+                             status === 'interview' || 
+                             status === 'writtenexam' || 
+                             status === 'shortlisted';
+          
+          console.log(`📋 Shortlist check:`, {
+            id: a._id || a.id,
+            status: a.status,
+            normalizedStatus: status,
+            isProcessed
+          });
+          
+          return isProcessed;
         });
-        setApplications(shortlisted);
+        
+        console.log(`📊 Shortlisted: ${processedApplications.length} out of ${all.length} total`);
+        setApplications(processedApplications);
       } catch (error) {
         console.error("Error fetching shortlisted applications:", error);
         setApplications([]);

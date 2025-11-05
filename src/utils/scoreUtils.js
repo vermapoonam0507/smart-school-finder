@@ -82,11 +82,6 @@ export const calculateSchoolScore = (school) => {
  * @returns {string} Display text for score
  */
 export const getScoreDisplay = (score) => {
-  if (score >= 90) return `${score} ⭐⭐⭐⭐⭐`;
-  if (score >= 80) return `${score} ⭐⭐⭐⭐`;
-  if (score >= 70) return `${score} ⭐⭐⭐`;
-  if (score >= 60) return `${score} ⭐⭐`;
-  if (score >= 50) return `${score} ⭐`;
   return score > 0 ? `${score}` : 'N/A';
 };
 

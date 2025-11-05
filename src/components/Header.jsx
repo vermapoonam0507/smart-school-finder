@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { School, Menu, X, LogOut, User, ChevronDown, Shield } from 'lucide-react';
 import NotificationIcon from './NotificationIcon';
+import Logo from './Logo';
 
 const Header = ({ isMobileMenuOpen, setMobileMenuOpen, compareCount, shortlistCount = 0, currentUser, onLogout }) => {
   const location = useLocation();
@@ -22,10 +23,7 @@ const Header = ({ isMobileMenuOpen, setMobileMenuOpen, compareCount, shortlistCo
   return (
   <header className="bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-50">
     <nav className="container mx-auto px-6 py-4 flex justify-between items-center">
-      <Link to="/" className="text-2xl font-bold text-gray-800">
-        <School className="inline-block mr-2 text-blue-600" />
-        SchoolFinder
-      </Link>
+      <Logo />
       <div className="hidden md:flex items-center space-x-8">
         {(!currentUser || currentUser.userType !== 'school') && (
             <>

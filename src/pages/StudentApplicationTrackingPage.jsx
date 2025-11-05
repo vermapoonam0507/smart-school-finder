@@ -313,6 +313,10 @@ const StudentApplicationTrackingPage = () => {
     fetchApplications(true);
   };
 
+  const handleStatusFilter = (status) => {
+    setSelectedStatus(status);
+  };
+
   const getStatusCounts = () => {
     const counts = {
       All: applications.length,
