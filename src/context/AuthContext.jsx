@@ -184,6 +184,8 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('userData');
     // Also clear lastCreatedSchoolId on logout to avoid leaking it to next user
     try { localStorage.removeItem('lastCreatedSchoolId'); } catch (_) {}
+    // Clear comparison list to prevent data leakage across sessions
+    try { localStorage.removeItem('comparisonList'); } catch (_) {}
     toast.success('Logged out successfully');
   };
 

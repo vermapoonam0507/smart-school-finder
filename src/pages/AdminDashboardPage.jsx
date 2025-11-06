@@ -12,6 +12,7 @@ import apiClient from "../api/axios";
 import PendingSchoolsSection from "../components/PendingSchoolsSection";
 import PendingReviewsSection from "../components/PendingReviewsSection";
 import DebugAPI from "../components/DebugAPI";
+import SchoolDebugger from "../components/SchoolDebugger";
 import Logo from "../components/Logo";
 
 const AdminDashboardPage = () => {
@@ -158,6 +159,11 @@ const AdminDashboardPage = () => {
         {/* Debug API Section */}
         <div className="mb-8">
           <DebugAPI />
+        </div>
+
+        {/* School Debugger - Remove this after fixing duplicates */}
+        <div className="mb-8">
+          <SchoolDebugger />
         </div>
 
         {/* Pending Schools Section */}

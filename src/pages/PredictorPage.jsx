@@ -79,35 +79,6 @@ const PredictorPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
   const [hasSearched, setHasSearched] = useState(false);
-  const [openDropdown, setOpenDropdown] = useState(null);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      // Don't close if clicking on scrollbar or inside dropdown
-      if (openDropdown && 
-          !event.target.closest('.dropdown-container') &&
-          !event.target.closest('.dropdown-scroll')) {
-        setOpenDropdown(null);
-      }
-    };
-
-    // Use mousedown instead of click to prevent interference with scrolling
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [openDropdown]);
-
-  // Prevent scroll event from bubbling and causing unwanted behavior
-  useEffect(() => {
-    const preventScrollBubble = (e) => {
-      if (e.target.closest('.dropdown-scroll')) {
-        e.stopPropagation();
-      }
-    };
-    
-    document.addEventListener('wheel', preventScrollBubble, { passive: false });
-    return () => document.removeEventListener('wheel', preventScrollBubble);
-  }, []);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
@@ -268,8 +239,6 @@ const PredictorPage = () => {
   };
 
   const DropdownField = ({ label, field, icon, required = false }) => {
-    const isOpen = openDropdown === field;
-    const dropdownRef = useRef(null);
     const options = 
       field === 'schoolType' ? schoolTypes :
       field === 'preferredShifts' ? shiftOptions :
@@ -307,58 +276,21 @@ const PredictorPage = () => {
               {icon}
             </div>
           )}
-          <button
-            type="button"
-            onClick={() => setOpenDropdown(isOpen ? null : field)}
-            className={`w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white text-left ${
+          <select
+            value={formData[field]}
+            onChange={(e) => handleInputChange(field, e.target.value)}
+            className={`w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white text-left appearance-none ${
               icon ? 'pl-10' : ''
             } ${errors[field] ? 'border-red-500' : ''} ${!formData[field] ? 'text-gray-400' : 'text-gray-900'}`}
           >
-            {formData[field] || placeholder}
-          </button>
-          <ChevronDown className={`absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none transition-transform ${
-            isOpen ? 'rotate-180' : ''
-          }`} />
-          
-          {isOpen && (
-            <div 
-              ref={dropdownRef}
-              className={`dropdown-scroll absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg ${
-                field === 'state' || field === 'city' || field === 'interests' ? 'max-h-80' : 'max-h-60'
-              } overflow-y-auto`}
-              style={{ 
-                scrollBehavior: 'smooth',
-                overflowX: 'hidden'
-              }}
-              onWheel={(e) => e.stopPropagation()}
-            >
-              {!required && (
-                <div
-                  onClick={() => handleSelect('')}
-                  className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-gray-400 border-b border-gray-200"
-                >
-                  {placeholder}
-                </div>
-              )}
-              {options.length > 0 ? (
-                options.map((option) => (
-                  <div
-                    key={`${field}-${option}`}
-                    onClick={() => handleSelect(option)}
-                    className={`px-4 py-2 hover:bg-blue-50 cursor-pointer transition-colors ${
-                      formData[field] === option ? 'bg-blue-100 text-blue-700 font-medium' : 'text-gray-900'
-                    }`}
-                  >
-                    {option}
-                  </div>
-                ))
-              ) : (
-                <div className="px-4 py-2 text-gray-400 text-center">
-                  No options available
-                </div>
-              )}
-            </div>
-          )}
+            <option value="" className="text-gray-400">{placeholder}</option>
+            {options.map((option) => (
+              <option key={`${field}-${option}`} value={option} className="text-gray-900">
+                {option}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
           
           {errors[field] && (
             <p className="text-red-500 text-sm mt-1">{errors[field]}</p>
@@ -370,7 +302,7 @@ const PredictorPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 py-4 sm:py-8">
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 lg:p-8">
           <div className="text-center mb-6 sm:mb-8">
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">
@@ -381,55 +313,64 @@ const PredictorPage = () => {
             </p>
           </div>
 
-          <form onSubmit={handleGetSchools} className="space-y-6">
-            <DropdownField
-              label="Select School Type"
-              field="schoolType"
-            />
-            
-            <DropdownField
-              label="Preferred Shifts"
-              field="preferredShifts"
-            />
-            
-            <DropdownField
-              label="Preferred Standard"
-              field="preferredStandard"
-            />
-            
-            <DropdownField
-              label="Gender"
-              field="gender"
-              icon={<User className="w-5 h-5" />}
-              required={true}
-            />
-            
-            <DropdownField
-              label="State"
-              field="state"
-              icon={<MapPin className="w-5 h-5" />}
-              required={true}
-            />
-            
-            <DropdownField
-              label="City"
-              field="city"
-              icon={<Building className="w-5 h-5" />}
-              required={true}
-            />
-            
-            <DropdownField
-              label="Area"
-              field="area"
-              icon={<Navigation className="w-5 h-5" />}
-              required={true}
-            />
-            
-            <DropdownField
-              label="Interests"
-              field="interests"
-              icon={<Heart className="w-5 h-5" />}
-            />
+          <form onSubmit={handleGetSchools}>
+            {/* Two Column Layout */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 mb-6">
+              {/* Left Column */}
+              <div className="space-y-6">
+                <DropdownField
+                  label="Select School Type"
+                  field="schoolType"
+                />
+                
+                <DropdownField
+                  label="Preferred Shifts"
+                  field="preferredShifts"
+                />
+                
+                <DropdownField
+                  label="Preferred Standard"
+                  field="preferredStandard"
+                />
+                
+                <DropdownField
+                  label="Gender"
+                  field="gender"
+                  icon={<User className="w-5 h-5" />}
+                  required={true}
+                />
+              </div>
+
+              {/* Right Column */}
+              <div className="space-y-6">
+                <DropdownField
+                  label="State"
+                  field="state"
+                  icon={<MapPin className="w-5 h-5" />}
+                  required={true}
+                />
+                
+                <DropdownField
+                  label="City"
+                  field="city"
+                  icon={<Building className="w-5 h-5" />}
+                  required={true}
+                />
+                
+                <DropdownField
+                  label="Area"
+                  field="area"
+                  icon={<Navigation className="w-5 h-5" />}
+                  required={true}
+                />
+                
+                <DropdownField
+                  label="Interests"
+                  field="interests"
+                  icon={<Heart className="w-5 h-5" />}
+                />
+              </div>
+            </div>
 
             <div className="pt-4">
               <button

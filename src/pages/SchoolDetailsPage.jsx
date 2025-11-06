@@ -347,11 +347,12 @@ const SchoolDetailsPage = ({ shortlist, onShortlistToggle }) => {
               <img
                 src={(() => {
                   // Simplified image source selection - check only essential fields
+                  const logoUrl = typeof school.logo === 'object' ? school.logo?.url : school.logo;
                   const imageSources = [
                     school.photos?.[0],
                     school.profilePhoto,
                     school.image,
-                    school.logo,
+                    logoUrl,
                     school.profileImage,
                     school.schoolLogo
                   ].filter(Boolean);

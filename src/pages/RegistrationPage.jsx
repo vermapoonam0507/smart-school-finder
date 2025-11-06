@@ -348,6 +348,7 @@ const RegistrationPage = () => {
   const [editingSchoolId, setEditingSchoolId] = useState("");
   const [hasExistingSchool, setHasExistingSchool] = useState(false);
   const [isLoadingExistingData, setIsLoadingExistingData] = useState(true);
+  const hasCheckedForSchool = React.useRef(false); // Prevent multiple checks
 
   // State with all the fields required by the backend schema
   const [formData, setFormData] = useState({
@@ -454,9 +455,10 @@ const RegistrationPage = () => {
   const [customAmenities, setCustomAmenities] = useState([]);
   const [selectedPhotos, setSelectedPhotos] = useState([]);
   const [selectedVideo, setSelectedVideo] = useState(null);
-  // UI-only additions: logo + social links (not sent to backend)
+  // Logo upload
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState("");
+  // UI-only additions: social links (not sent to backend)
   const [socialLinks, setSocialLinks] = useState({
     facebook: "",
     twitter: "",
@@ -732,8 +734,9 @@ const RegistrationPage = () => {
         tags: Array.isArray(formData.tags) ? formData.tags : []
       };
 
-      // Only include authId for new registrations, not for updates
-      if (!isEditMode) {
+      // Always include authId to ensure it's set (for both new and existing schools)
+      // This is crucial for deduplication and tracking which user owns which school
+      if (currentUser?._id) {
         payload.authId = currentUser._id;
       }
 
@@ -746,9 +749,48 @@ const RegistrationPage = () => {
           console.warn('⚠️ Core school update failed, proceeding with subresource saves:', err?.response?.data || err?.message || err);
         }
       } else {
-        const schoolResponse = await addSchool(payload);
-        schoolId = schoolResponse.data.data._id;
-        try { localStorage.setItem('lastCreatedSchoolId', String(schoolId)); } catch (_) {}
+        // Safety check: Before creating a new school, verify one doesn't already exist
+        // This prevents duplicate school entries for the same user
+        try {
+          console.log('🔍 Safety check: Verifying no existing school before creating new one...');
+          const statuses = ['accepted', 'pending', 'rejected'];
+          let existingSchool = null;
+          
+          for (const status of statuses) {
+            try {
+              const response = await getSchoolsByStatus(status);
+              const schools = response?.data?.data || response?.data || [];
+              existingSchool = schools.find(s => s.authId === currentUser._id);
+              if (existingSchool) {
+                console.log('⚠️ Found existing school during safety check:', existingSchool);
+                break;
+              }
+            } catch (err) {
+              // Continue checking other statuses
+            }
+          }
+          
+          if (existingSchool) {
+            // Update existing school instead of creating new one
+            console.log('✅ Updating existing school instead of creating duplicate');
+            schoolId = existingSchool._id;
+            await updateSchoolInfo(schoolId, payload);
+            setIsEditMode(true);
+            setEditingSchoolId(schoolId);
+            setHasExistingSchool(true);
+          } else {
+            // Safe to create new school
+            console.log('✅ No existing school found, creating new one');
+            const schoolResponse = await addSchool(payload);
+            schoolId = schoolResponse.data.data._id;
+            try { localStorage.setItem('lastCreatedSchoolId', String(schoolId)); } catch (_) {}
+          }
+        } catch (err) {
+          console.error('Safety check failed, proceeding with creation:', err);
+          const schoolResponse = await addSchool(payload);
+          schoolId = schoolResponse.data.data._id;
+          try { localStorage.setItem('lastCreatedSchoolId', String(schoolId)); } catch (_) {}
+        }
       }
 
       // Create related data in parallel
@@ -1052,6 +1094,15 @@ const RegistrationPage = () => {
       // Wait for all related data to be created
       await Promise.all(promises);
 
+      // Upload logo if selected
+      if (logoFile) {
+        const logoFormData = new FormData();
+        logoFormData.append('logo', logoFile);
+        await apiClient.post(`/admin/${schoolId}/upload/logo`, logoFormData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+      }
+
       // Upload photos if selected
       if (selectedPhotos.length > 0) {
         const photoFormData = new FormData();
@@ -1188,8 +1239,6 @@ const RegistrationPage = () => {
       customActivities,
       customAmenities,
       facultyQuality,
-      academicResults,
-      examQualifiers,
       activeSection,
     };
     try {
@@ -1263,10 +1312,13 @@ const RegistrationPage = () => {
     }
   };
 
-  // Check for existing school data on mount
+  // Check for existing school data on mount and when currentUser becomes available
   useEffect(() => {
-    checkForExistingSchool();
-  }, []);
+    if (currentUser?._id && !hasCheckedForSchool.current) {
+      hasCheckedForSchool.current = true;
+      checkForExistingSchool();
+    }
+  }, [currentUser?._id]); // Re-run when currentUser becomes available
 
   // Debug: Log state changes (remove this in production)
   useEffect(() => {
@@ -1295,6 +1347,15 @@ const RegistrationPage = () => {
 
   // Check for existing school data automatically
   const checkForExistingSchool = async () => {
+    console.log('🔍 Starting checkForExistingSchool...');
+    console.log('👤 Current User Info:', {
+      _id: currentUser?._id,
+      email: currentUser?.email,
+      userType: currentUser?.userType,
+      schoolId: currentUser?.schoolId,
+      authId: currentUser?.authId
+    });
+    
     if (!currentUser?._id) {
       console.log('❌ No current user, treating as new school');
       setHasExistingSchool(false);
@@ -1313,22 +1374,34 @@ const RegistrationPage = () => {
       const cachedSchoolId = typeof localStorage !== 'undefined' && localStorage.getItem('lastCreatedSchoolId');
       if (cachedSchoolId) {
         try {
+          console.log('🔍 Trying localStorage schoolId:', cachedSchoolId);
           const res = await getSchoolById(cachedSchoolId, { headers: { 'X-Silent-Request': '1' } });
-          school = res?.data?.data;
-          console.log('✅ Found existing school from localStorage');
+          school = res?.data?.data || res?.data;
+          if (school && school._id) {
+            console.log('✅ Found existing school from localStorage:', school.name);
+          } else {
+            console.log('⚠️ localStorage returned invalid school data');
+            school = null;
+          }
         } catch (e) {
-          console.log('❌ localStorage schoolId not valid, trying other methods...');
+          console.log('❌ localStorage schoolId not valid:', e.message);
         }
       }
       
       // Method 2: Try currentUser.schoolId (works if backend returns it)
       if (!school && currentUser?.schoolId) {
         try {
+          console.log('🔍 Trying currentUser.schoolId:', currentUser.schoolId);
           const res = await getSchoolById(currentUser.schoolId, { headers: { 'X-Silent-Request': '1' } });
-          school = res?.data?.data;
-          console.log('✅ Found existing school from currentUser.schoolId');
+          school = res?.data?.data || res?.data;
+          if (school && school._id) {
+            console.log('✅ Found existing school from currentUser.schoolId:', school.name);
+          } else {
+            console.log('⚠️ currentUser.schoolId returned invalid school data');
+            school = null;
+          }
         } catch (e) {
-          console.log('❌ currentUser.schoolId not valid, trying other methods...');
+          console.log('❌ currentUser.schoolId not valid:', e.message);
         }
       }
       
@@ -1361,28 +1434,52 @@ const RegistrationPage = () => {
             localStorage.setItem('lastCreatedSchoolId', school._id);
           } else {
             console.log('⚠️ No school found with authId, trying email match...');
+            console.log('🔍 Current user info:', {
+              userId: currentUser._id,
+              userEmail: currentUser.email,
+              userType: currentUser.userType
+            });
             
             // Fallback: Try to match by email (for schools created before authId was added)
             if (currentUser.email) {
-              console.log('🔍 Searching for email match:', {
-                userEmail: currentUser.email,
-                totalSchools: schools.length,
-                sampleSchoolEmails: schools.slice(0, 3).map(s => ({ name: s.name, email: s.email, authId: s.authId }))
-              });
+              console.log('🔍 Searching for email match among', schools.length, 'schools');
+              console.log('🔍 Sample schools:', schools.slice(0, 3).map(s => ({ 
+                name: s.name, 
+                email: s.email, 
+                authId: s.authId,
+                _id: s._id
+              })));
               
-              school = schools.find(s => s.email && s.email.toLowerCase() === currentUser.email.toLowerCase());
+              const userEmailLower = currentUser.email.toLowerCase().trim();
+              school = schools.find(s => {
+                if (!s.email) return false;
+                const schoolEmailLower = s.email.toLowerCase().trim();
+                const matches = schoolEmailLower === userEmailLower;
+                if (matches) {
+                  console.log('🎯 Email match found:', {
+                    schoolName: s.name,
+                    schoolEmail: s.email,
+                    userEmail: currentUser.email
+                  });
+                }
+                return matches;
+              });
               
               if (school) {
                 console.log('✅ Found existing school by email match:', {
                   schoolName: school.name,
                   schoolEmail: school.email,
-                  schoolId: school._id
+                  schoolId: school._id,
+                  hasAuthId: !!school.authId
                 });
                 localStorage.setItem('lastCreatedSchoolId', school._id);
               } else {
                 console.log('❌ No school found with matching email');
-                console.log('🔍 All school emails in database:', schools.map(s => s.email).filter(Boolean));
+                console.log('🔍 Your email:', userEmailLower);
+                console.log('🔍 All school emails:', schools.map(s => s.email?.toLowerCase()).filter(Boolean));
               }
+            } else {
+              console.log('❌ Current user has no email to match against');
             }
           }
         } catch (e) {
@@ -1390,12 +1487,19 @@ const RegistrationPage = () => {
         }
       }
       
-      if (school) {
-        console.log('✅ Found existing school, entering edit mode');
+      if (school && school._id) {
+        console.log('✅ Found existing school, entering edit mode:', {
+          schoolId: school._id,
+          schoolName: school.name,
+          schoolEmail: school.email
+        });
         setHasExistingSchool(true);
         setEditingSchoolId(school._id);
         setIsEditMode(true);
+        console.log('🔄 Loading existing school data...');
         await loadExistingSchoolData(school);
+        console.log('✅ School data loaded successfully');
+        toast.success(`Welcome back! Loaded profile for ${school.name || 'your school'}`);
       } else {
         console.log('❌ No existing school found, treating as new registration');
         setHasExistingSchool(false);
@@ -1423,12 +1527,30 @@ const RegistrationPage = () => {
 
   // Load existing school data into form
   const loadExistingSchoolData = async (school) => {
+    console.log('📥 loadExistingSchoolData called with school:', {
+      id: school._id,
+      name: school.name,
+      email: school.email,
+      city: school.city
+    });
+    
     // Clear any existing draft since we're loading real school data
     try {
       localStorage.removeItem("schoolRegDraft");
     } catch (error) {
       console.error("Could not clear draft:", error);
     }
+    
+    // Load existing logo if available
+    if (school.logo) {
+      // Backend returns logo as object with url property
+      const logoUrl = typeof school.logo === 'object' ? school.logo.url : school.logo;
+      if (logoUrl) {
+        setLogoPreview(logoUrl);
+      }
+    }
+    
+    console.log('📝 Setting basic form data...');
     setFormData(prev => ({
       ...prev,
       name: school.name || "",
@@ -1608,8 +1730,22 @@ const RegistrationPage = () => {
       }
 
       console.log('✅ Successfully loaded existing school data');
+      console.log('📋 School data loaded:', {
+        name: school.name,
+        email: school.email,
+        city: school.city,
+        board: school.board,
+        hasAmenities: !!amenities,
+        hasActivities: !!activities,
+        hasInfrastructure: !!infra,
+        hasFees: !!fees,
+        hasAcademics: !!academics
+      });
+      console.log('✅ Form should now display the loaded data. Check the form fields.');
     } catch (error) {
-      console.error('Error loading sub-resources:', error);
+      console.error('❌ Error loading sub-resources:', error);
+      console.error('Error details:', error.message, error.response?.data);
+      toast.error('Some school details could not be loaded. Please check and fill any missing information.');
     }
   };
 
@@ -1999,6 +2135,13 @@ const RegistrationPage = () => {
                   }
                 </p>
               </div>
+              {/* Debug info - remove in production */}
+              {process.env.NODE_ENV === 'development' && (
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-xs">
+                  <strong>Debug:</strong> hasExistingSchool={String(hasExistingSchool)}, isEditMode={String(isEditMode)}, 
+                  schoolId={editingSchoolId || 'none'}, formData.name={formData.name || 'empty'}
+                </div>
+              )}
             </>
           )}
           

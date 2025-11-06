@@ -15,7 +15,17 @@ const SchoolCard = ({ school, onCardClick, onCompareToggle, isCompared, currentU
       )}
       
       <div className="p-6 cursor-pointer flex-grow">
-       
+        {/* School Logo */}
+        {school.logo && (
+          <div className="flex justify-center mb-4">
+            <img 
+              src={typeof school.logo === 'object' ? school.logo.url : school.logo} 
+              alt={`${school.name} logo`} 
+              className="h-16 w-16 object-contain rounded-lg"
+              onError={(e) => { e.target.style.display = 'none'; }}
+            />
+          </div>
+        )}
 
         <h3 className="text-xl font-bold text-gray-900 mb-2">{school.name || 'School Name Not Available'}</h3>
         

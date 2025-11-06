@@ -7,6 +7,10 @@ const ShortlistPage = ({ shortlist, onShortlistToggle, comparisonList, onCompare
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
 
+  console.log("ShortlistPage received shortlist:", shortlist);
+  console.log("Shortlist length:", shortlist?.length);
+  console.log("Shortlist type:", typeof shortlist, Array.isArray(shortlist));
+
   const handleCardClick = (school) => {
     navigate(`/school/${school._id || school.id || school.schoolId}`);
   };
@@ -18,18 +22,23 @@ const ShortlistPage = ({ shortlist, onShortlistToggle, comparisonList, onCompare
     navigate(`/apply/${schoolId}`);
   };
 
+  // Filter out any null, undefined, or invalid school objects
+  const validShortlist = Array.isArray(shortlist) 
+    ? shortlist.filter(school => school && (school._id || school.schoolId))
+    : [];
+
   return (
     <div className="container mx-auto px-6 py-10">
       <h1 className="text-3xl font-bold text-gray-800 mb-6">Your Shortlisted Schools</h1>
-      {shortlist && shortlist.length > 0 ? (
+      {validShortlist.length > 0 ? (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {shortlist.map((school) => (
+          {validShortlist.map((school) => (
             <SchoolCard
               key={school.schoolId || school._id}
               school={school}
               onCardClick={() => handleCardClick(school)}
               onShortlistToggle={() => onShortlistToggle(school)}
-              isShortlisted={shortlist?.some(item => (item.schoolId || item._id) === (school.schoolId || school._id))}
+              isShortlisted={validShortlist.some(item => (item.schoolId || item._id) === (school.schoolId || school._id))}
               onCompareToggle={() => onCompareToggle(school)}
               isCompared={comparisonList?.some(item => (item.schoolId || item._id) === (school.schoolId || school._id))}
               currentUser={currentUser}
@@ -39,7 +48,7 @@ const ShortlistPage = ({ shortlist, onShortlistToggle, comparisonList, onCompare
         </div>
       ) : (
         <div className="text-center py-12 bg-white rounded-lg shadow">
-          <p>You haven't shortlisted any schools yet.</p>
+          <p className="text-gray-600">You haven't shortlisted any schools yet.</p>
         </div>
       )}
     </div>

@@ -86,6 +86,13 @@ function App() {
     return () => window.removeEventListener('comparisonListUpdated', onComparisonListUpdated);
   }, []);
 
+  // Clear comparison list when user logs out
+  useEffect(() => {
+    if (!currentUser) {
+      setComparisonList([]);
+    }
+  }, [currentUser]);
+
 
 useEffect(() => {
     const fetchShortlistAndProfile = async () => {
@@ -105,7 +112,10 @@ useEffect(() => {
         // Yeh API call naye user ke liye fail hogi
         const authIdForApis = currentUser.authId || currentUser._id;
         const responseData = await getShortlist(authIdForApis);
-        setShortlist(responseData.data || []);
+        console.log("Fetched shortlist data:", responseData);
+        const shortlistData = responseData.data || [];
+        console.log("Setting shortlist to:", shortlistData);
+        setShortlist(shortlistData);
       } catch (error) {
         // Yahan hum error ko handle karenge
         const errorMessage = error.response?.data?.message;
@@ -203,13 +213,18 @@ useEffect(() => {
     });
   };
 
+  // Calculate valid shortlist count (filter out invalid entries)
+  const validShortlistCount = Array.isArray(shortlist) 
+    ? shortlist.filter(school => school && (school._id || school.schoolId)).length 
+    : 0;
+
   return (
     <>
       <Header
         isMobileMenuOpen={mobileMenuOpen}
         setMobileMenuOpen={setMobileMenuOpen}
         compareCount={comparisonList.length}
-        shortlistCount={shortlist.length}
+        shortlistCount={validShortlistCount}
         currentUser={currentUser}
         onLogout={handleLogout}
       />

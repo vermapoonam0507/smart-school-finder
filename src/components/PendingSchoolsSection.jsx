@@ -40,7 +40,49 @@ const PendingSchoolsSection = () => {
         });
       }
       
-      setPendingSchools(normalized);
+      // Deduplicate schools by authId - keep only the most recent one per authId
+      const deduplicatedSchools = [];
+      const seenSchools = new Map(); // Track by authId or _id
+      
+      // Sort by createdAt (most recent first) to keep the latest entry
+      const sortedSchools = [...normalized].sort((a, b) => {
+        const dateA = new Date(a.createdAt || 0);
+        const dateB = new Date(b.createdAt || 0);
+        return dateB - dateA; // Most recent first
+      });
+      
+      for (const school of sortedSchools) {
+        // Use authId as primary identifier, fallback to email (for legacy schools), then _id
+        const identifier = school.authId || (school.email ? `email:${school.email.toLowerCase()}` : school._id);
+        
+        if (!identifier) {
+          // If no identifier at all, include it (shouldn't happen but safe)
+          deduplicatedSchools.push(school);
+          console.warn('⚠️ School without authId, email, or _id:', school.name);
+          continue;
+        }
+        
+        // If we haven't seen this identifier yet, add it
+        if (!seenSchools.has(identifier)) {
+          seenSchools.set(identifier, school);
+          deduplicatedSchools.push(school);
+        } else {
+          console.log('🗑️ Removing duplicate school:', {
+            name: school.name,
+            _id: school._id,
+            authId: school.authId,
+            email: school.email,
+            createdAt: school.createdAt,
+            identifier: identifier,
+            kept: seenSchools.get(identifier).name
+          });
+        }
+      }
+      
+      console.log(`📊 Deduplication: ${normalized.length} schools → ${deduplicatedSchools.length} unique schools`);
+      console.log(`📊 Unique identifiers found: ${seenSchools.size}`);
+      
+      setPendingSchools(deduplicatedSchools);
     } catch (error) {
       console.error('Failed to load pending schools:', error);
       toast.error('Failed to load pending schools');
