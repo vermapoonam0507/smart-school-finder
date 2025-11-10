@@ -38,10 +38,44 @@ export const addToShortlist = async (authId, schoolId) => {
 
 export const removeFromShortlist = async (authId, schoolId) => {
   try {
-    const response = await apiClient.post('/users/shortlist/remove', { authId, schoolId });
+    console.log('API: Removing from shortlist:', { authId, schoolId });
+    
+    // Ensure schoolId is a string
+    const normalizedSchoolId = String(schoolId);
+    
+    // Try with the normalized schoolId
+    const response = await apiClient.post('/users/shortlist/remove', { 
+      authId, 
+      schoolId: normalizedSchoolId 
+    });
+    
+    console.log('API: Remove successful:', response.data);
     return response.data;
   } catch (error) {
-    console.error("Error removing from shortlist:", error.response?.data || error.message);
+    console.error("Error removing from shortlist:", {
+      request: { authId, schoolId },
+      error: error.response?.data || error.message,
+      status: error.response?.status,
+      fullError: error
+    });
+    
+    // If it's a 404 or specific error, try with _id instead
+    if (error.response?.status === 404 || error.response?.status === 400) {
+      console.log('Retrying with _id field...');
+      try {
+        const retryResponse = await apiClient.post('/users/shortlist/remove', { 
+          authId, 
+          _id: String(schoolId)  // Try with _id field
+        });
+        console.log('API: Remove successful with _id:', retryResponse.data);
+        return retryResponse.data;
+      } catch (retryError) {
+        console.error("Retry also failed:", retryError.response?.data || retryError.message);
+        // Throw original error
+        throw error.response?.data || error;
+      }
+    }
+    
     throw error.response?.data || error;
   }
 };

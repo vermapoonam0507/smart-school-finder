@@ -32,11 +32,13 @@ const SchoolsPage = ({
       const location = await getCurrentLocation();
       setUserLocation(location);
       setShowLocationOptions(false);
+      // Show success message only for manual request
       toast.success("Location access granted! Schools are now sorted by distance.");
     } catch (error) {
       console.warn("Could not get user location:", error.message);
       setLocationError(error.message);
-      toast.warn("Location access denied. You can still browse schools without distance info.");
+      // Don't show warning for manual request failure
+      toast.info("Location access was denied. You can select a city manually.");
     }
   };
 
@@ -59,9 +61,21 @@ const SchoolsPage = ({
     }
   };
 
-  // Get user location on component mount
+  // Get user location on component mount - with flag to prevent duplicate toasts
   useEffect(() => {
-    requestUserLocation();
+    const getLocation = async () => {
+      try {
+        setLocationError(null);
+        const location = await getCurrentLocation();
+        setUserLocation(location);
+        // Don't show toast on initial load, only show when user manually requests
+      } catch (error) {
+        console.warn("Could not get user location:", error.message);
+        setLocationError(error.message);
+        // Don't show warning toast on initial load
+      }
+    };
+    getLocation();
   }, []);
 
   useEffect(() => {

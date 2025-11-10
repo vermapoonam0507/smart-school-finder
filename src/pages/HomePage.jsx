@@ -19,7 +19,7 @@ import { getUserPreferences } from '../api/preferencesService';
 import SchoolCard from '../components/SchoolCard';
 import { useAuth } from '../context/AuthContext';
 
-const HomePage = () => {
+const HomePage = ({ onCompareToggle, comparisonList, shortlist, onShortlistToggle }) => {
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
   const [matchingSchools, setMatchingSchools] = useState([]);
@@ -106,9 +106,9 @@ const HomePage = () => {
   // Load user preferences on component mount
   useEffect(() => {
     const loadUserPreferences = async () => {
-      if (currentUser) {
+      if (currentUser && (currentUser.authId || currentUser._id)) {
         try {
-          const preferences = await getUserPreferences();
+          const preferences = await getUserPreferences(currentUser.authId || currentUser._id);
           if (preferences) {
             setUserPreferences(preferences);
           }
@@ -175,11 +175,11 @@ const HomePage = () => {
                 key={school._id || school.id || school.schoolId}
                 school={school}
                 onCardClick={() => navigate(`/school/${school._id || school.id || school.schoolId}`)}
-                onCompareToggle={() => {}}
-                isCompared={false}
+                onCompareToggle={onCompareToggle}
+                isCompared={comparisonList?.some(item => (item.schoolId || item._id) === (school._id || school.id || school.schoolId))}
                 currentUser={currentUser}
-                onShortlistToggle={() => {}}
-                isShortlisted={false}
+                onShortlistToggle={onShortlistToggle}
+                isShortlisted={shortlist?.some(item => (item.schoolId || item._id) === (school._id || school.id || school.schoolId))}
                 onApply={() => navigate(`/apply/${school._id || school.id || school.schoolId}`)}
               />
             ))}

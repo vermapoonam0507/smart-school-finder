@@ -233,7 +233,16 @@ const ApplicationStatusPage = () => {
                 <div key={f._id || f.id} className="bg-white rounded-xl shadow border border-gray-200 p-4">
                   <div className="flex items-start justify-between">
                     <div className="min-w-0">
-                      <div className="font-semibold text-gray-900 truncate">{schoolName}</div>
+                      {idStr ? (
+                        <button 
+                          onClick={() => navigate(`/school/${idStr}`)}
+                          className="font-semibold text-gray-900 hover:text-blue-600 hover:underline truncate text-left block w-full"
+                        >
+                          {schoolName}
+                        </button>
+                      ) : (
+                        <div className="font-semibold text-gray-900 truncate">{schoolName}</div>
+                      )}
                       <div className="text-xs text-gray-500 mt-1">Status: <span className={status.includes('accept') ? 'text-green-700' : status.includes('reject') ? 'text-red-600' : 'text-amber-600'}>{status}</span></div>
                       <div className="text-xs text-gray-400 mt-1">Submitted: {submitted}</div>
                     </div>

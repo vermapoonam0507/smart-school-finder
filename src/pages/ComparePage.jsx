@@ -1,8 +1,11 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { XCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { XCircle, CheckCircle } from 'lucide-react';
+import { toast } from 'react-toastify';
 
-const ComparePage = ({ comparisonList, onCompareToggle }) => {
+const ComparePage = ({ comparisonList, onCompareToggle, shortlist, onShortlistToggle }) => {
+  const navigate = useNavigate();
+  const [isProcessing, setIsProcessing] = useState(false);
   if (!comparisonList || comparisonList.length === 0) {
     return (
       <div className="container mx-auto px-6 py-20 text-center">
@@ -26,6 +29,51 @@ const ComparePage = ({ comparisonList, onCompareToggle }) => {
     { key: 'state', label: 'State' },
     { key: 'city', label: 'City' },
   ];
+
+  const handleCompleteComparison = async () => {
+    setIsProcessing(true);
+    try {
+      // Remove all compared schools from shortlist sequentially
+      let removedCount = 0;
+      for (const school of comparisonList) {
+        // Check if the school is in shortlist before removing
+        const isInShortlist = shortlist?.some(
+          (item) => (item.schoolId || item._id) === (school.schoolId || school._id)
+        );
+        if (isInShortlist) {
+          // Wait for each removal to complete before proceeding to the next
+          await onShortlistToggle(school);
+          removedCount++;
+          // Add a small delay to ensure state updates properly
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+
+      // Clear the comparison list
+      comparisonList.forEach((school) => {
+        onCompareToggle(school);
+      });
+
+      // Add a small delay before showing success and navigating for better UX
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      if (removedCount > 0) {
+        toast.success(`Comparison completed! ${removedCount} school${removedCount > 1 ? 's' : ''} removed from shortlist.`);
+      } else {
+        toast.success('Comparison completed!');
+      }
+      
+      // Delay navigation slightly so user can see the success message
+      setTimeout(() => {
+        navigate('/schools');
+      }, 1500);
+    } catch (error) {
+      toast.error('Error completing comparison. Please try again.');
+      console.error('Error in handleCompleteComparison:', error);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -64,6 +112,36 @@ const ComparePage = ({ comparisonList, onCompareToggle }) => {
             ))}
           </tbody>
         </table>
+      </div>
+      
+      {/* Complete Comparison Button */}
+      <div className="mt-8 text-center">
+        <button
+          onClick={handleCompleteComparison}
+          disabled={isProcessing}
+          className={`font-semibold px-8 py-3 rounded-lg shadow-lg flex items-center justify-center mx-auto gap-2 ${
+            isProcessing 
+              ? 'bg-gray-400 cursor-not-allowed' 
+              : 'bg-green-600 text-white hover:bg-green-700'
+          }`}
+        >
+          {isProcessing ? (
+            <>
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              Processing...
+            </>
+          ) : (
+            <>
+              <CheckCircle size={20} />
+              Complete Comparison
+            </>
+          )}
+        </button>
+        <p className="text-sm text-gray-600 mt-2">
+          {isProcessing 
+            ? 'Removing schools from shortlist...' 
+            : 'This will remove compared schools from your shortlist'}
+        </p>
       </div>
     </div>
   );

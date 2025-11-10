@@ -161,12 +161,26 @@ const SchoolCard = ({ school, onCardClick, onCompareToggle, isCompared, currentU
       </div>
       
       <div className={`px-6 pt-4 pb-4 bg-gray-50 border-t border-gray-200` }>
-        <button
-          onClick={(e) => { e.stopPropagation(); onApply(); }}
-          className="w-full flex items-center justify-center font-medium rounded-lg text-sm px-5 py-2.5 text-center transition-colors duration-300 bg-blue-600 text-white hover:bg-blue-700"
-        >
-          Apply
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={(e) => { e.stopPropagation(); onApply(); }}
+            className="flex-1 flex items-center justify-center font-medium rounded-lg text-sm px-5 py-2.5 text-center transition-colors duration-300 bg-blue-600 text-white hover:bg-blue-700"
+          >
+            Apply
+          </button>
+          {onCompareToggle && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onCompareToggle(); }}
+              className={`flex-1 flex items-center justify-center font-medium rounded-lg text-sm px-5 py-2.5 text-center transition-colors duration-300 ${
+                isCompared 
+                  ? 'bg-green-600 text-white hover:bg-green-700' 
+                  : 'border border-gray-300 text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              {isCompared ? 'Compared' : 'Compare'}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

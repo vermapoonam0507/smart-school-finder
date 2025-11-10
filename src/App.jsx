@@ -150,40 +150,66 @@ useEffect(() => {
       toast.info("Please log in to shortlist schools.");
       return;
     }
-    const schoolId = school.schoolId || school._id;
+    // More robust ID extraction
+    const schoolId = school.schoolId || school._id || school.id;
+    const authId = currentUser.authId || currentUser._id || currentUser.id;
+    
+    // Check if the school is shortlisted with multiple ID field combinations
     const isShortlisted = shortlist.some(
-      (item) => (item.schoolId || item._id) === schoolId
+      (item) => {
+        const itemId = item.schoolId || item._id || item.id;
+        return itemId === schoolId || 
+               itemId === school.schoolId || 
+               itemId === school._id || 
+               itemId === school.id;
+      }
     );
+
+    console.log('Shortlist toggle:', {
+      schoolName: school.name,
+      schoolId,
+      authId,
+      isShortlisted,
+      school,
+      currentUser
+    });
 
     if (isShortlisted) {
       // Optimistic remove
       const prevShortlist = shortlist;
       setShortlist((prev) =>
-        prev.filter((item) => (item.schoolId || item._id) !== schoolId)
+        prev.filter((item) => {
+          const itemId = item.schoolId || item._id || item.id;
+          return itemId !== schoolId && 
+                 itemId !== school.schoolId && 
+                 itemId !== school._id && 
+                 itemId !== school.id;
+        })
       );
       try {
-        await removeFromShortlist(
-          currentUser.authId || currentUser._id,
-          schoolId
-        );
+        await removeFromShortlist(authId, schoolId);
         toast.success(`${school.name} removed from shortlist.`);
       } catch (error) {
         // Revert on failure
         setShortlist(prevShortlist);
-        toast.error(`Failed to remove ${school.name}.`);
+        console.error('Failed to remove from shortlist:', {
+          error: error.response?.data || error.message,
+          schoolName: school.name,
+          schoolId,
+          authId
+        });
+        const errorMessage = error.response?.data?.message || error.message || 'Unknown error';
+        toast.error(`Failed to remove ${school.name}: ${errorMessage}`);
       }
     } else {
       // Optimistic add
       const prevShortlist = shortlist;
       setShortlist((prev) => [...prev, school]);
       try {
-        await addToShortlist(
-          currentUser.authId || currentUser._id,
-          schoolId
-        );
+        await addToShortlist(authId, schoolId);
         // Optionally refresh in background to sync with server shape
         try {
-          const responseData = await getShortlist(currentUser.authId || currentUser._id);
+          const responseData = await getShortlist(authId);
           if (responseData && Array.isArray(responseData.data)) {
             setShortlist(responseData.data);
           }
@@ -192,7 +218,14 @@ useEffect(() => {
       } catch (error) {
         // Revert on failure
         setShortlist(prevShortlist);
-        toast.error(`Failed to shortlist ${school.name}.`);
+        console.error('Failed to add to shortlist:', {
+          error: error.response?.data || error.message,
+          schoolName: school.name,
+          schoolId,
+          authId
+        });
+        const errorMessage = error.response?.data?.message || error.message || 'Unknown error';
+        toast.error(`Failed to shortlist ${school.name}: ${errorMessage}`);
       }
     }
   };
@@ -231,7 +264,17 @@ useEffect(() => {
       <main>
         <Routes>
          {/* Public Routes */}
-         <Route path="/" element={<HomePage />} />
+         <Route 
+           path="/" 
+           element={
+             <HomePage 
+               onCompareToggle={handleCompareToggle}
+               comparisonList={comparisonList}
+               shortlist={shortlist}
+               onShortlistToggle={handleShortlistToggle}
+             />
+           } 
+         />
          <Route path="/landing" element={<LandingPage />} />
          <Route path="/login" element={<LoginPage />} />
          <Route path="/signup" element={<SignUpPage />} />
@@ -280,6 +323,8 @@ useEffect(() => {
               <ComparePage
                 comparisonList={comparisonList}
                 onCompareToggle={handleCompareToggle}
+                shortlist={shortlist}
+                onShortlistToggle={handleShortlistToggle}
               />
             }
           />

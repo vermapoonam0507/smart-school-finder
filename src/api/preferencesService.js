@@ -1,8 +1,9 @@
 // API service for user preferences
 import apiClient from './axios';
 
-export const getUserPreferences = async () => {
+export const getUserPreferences = async (studId) => {
   try {
+    if (!studId) return null;
     const { data } = await apiClient.get(`/preferences/${studId}`);
     return data;
   } catch (error) {
@@ -11,9 +12,9 @@ export const getUserPreferences = async () => {
   }
 };
 
-export const saveUserPreferences = async (preferences) => {
+export const saveUserPreferences = async (studId, preferences) => {
   try {
-    const { data } = await apiClient.get(`/preferences/${studId}`);
+    const { data } = await apiClient.post(`/preferences/${studId}`, preferences);
     return data;
   } catch (error) {
     console.error('Error saving preferences:', error);

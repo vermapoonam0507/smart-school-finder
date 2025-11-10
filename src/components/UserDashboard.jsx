@@ -437,7 +437,18 @@ const UserDashboard = ({ shortlist, comparisonList, onCompareToggle, onShortlist
 
                     return (
                       <tr key={row._id || row.applicationId} className="border-b last:border-0">
-                        <td className="py-2 pr-4">{displayName}</td>
+                        <td className="py-2 pr-4">
+                          {schoolIdStr ? (
+                            <button
+                              onClick={() => navigate(`/school/${schoolIdStr}`)}
+                              className="text-blue-600 hover:text-blue-800 hover:underline font-medium text-left"
+                            >
+                              {displayName}
+                            </button>
+                          ) : (
+                            <span>{displayName}</span>
+                          )}
+                        </td>
                         <td className="py-2 pr-4">
                           <span className={status.toLowerCase().includes('accept') ? 'text-green-700' : status.toLowerCase().includes('reject') ? 'text-red-600' : 'text-amber-600'}>
                             {status}

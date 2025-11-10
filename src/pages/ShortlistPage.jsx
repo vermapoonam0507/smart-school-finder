@@ -12,6 +12,8 @@ const ShortlistPage = ({ shortlist, onShortlistToggle, comparisonList, onCompare
   console.log("Shortlist type:", typeof shortlist, Array.isArray(shortlist));
 
   const handleCardClick = (school) => {
+    // Navigate to school details without removing from shortlist
+    // (Remove the automatic removal based on user feedback)
     navigate(`/school/${school._id || school.id || school.schoolId}`);
   };
 
