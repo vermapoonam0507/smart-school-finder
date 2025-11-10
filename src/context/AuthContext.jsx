@@ -48,6 +48,11 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (credentials, userType = 'user') => {
     try {
+      console.log('🔐 Starting login process for userType:', userType);
+      // Clear any existing user state first to prevent conflicts
+      setUser(null);
+      setToken(null);
+
       let response;
 
       if (userType === 'admin') {
@@ -206,17 +211,55 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    console.log('🚪 Starting logout process...');
+
     // Clear state
     setUser(null);
     setToken(null);
-    
-    // Clear localStorage items
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('userData');
-    localStorage.removeItem('lastCreatedSchoolId');
-    localStorage.removeItem('comparisonList');
-    
-    console.log('✅ Logout complete');
+
+    // Clear ALL localStorage items to prevent session conflicts
+    // EXCEPT remember-me preferences which are login-page specific
+    const keysToRemove = [
+      'authToken',
+      'userData',
+      'lastCreatedSchoolId',
+      'comparisonList',
+      'schoolRegDraft', // Contains userType and school data
+      'lastAppliedSchoolId', // Navigation - from ApplicationStatusPage
+      'redirectPath', // Navigation
+      'lastInterviewNotification', // Features
+      'guestSearchCriteria', // Features
+      'shortlist', // User data
+      'schoolName', // Dynamic school entries (base key)
+      'adminRedirectPath', // Admin navigation
+    ];
+
+    // Remove specific keys
+    keysToRemove.forEach(key => {
+      try {
+        localStorage.removeItem(key);
+      } catch (e) {
+        // Ignore errors for missing keys
+      }
+    });
+
+    // Clear all dynamic entries that might contain user-specific data
+    try {
+      const allKeys = Object.keys(localStorage);
+      allKeys.forEach(key => {
+        if (
+          key.startsWith('schoolName:') || // School name cache
+          key.startsWith('schoolInfo:') || // School info cache from ApplicationStatusPage
+          key.startsWith('adminRedirectPath') // Admin navigation
+        ) {
+          localStorage.removeItem(key);
+        }
+      });
+    } catch (e) {
+      // Ignore errors when accessing localStorage
+    }
+
+    console.log('✅ Complete logout - all session data cleared (remember-me preferences preserved)');
     toast.success('Logged out successfully');
   };
 

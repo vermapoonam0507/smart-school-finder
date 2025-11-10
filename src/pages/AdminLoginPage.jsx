@@ -56,14 +56,14 @@ const AdminLoginPage = () => {
         localStorage.removeItem("admin-rememberMe");
       }
 
-      // Redirect to admin dashboard
+      // Clear any admin redirect path and always navigate to admin dashboard
       const redirectPath = localStorage.getItem("adminRedirectPath");
       if (redirectPath) {
         localStorage.removeItem("adminRedirectPath");
-        navigate(redirectPath);
-      } else {
-        navigate("/admin/dashboard");
       }
+      
+      // Always navigate to admin dashboard to avoid accessing restricted areas
+      navigate("/admin/dashboard");
 
     } catch (error) {
       console.error("Admin login failed:", error);

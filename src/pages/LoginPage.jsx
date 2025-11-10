@@ -59,15 +59,14 @@ const LoginPage = () => {
         localStorage.removeItem("school-finder-rememberMe");
       }
 
-      
+      // Clear any redirect path that might lead to restricted areas
       const redirectPath = localStorage.getItem("redirectPath");
       if (redirectPath) {
-        localStorage.removeItem("redirectPath"); 
-        navigate(redirectPath);
-      } else {
-        
-        navigate("/dashboard");
+        localStorage.removeItem("redirectPath");
       }
+      
+      // Always navigate to dashboard for regular users to avoid accessing restricted areas
+      navigate("/dashboard");
       
     } catch (error) {
       console.error("Login failed:", error);

@@ -244,13 +244,14 @@ const StudentApplicationPage = () => {
     const nextStep = () => setStep(prev => prev + 1);
     const prevStep = () => setStep(prev => prev - 1);
 
-    // Prevent school users from accessing student application form
-    useEffect(() => {
-        if (currentUser && currentUser.userType === 'school') {
-            toast.error('School accounts cannot submit student applications.');
-            navigate('/school-portal');
-        }
-    }, [currentUser, navigate]);
+    // Allow all authenticated users to access student application forms
+    // School users can now submit applications to other schools if needed
+    // useEffect(() => {
+    //     if (currentUser && currentUser.userType === 'school') {
+    //         toast.error('School accounts cannot submit student applications.');
+    //         navigate('/school-portal');
+    //     }
+    // }, [currentUser, navigate]);
 
     // Fetch school details to get school name
     useEffect(() => {
