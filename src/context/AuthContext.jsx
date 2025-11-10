@@ -121,7 +121,27 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('authToken', token);
 
       const userId = basicAuthData?._id;
-      if (!userId || basicAuthData.userType === 'school') {
+      
+      // Special handling for school accounts
+      if (basicAuthData.userType === 'school') {
+        console.log('🏫 School account login detected');
+        
+        // For school accounts, we don't fetch the school profile here
+        // because school accounts don't have permission to use admin endpoints
+        // The RegistrationPage will handle finding the school profile
+        const schoolUserData = {
+          ...basicAuthData,
+          userType: 'school',
+          // authId is already in basicAuthData, which will be used to match the school
+        };
+        
+        setUser(schoolUserData);
+        localStorage.setItem('userData', JSON.stringify(schoolUserData));
+        toast.success('School login successful!');
+        return;
+      }
+      
+      if (!userId) {
         setUser(basicAuthData);
         localStorage.setItem('userData', JSON.stringify(basicAuthData));
         // If this is not a school account, clear any last-created-school id to avoid leaking another user's school
@@ -134,27 +154,35 @@ export const AuthProvider = ({ children }) => {
 
       // Fetch full profile and preferences
       const profileResponse = await getUserProfile(basicAuthData.authId || userId);
-      const studentId = profileResponse.data?.data?._id || profileResponse.data?._id;
+      const profileData = profileResponse.data?.data || profileResponse.data;
+      const studentId = profileData?._id;
 
       let preferences = null;
       try {
         if (studentId) {
+          console.log('Fetching preferences for studentId during login:', studentId);
           const prefResponse = await getUserPreferences(studentId);
-          // Handle both success and "not found" responses
-          if (prefResponse?.data && prefResponse.status !== 'Not Found') {
+          console.log('Preferences response during login:', prefResponse);
+          
+          // Handle different response structures
+          if (prefResponse?.data?.data) {
+            preferences = prefResponse.data.data;
+          } else if (prefResponse?.data && prefResponse.status !== 'Not Found') {
             preferences = prefResponse.data;
           } else if (prefResponse && !prefResponse.status) {
-            // Direct data response
             preferences = prefResponse;
           }
+          
+          console.log('Parsed preferences during login:', preferences);
         }
-      } catch (_) {
+      } catch (error) {
+        console.log('Error fetching preferences during login:', error.message);
         // Preferences are optional, continue without them
       }
 
       const fullUserData = {
         ...basicAuthData,
-        ...(profileResponse.data?.data || profileResponse.data),
+        ...profileData,
         studentId: studentId, // Store the student profile ID for consistent use
         ...(preferences ? { preferences } : {})
       };
@@ -178,14 +206,17 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    // Clear state
     setUser(null);
     setToken(null);
+    
+    // Clear localStorage items
     localStorage.removeItem('authToken');
     localStorage.removeItem('userData');
-    // Also clear lastCreatedSchoolId on logout to avoid leaking it to next user
-    try { localStorage.removeItem('lastCreatedSchoolId'); } catch (_) {}
-    // Clear comparison list to prevent data leakage across sessions
-    try { localStorage.removeItem('comparisonList'); } catch (_) {}
+    localStorage.removeItem('lastCreatedSchoolId');
+    localStorage.removeItem('comparisonList');
+    
+    console.log('✅ Logout complete');
     toast.success('Logged out successfully');
   };
 

@@ -57,19 +57,36 @@ const UserDashboard = ({ shortlist, comparisonList, onCompareToggle, onShortlist
 
         // Load user preferences
         try {
-          const preferencesRes = await getUserPreferences(currentUser._id);
+          const studentId = currentUser.studentId || profileData?._id || currentUser._id;
+          console.log("Fetching preferences for studentId:", studentId);
+          const preferencesRes = await getUserPreferences(studentId);
           console.log("Preferences response:", preferencesRes);
-          const preferencesData = preferencesRes?.data?.data || preferencesRes?.data;
-          console.log("Preferences data:", preferencesData);
+          
+          // Handle different response structures
+          let preferencesData = null;
+          if (preferencesRes?.data?.data) {
+            preferencesData = preferencesRes.data.data;
+          } else if (preferencesRes?.data && preferencesRes.status !== 'Not Found') {
+            preferencesData = preferencesRes.data;
+          } else if (preferencesRes && !preferencesRes.status) {
+            preferencesData = preferencesRes;
+          }
+          
+          console.log("Parsed preferences data:", preferencesData);
+          
           if (preferencesData) {
             updateUserContext({ 
               ...currentUser, 
               ...profileData,
               preferences: preferencesData 
             });
+          } else {
+            console.log('No preferences data found, user may need to set preferences');
           }
         } catch (prefErr) {
-          console.log('No preferences found for user:', prefErr.message);
+          console.log('Error fetching preferences:', prefErr.message);
+          // Don't fail silently - preferences might be important for display
+          console.error('Full preference error:', prefErr);
         }
       } catch (err) {
         console.error('Error ensuring student profile:', err);
@@ -209,24 +226,35 @@ const UserDashboard = ({ shortlist, comparisonList, onCompareToggle, onShortlist
       // Update main profile fields
       const updatedProfile = await updateUserProfile(authId, profileData);
 
-      // Update preferences separately if present
-      if (profileData.preferences) {
-        await saveUserPreferences(authId, {
-          studentId: authId,
-          ...profileData.preferences
-        });
-      }
-
       // Fetch the updated profile from the server to ensure we have the latest data
       const freshProfile = await getUserProfile(authId);
       const freshData = freshProfile?.data?.data || freshProfile?.data;
 
+      // Update preferences separately if present
+      if (profileData.preferences) {
+        console.log('Saving preferences with studentId:', freshData?._id || authId);
+        await saveUserPreferences(freshData?._id || authId, {
+          studentId: freshData?._id || authId,
+          ...profileData.preferences
+        });
+      }
+
       // Also fetch updated preferences
       let freshPreferences = null;
       try {
-        const preferencesRes = await getUserPreferences(authId);
+        const studentId = freshData?._id || authId;
+        const preferencesRes = await getUserPreferences(studentId);
         console.log("Updated preferences response:", preferencesRes);
-        freshPreferences = preferencesRes?.data?.data || preferencesRes?.data;
+        
+        // Handle different response structures
+        if (preferencesRes?.data?.data) {
+          freshPreferences = preferencesRes.data.data;
+        } else if (preferencesRes?.data && preferencesRes.status !== 'Not Found') {
+          freshPreferences = preferencesRes.data;
+        } else if (preferencesRes && !preferencesRes.status) {
+          freshPreferences = preferencesRes;
+        }
+        
         console.log("Updated preferences data:", freshPreferences);
       } catch (prefErr) {
         console.log('No preferences found after update:', prefErr.message);

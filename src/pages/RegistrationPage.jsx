@@ -9,7 +9,7 @@ import {
   addSchool, 
   addAmenities, 
   addActivities, 
-  addAlumni, 
+  // addAlumni, // Commented out - no alumni UI yet
   addInfrastructure, 
   addOtherDetails, 
   addFeesAndScholarships,
@@ -727,8 +727,8 @@ const RegistrationPage = () => {
         transportAvailable: (String(formData.transportAvailable).toLowerCase() === 'yes' || formData.transportAvailable === true) ? 'yes' : 'no',
         latitude: Number(formData.latitude), // Mandatory for distance calculation
         longitude: Number(formData.longitude), // Mandatory for distance calculation
-        // Match backend field casing
-        teacherToStudentRatio: formData.TeacherToStudentRatio,
+        // Match backend field casing (backend expects capitalized key)
+        TeacherToStudentRatio: formData.TeacherToStudentRatio,
         rank: formData.rank,
         specialist: Array.isArray(formData.specialist) ? formData.specialist : [],
         tags: Array.isArray(formData.tags) ? formData.tags : []
@@ -751,42 +751,51 @@ const RegistrationPage = () => {
       } else {
         // Safety check: Before creating a new school, verify one doesn't already exist
         // This prevents duplicate school entries for the same user
-        try {
-          console.log('🔍 Safety check: Verifying no existing school before creating new one...');
-          const statuses = ['accepted', 'pending', 'rejected'];
-          let existingSchool = null;
-          
-          for (const status of statuses) {
-            try {
-              const response = await getSchoolsByStatus(status);
-              const schools = response?.data?.data || response?.data || [];
-              existingSchool = schools.find(s => s.authId === currentUser._id);
-              if (existingSchool) {
-                console.log('⚠️ Found existing school during safety check:', existingSchool);
-                break;
+        // Note: School accounts can't access admin endpoints, so we skip this check for them
+        if (currentUser?.userType !== 'school') {
+          try {
+            console.log('🔍 Safety check: Verifying no existing school before creating new one...');
+            const statuses = ['accepted', 'pending', 'rejected'];
+            let existingSchool = null;
+            
+            for (const status of statuses) {
+              try {
+                const response = await getSchoolsByStatus(status);
+                const schools = response?.data?.data || response?.data || [];
+                existingSchool = schools.find(s => s.authId === currentUser._id);
+                if (existingSchool) {
+                  console.log('⚠️ Found existing school during safety check:', existingSchool);
+                  break;
+                }
+              } catch (err) {
+                // Continue checking other statuses
               }
-            } catch (err) {
-              // Continue checking other statuses
             }
-          }
-          
-          if (existingSchool) {
-            // Update existing school instead of creating new one
-            console.log('✅ Updating existing school instead of creating duplicate');
-            schoolId = existingSchool._id;
-            await updateSchoolInfo(schoolId, payload);
-            setIsEditMode(true);
-            setEditingSchoolId(schoolId);
-            setHasExistingSchool(true);
-          } else {
-            // Safe to create new school
-            console.log('✅ No existing school found, creating new one');
+            
+            if (existingSchool) {
+              // Update existing school instead of creating new one
+              console.log('✅ Updating existing school instead of creating duplicate');
+              schoolId = existingSchool._id;
+              await updateSchoolInfo(schoolId, payload);
+              setIsEditMode(true);
+              setEditingSchoolId(schoolId);
+              setHasExistingSchool(true);
+            } else {
+              // Safe to create new school
+              console.log('✅ No existing school found, creating new one');
+              const schoolResponse = await addSchool(payload);
+              schoolId = schoolResponse.data.data._id;
+              try { localStorage.setItem('lastCreatedSchoolId', String(schoolId)); } catch (_) {}
+            }
+          } catch (err) {
+            console.error('Safety check failed, proceeding with creation:', err);
             const schoolResponse = await addSchool(payload);
             schoolId = schoolResponse.data.data._id;
             try { localStorage.setItem('lastCreatedSchoolId', String(schoolId)); } catch (_) {}
           }
-        } catch (err) {
-          console.error('Safety check failed, proceeding with creation:', err);
+        } else {
+          // For school accounts, directly create or update
+          console.log('🏫 School account - skipping duplicate check, proceeding with registration');
           const schoolResponse = await addSchool(payload);
           schoolId = schoolResponse.data.data._id;
           try { localStorage.setItem('lastCreatedSchoolId', String(schoolId)); } catch (_) {}
@@ -816,7 +825,9 @@ const RegistrationPage = () => {
         promises.push(updateOrAdd(updateActivities, addActivities, schoolId, payloadActivities));
       }
 
-      // Add alumni if any
+      // Add alumni if any (skip for now as there's no alumni UI)
+      // TODO: Uncomment when alumni UI is added
+      /*
       if (famousAlumnies.length > 0 || topAlumnies.length > 0 || otherAlumnies.length > 0) {
         promises.push(addAlumni({
           schoolId,
@@ -825,6 +836,7 @@ const RegistrationPage = () => {
           otherAlumnies
         }));
       }
+      */
 
       // Add/Update infrastructure
       if (formData.infraLabTypes?.length > 0 || formData.infraSportsTypes?.length > 0 || formData.infraLibraryBooks || formData.infraSmartClassrooms) {
@@ -1240,6 +1252,12 @@ const RegistrationPage = () => {
       customAmenities,
       facultyQuality,
       activeSection,
+      editingSchoolId, // Include schoolId for existing schools
+      hasExistingSchool, // Include state to know if this was an existing school
+      isEditMode, // Include edit mode state
+      logoPreview, // Include logo preview
+      socialLinks, // Include social media links
+      admissionSteps, // Include admission timeline
     };
     try {
       localStorage.setItem("schoolRegDraft", JSON.stringify(draft));
@@ -1254,12 +1272,12 @@ const RegistrationPage = () => {
       const savedDraft = localStorage.getItem("schoolRegDraft");
       if (savedDraft) {
         const draft = JSON.parse(savedDraft);
-        
+
         // Restore form data
         if (draft.formData) {
           setFormData(draft.formData);
         }
-        
+
         // Restore alumni data
         if (draft.famousAlumnies) {
           setFamousAlumnies(draft.famousAlumnies);
@@ -1270,7 +1288,7 @@ const RegistrationPage = () => {
         if (draft.otherAlumnies) {
           setOtherAlumnies(draft.otherAlumnies);
         }
-        
+
         // Restore activities and amenities
         if (draft.customActivities) {
           setCustomActivities(draft.customActivities);
@@ -1278,18 +1296,40 @@ const RegistrationPage = () => {
         if (draft.customAmenities) {
           setCustomAmenities(draft.customAmenities);
         }
-        
+
         // Restore faculty and academic data
         if (draft.facultyQuality) {
           setFacultyQuality(draft.facultyQuality);
         }
         // academicResults and examQualifiers removed - not in backend schema
-        
+
         // Restore active section
         if (draft.activeSection) {
           setActiveSection(draft.activeSection);
         }
-        
+
+        // Restore edit mode states for existing schools
+        if (draft.editingSchoolId) {
+          setEditingSchoolId(draft.editingSchoolId);
+        }
+        if (draft.hasExistingSchool !== undefined) {
+          setHasExistingSchool(draft.hasExistingSchool);
+        }
+        if (draft.isEditMode !== undefined) {
+          setIsEditMode(draft.isEditMode);
+        }
+
+        // Restore logo, social links, and admission timeline
+        if (draft.logoPreview) {
+          setLogoPreview(draft.logoPreview);
+        }
+        if (draft.socialLinks) {
+          setSocialLinks(draft.socialLinks);
+        }
+        if (draft.admissionSteps) {
+          setAdmissionSteps(draft.admissionSteps);
+        }
+
         // Only show toast if we actually have meaningful draft data
         if (draft.formData?.name || draft.formData?.email || draft.formData?.description) {
           toast.success("Draft loaded successfully!");
@@ -1353,7 +1393,8 @@ const RegistrationPage = () => {
       email: currentUser?.email,
       userType: currentUser?.userType,
       schoolId: currentUser?.schoolId,
-      authId: currentUser?.authId
+      authId: currentUser?.authId,
+      isSchoolAccount: currentUser?.userType === 'school'
     });
     
     if (!currentUser?._id) {
@@ -1364,6 +1405,24 @@ const RegistrationPage = () => {
       // Load draft for new users
       loadDraft();
       return;
+    }
+    
+    // Check if there's a draft for this existing user (they might be editing)
+    try {
+      const savedDraft = localStorage.getItem("schoolRegDraft");
+      if (savedDraft) {
+        const draft = JSON.parse(savedDraft);
+        // If draft indicates this is an existing school in edit mode, load the draft instead of backend data
+        if (draft.hasExistingSchool && draft.isEditMode && draft.editingSchoolId) {
+          console.log('✅ Found existing draft for editing school, loading draft instead of backend');
+          loadDraft(); // Load the draft
+          setIsLoadingExistingData(false);
+          toast.success('Resumed editing your school profile from draft');
+          return;
+        }
+      }
+    } catch (error) {
+      console.error('Error checking draft:', error);
     }
     
     try {
@@ -1408,31 +1467,82 @@ const RegistrationPage = () => {
       // Method 3: Fetch schools and filter by authId (frontend-only solution)
       if (!school) {
         try {
-          console.log('🔍 Fetching schools to find match by authId...');
+          console.log('🔍 Fetching schools to find match by authId or email...');
+          console.log('🔍 User type:', currentUser?.userType);
           
-          // Try multiple status endpoints since 'all' doesn't work
-          let schools = [];
-          const statuses = ['accepted', 'pending', 'rejected'];
-          
-          for (const status of statuses) {
+          // Special optimization for school accounts
+          if (currentUser?.userType === 'school' && currentUser?.schoolId) {
+            console.log('✅ User is a school account with schoolId already set:', currentUser.schoolId);
+            // Try to fetch the school directly
             try {
-              const res = await getSchoolsByStatus(status);
-              const statusSchools = res?.data?.data || res?.data || [];
-              schools = schools.concat(statusSchools);
-            } catch (statusErr) {
-              console.log(`Could not fetch ${status} schools:`, statusErr.message);
+              const res = await getSchoolById(currentUser.schoolId);
+              school = res?.data?.data || res?.data;
+              if (school && school._id) {
+                console.log('✅ Successfully fetched school from user.schoolId');
+                localStorage.setItem('lastCreatedSchoolId', school._id);
+              }
+            } catch (e) {
+              console.log('❌ Could not fetch school with user.schoolId:', e.message);
             }
           }
           
-          console.log(`Found ${schools.length} total schools across all statuses`);
-          
-          // Find school where authId matches current user's _id
-          school = schools.find(s => s.authId === currentUser._id);
-          
-          if (school) {
-            console.log('✅ Found existing school by authId match');
-            localStorage.setItem('lastCreatedSchoolId', school._id);
-          } else {
+          // If still no school, try fetching all schools (only works for admin users)
+          if (!school && currentUser?.userType === 'school') {
+            // For school accounts, we can't fetch all schools (no permission)
+            // Instead, we'll rely on localStorage or the school having their ID saved
+            console.log('⚠️ School account detected - cannot fetch all schools (no admin permissions)');
+            console.log('💡 Tip: School profile will be linked after first registration');
+            
+            // Check if there's a previously saved school ID in localStorage from a previous session
+            const savedSchoolId = localStorage.getItem('lastCreatedSchoolId');
+            if (savedSchoolId) {
+              try {
+                console.log('🔍 Trying saved schoolId from previous session:', savedSchoolId);
+                const res = await getSchoolById(savedSchoolId);
+                const testSchool = res?.data?.data || res?.data;
+                
+                // Verify this school belongs to the current user by email
+                if (testSchool && testSchool.email && currentUser.email) {
+                  if (testSchool.email.toLowerCase() === currentUser.email.toLowerCase()) {
+                    school = testSchool;
+                    console.log('✅ Found school from saved ID with matching email');
+                  } else {
+                    console.log('❌ Saved school ID belongs to different email, clearing...');
+                    localStorage.removeItem('lastCreatedSchoolId');
+                  }
+                }
+              } catch (e) {
+                console.log('❌ Could not fetch school with saved ID:', e.message);
+                localStorage.removeItem('lastCreatedSchoolId');
+              }
+            }
+          } else if (!school) {
+            // For non-school users or when we need to fetch all schools
+            // Try multiple status endpoints since 'all' doesn't work
+            let schools = [];
+            const statuses = ['accepted', 'pending', 'rejected'];
+            
+            for (const status of statuses) {
+              try {
+                console.log(`🔍 Fetching ${status} schools...`);
+                const res = await getSchoolsByStatus(status);
+                const statusSchools = res?.data?.data || res?.data || [];
+                console.log(`   Found ${statusSchools.length} ${status} schools`);
+                schools = schools.concat(statusSchools);
+              } catch (statusErr) {
+                console.log(`   ❌ Could not fetch ${status} schools:`, statusErr.message);
+              }
+            }
+            
+            console.log(`📊 Found ${schools.length} total schools across all statuses`);
+            
+            // Find school where authId matches current user's _id
+            school = schools.find(s => s.authId === currentUser._id);
+            
+            if (school) {
+              console.log('✅ Found existing school by authId match');
+              localStorage.setItem('lastCreatedSchoolId', school._id);
+            } else {
             console.log('⚠️ No school found with authId, trying email match...');
             console.log('🔍 Current user info:', {
               userId: currentUser._id,
@@ -1480,6 +1590,7 @@ const RegistrationPage = () => {
               }
             } else {
               console.log('❌ Current user has no email to match against');
+            }
             }
           }
         } catch (e) {
@@ -1749,11 +1860,11 @@ const RegistrationPage = () => {
     }
   };
 
-  // Auto-save draft when form data changes (debounced) - only for new schools
+  // Auto-save draft when form data changes (debounced) - works for both new and existing schools
   useEffect(() => {
-    // Don't auto-save for existing schools to avoid overwriting their data
-    if (hasExistingSchool) return;
-    
+    // Only auto-save if user has started filling the form and we're not currently loading existing data
+    if (isLoadingExistingData || !currentUser) return;
+
     const autoSaveTimer = setTimeout(() => {
       if (formData.name || formData.description || formData.email) {
         // Only auto-save if user has started filling the form
@@ -1766,10 +1877,17 @@ const RegistrationPage = () => {
           customAmenities,
           facultyQuality,
           activeSection,
+          editingSchoolId, // Include schoolId for existing schools
+          hasExistingSchool, // Include state to know if this was an existing school
+          isEditMode, // Include edit mode state
+          logoPreview, // Include logo preview
+          socialLinks, // Include social media links
+          admissionSteps, // Include admission timeline
         };
         try {
           localStorage.setItem("schoolRegDraft", JSON.stringify(draft));
           // Don't show toast for auto-save to avoid spam
+          console.log('💾 Auto-saved draft');
         } catch (error) {
           console.error("Auto-save failed:", error);
         }
@@ -1777,7 +1895,7 @@ const RegistrationPage = () => {
     }, 2000); // Auto-save after 2 seconds of inactivity
 
     return () => clearTimeout(autoSaveTimer);
-  }, [formData, famousAlumnies, topAlumnies, otherAlumnies, customActivities, customAmenities, facultyQuality, activeSection, hasExistingSchool]);
+  }, [formData, famousAlumnies, topAlumnies, otherAlumnies, customActivities, customAmenities, facultyQuality, activeSection, editingSchoolId, hasExistingSchool, isEditMode, logoPreview, socialLinks, admissionSteps, isLoadingExistingData, currentUser]);
 
   const goPrev = () => {
     if (isFirst) return;

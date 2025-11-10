@@ -20,7 +20,7 @@ export const loginAdmin = async (credentials) => {
 };
 
 /**
- * ============================
+ * ============================l-f
  * Dashboard & User Management
  * ============================
  */
@@ -127,8 +127,23 @@ export const updateSchoolInfo = (schoolId, data) =>
 export const updateSchoolStatus = (schoolId, newStatus) =>
   apiClient.put(`/admin/schools/${encodeURIComponent(schoolId)}`, { status: newStatus });
 
-export const getSchoolsByStatus = (status) =>
-  apiClient.get(`/admin/schools/status/${encodeURIComponent(status)}`);
+export const getSchoolsByStatus = async (status) => {
+  try {
+    return await apiClient.get(`/admin/schools/status/${encodeURIComponent(status)}`);
+  } catch (error) {
+    const message = error?.response?.data?.message || '';
+    if (error?.response?.status === 500 && message.includes('No schools found with status')) {
+      return {
+        data: {
+          data: [],
+          message,
+          status: 'success'
+        }
+      };
+    }
+    throw error;
+  }
+};
 
 export const getAllSchools = () => apiClient.get('/admin/schools/status/all');
 export const getPendingSchools = async () => {

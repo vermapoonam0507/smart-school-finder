@@ -9,7 +9,7 @@ import apiClient from './axios';
  */
 export const getSchoolReviews = async (schoolId) => {
   try {
-    const response = await apiClient.get(`/reviews/admin/${schoolId}`);
+    const response = await apiClient.get(`/reviews/${schoolId}`);
     return response.data;
   } catch (error) {
     throw error;
@@ -68,6 +68,27 @@ export const getStudentReviews = async (studentId) => {
 };
 
 /**
+ * Update an existing review
+ * @param {string} schoolId
+ * @param {string} studentId
+ * @param {object} reviewData
+ */
+export const updateReview = async (schoolId, studentId, reviewData) => {
+  try {
+    // Transform frontend data to match backend schema
+    const backendData = {
+      text: reviewData.comment, // frontend uses 'comment', backend uses 'text'
+      ratings: reviewData.rating, // frontend uses 'rating', backend uses 'ratings'
+      status: 'Pending' // Set status back to Pending for re-approval
+    };
+    const response = await apiClient.put(`/reviews/${schoolId}/${studentId}`, backendData);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
  * Delete a review
  * @param {string} reviewId
  */
@@ -87,7 +108,7 @@ export const deleteReview = async (reviewId) => {
  */
 export const getPendingReviews = async () => {
   try {
-    const response = await apiClient.get('/reviews/admin/pending/all');
+    const response = await apiClient.get('/reviews/pending/all');
     return response.data;
   } catch (error) {
     throw error;
@@ -100,7 +121,7 @@ export const getPendingReviews = async () => {
  */
 export const acceptReview = async (reviewId) => {
   try {
-    const response = await apiClient.patch(`/reviews/admin/accept/${reviewId}`);
+    const response = await apiClient.patch(`/reviews/accept/${reviewId}`);
     return response.data;
   } catch (error) {
     throw error;
@@ -113,7 +134,7 @@ export const acceptReview = async (reviewId) => {
  */
 export const rejectReview = async (reviewId) => {
   try {
-    const response = await apiClient.delete(`/reviews/admin/reject/${reviewId}`);
+    const response = await apiClient.delete(`/reviews/reject/${reviewId}`);
     return response.data;
   } catch (error) {
     throw error;

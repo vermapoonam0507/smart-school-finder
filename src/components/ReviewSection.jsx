@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { getSchoolReviews, getStudentReviews, submitReview, updateReview, likeReview } from '../api/reviewService';
+import { getSchoolReviews, getStudentReviews, submitReview, updateReview, likeReview } from '../api/reviewService_fixed';
+import { getUserProfile, createStudentProfile } from '../api/userService';
 import { toast } from 'react-toastify';
 import { Star, Heart, MessageCircle, User } from 'lucide-react';
 
@@ -63,7 +64,8 @@ const ReviewSection = ({ schoolId }) => {
             setNewReview({ rating: 0, comment: '' });
           }
         } catch (studentReviewError) {
-          console.log('No student reviews found or error fetching:', studentReviewError.message);
+          // Handle both 404 (no reviews) and student not found cases gracefully
+          console.log('No student reviews found or student profile not created:', studentReviewError.message);
           setExistingReview(null);
           setNewReview({ rating: 0, comment: '' });
         }
@@ -82,6 +84,50 @@ const ReviewSection = ({ schoolId }) => {
   const handleCommentChange = (e) =>
     setNewReview((prev) => ({ ...prev, comment: e.target.value }));
 
+  const ensureStudentProfileExists = async () => {
+    try {
+      console.log('🔍 Checking if student profile exists for:', currentUser.authId);
+
+      // Check if student profile exists
+      const profileResponse = await getUserProfile(currentUser.authId);
+      console.log('📋 Profile response:', profileResponse);
+
+      if (profileResponse.data) {
+        console.log('✅ Student profile exists:', profileResponse.data);
+        return true;
+      }
+
+      if (profileResponse.status === 'Not Found') {
+        console.log('❌ Student profile not found, creating one...');
+
+        // Create a basic student profile with required fields
+        const profileData = {
+          authId: currentUser.authId,
+          email: currentUser.email,
+          name: currentUser.name || 'Student User',
+          contactNo: currentUser.contactNo || currentUser.phone || '0000000000',
+          dateOfBirth: currentUser.dateOfBirth || new Date('2000-01-01').toISOString(),
+          gender: currentUser.gender || 'other',
+          state: currentUser.state || 'Unknown',
+          city: currentUser.city || 'Unknown',
+          userType: 'student'
+        };
+
+        console.log('📝 Creating profile with data:', profileData);
+        const createResponse = await createStudentProfile(profileData);
+        console.log('✅ Student profile created successfully:', createResponse);
+        return true;
+      }
+
+      console.log('❓ Unexpected profile response structure');
+      return false;
+    } catch (error) {
+      console.error('❌ Error ensuring student profile exists:', error);
+      // If profile creation fails, we'll let the review submission handle the error
+      return false;
+    }
+  };
+
   const handleSubmitReview = async (e) => {
     e.preventDefault();
 
@@ -94,12 +140,23 @@ const ReviewSection = ({ schoolId }) => {
 
     try {
       setSubmitting(true);
+      
+      // Ensure student profile exists before submitting review
+      const profileExists = await ensureStudentProfileExists();
+      if (!profileExists) {
+        toast.info('Please complete your profile before submitting a review');
+        // Optionally redirect to profile creation page
+        window.location.href = '/create-profile';
+        return;
+      }
 
       const reviewData = {
         schoolId,
         studentId: currentUser.authId,
         rating: newReview.rating,
         comment: newReview.comment.trim(),
+        studentName: currentUser.name || 'Student User',
+        studentEmail: currentUser.email
       };
 
       if (existingReview) {
@@ -117,7 +174,17 @@ const ReviewSection = ({ schoolId }) => {
       fetchReviews();
     } catch (error) {
       console.error('Error submitting review:', error);
-      toast.error(error.response?.data?.message || 'Failed to submit review');
+      
+      // Handle specific error cases
+      if (error.response?.data?.message === 'Student not found') {
+        toast.error('Please complete your profile before submitting a review');
+        // Optionally redirect to profile creation page
+        setTimeout(() => {
+          window.location.href = '/create-profile';
+        }, 2000);
+      } else {
+        toast.error(error.response?.data?.message || 'Failed to submit review');
+      }
     } finally {
       setSubmitting(false);
     }
