@@ -265,6 +265,25 @@ export const deleteUser = (userId) => apiClient.delete(`/admin/users/${userId}`)
 export const deleteSchool = (schoolId) => apiClient.delete(`/admin/schools/${schoolId}`);
 
 // More resilient existence check that won't crash the UI if the id isn't a school id
+export const getSchoolByAuthId = async (authId) => {
+  if (!authId) return { data: null };
+  try {
+    console.log(`🔍 Finding school by authId: ${authId}`);
+    const res = await apiClient.get(`/admin/schools/by-auth/${encodeURIComponent(authId)}`, {
+      headers: { 'X-Silent-Request': '1' }
+    });
+    console.log(`✅ Found school by authId:`, res?.data);
+    return res;
+  } catch (error) {
+    const status = error?.response?.status;
+    console.warn(`⚠️ School not found for authId ${authId}, status: ${status}`);
+    if (status === 404 || status === 400 || status === 500) {
+      return { data: null };
+    }
+    throw error;
+  }
+};
+
 export const checkSchoolProfileExists = async (authId) => {
   if (!authId) return { data: null };
   try {

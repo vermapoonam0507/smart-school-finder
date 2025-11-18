@@ -5,6 +5,7 @@ import {
   getSchoolById,
   getPendingSchools,
   checkSchoolProfileExists,
+  getSchoolByAuthId,
 } from "../api/adminService";
 import RegistrationPage from "./RegistrationPage";
 import { fetchStudentApplications, updateApplicationStatus } from "../api/apiService";
@@ -84,7 +85,7 @@ const StatusBadge = ({ status }) => {
 // Approval Status section removed per request
 
 
-const ViewStudentApplications = ({ schoolId }) => {
+const ViewStudentApplications = ({}) => {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -96,6 +97,7 @@ const ViewStudentApplications = ({ schoolId }) => {
   const [selectedApplication, setSelectedApplication] = useState(null);
   const [showWrittenExamModal, setShowWrittenExamModal] = useState(false);
   const [selectedWrittenExamApplication, setSelectedWrittenExamApplication] = useState(null);
+  const [detectedSchoolId, setDetectedSchoolId] = useState(null);
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
 
@@ -108,24 +110,125 @@ const ViewStudentApplications = ({ schoolId }) => {
       }
       setError(null);
 
-      console.log(`🔄 ${isRefresh ? 'Refreshing' : 'Fetching'} applications for school: ${schoolId}`);
-      const status = selectedStatus === 'All' ? null : selectedStatus;
-      const response = await getSchoolForms(schoolId, status);
-      console.log('✅ Applications fetched:', response.data?.length || 0, 'applications');
-      console.log('📋 Full API Response:', response);
+      // First, use authId to find the school profile and get the correct schoolId
+      console.log(`🔍 [SCHOOL DETECTION] Starting school detection using authId: ${currentUser?._id}`);
+
+      let schoolId = null;
+      let schoolIdentifier = null;
+
+      if (currentUser?._id) {
+        try {
+          console.log(`🔑 [AUTH ID LOOKUP] Finding school profile for authId: ${currentUser._id}`);
+
+          // Use authId to find the school in schools collection where authId matches
+          const schoolProfileResponse = await getSchoolByAuthId(currentUser._id);
+          const schoolProfileData = schoolProfileResponse?.data;
+
+          console.log(`🏫 [SCHOOL PROFILE] Found school by authId:`, {
+            profileData: schoolProfileData,
+            hasData: !!schoolProfileData,
+            profileKeys: schoolProfileData ? Object.keys(schoolProfileData) : []
+          });
+
+          if (schoolProfileData?.data?._id) {
+            schoolId = schoolProfileData.data._id;
+            schoolIdentifier = schoolId;
+            console.log(`✅ [SCHOOL ID FOUND] Extracted schoolId from schools collection: ${schoolId}`);
+          } else if (schoolProfileData?._id) {
+            schoolId = schoolProfileData._id;
+            schoolIdentifier = schoolId;
+            console.log(`✅ [SCHOOL ID FOUND] Direct schoolId from schools collection: ${schoolId}`);
+          } else {
+            console.warn(`⚠️ [NO SCHOOL PROFILE] No school found for authId: ${currentUser._id}`);
+            // Fallback to currentUser schoolId
+            schoolId = currentUser?.schoolId;
+            schoolIdentifier = schoolId || currentUser?._id || currentUser?.email;
+            console.log(`🔄 [FALLBACK] Using fallback identifier: ${schoolIdentifier}`);
+          }
+        } catch (profileError) {
+          console.warn(`⚠️ [PROFILE LOOKUP ERROR] Could not find school profile by authId:`, {
+            authId: currentUser?._id,
+            error: profileError.message,
+            status: profileError.response?.status,
+            responseData: profileError.response?.data
+          });
+
+          // Fallback to currentUser schoolId
+          schoolId = currentUser?.schoolId;
+          schoolIdentifier = schoolId || currentUser?._id || currentUser?.email;
+          console.log(`🔄 [FALLBACK AFTER ERROR] Using fallback identifier: ${schoolIdentifier}`);
+        }
+      } else {
+        console.warn(`⚠️ [NO AUTH ID] No authId found in currentUser, using fallback`);
+        schoolId = currentUser?.schoolId;
+        schoolIdentifier = schoolId || currentUser?._id || currentUser?.email;
+      }
+
+      console.log(`🎯 [FINAL SCHOOL ID] Using schoolId: ${schoolId}, identifier: ${schoolIdentifier}`, {
+        authId: currentUser?._id,  // This is the user ID from Auth collection
+        userEmail: currentUser?.email,
+        userType: currentUser?.userType,
+        originalUserSchoolId: currentUser?.schoolId,  // This might be wrong
+        detectedSchoolId: schoolId,  // This is the correct school ID from schools collection
+        finalIdentifier: schoolIdentifier
+      });
+
+      // Fetch applications using the correct school identifier
+      console.log(`📡 [API CALL] Fetching forms with school identifier: ${schoolIdentifier}`);
+      const response = await fetchStudentApplications(schoolIdentifier);
+      console.log(`✅ [API RESPONSE] Forms fetched successfully:`, {
+        totalForms: response.data?.length || 0,
+        hasData: !!response.data,
+        responseKeys: Object.keys(response)
+      });
+
+      // Use the schoolId we already detected from the profile
+      let detectedSchoolId = schoolId; // Use the schoolId from email lookup
+
+      // If we didn't get schoolId from profile, try to detect it from forms as fallback
+      if (!detectedSchoolId && response.data && response.data.length > 0) {
+        console.log(`🔍 [FORM FALLBACK] Detecting schoolId from forms since profile lookup failed...`);
+
+        // Extract schoolId from the first form that has it
+        for (const [index, app] of response.data.entries()) {
+          console.log(`📋 [FORM ${index}] Analyzing form:`, {
+            formId: app?._id || app?.id,
+            hasSchoolId: !!app?.schoolId,
+            schoolId: app?.schoolId,
+            hasStudId: !!app?.studId,
+            studId: app?.studId,
+            status: app?.status,
+            studentName: app?.studentName
+          });
+
+          if (app?.schoolId && !detectedSchoolId) {
+            detectedSchoolId = typeof app.schoolId === 'object' ? app.schoolId._id || app.schoolId : app.schoolId;
+            console.log(`🎯 [SCHOOL ID DETECTED FROM FORM] Found schoolId from form ${index}: ${detectedSchoolId}`);
+            break;
+          }
+        }
+      }
+
+      // Store the detected schoolId
+      setDetectedSchoolId(detectedSchoolId);
+      console.log(`🔄 [STATE UPDATE] Set detectedSchoolId to: ${detectedSchoolId}`);
 
       // Log each application to see the structure after update
       if (response.data && response.data.length > 0) {
         response.data.forEach((app, index) => {
-          console.log(`📄 Application ${index} after update:`, {
+          console.log(`📄 [FORM ${index} DETAILS]`, {
             id: app._id,
+            formId: app?._id,
+            studentId: app?.studId,
+            schoolId: app?.schoolId,
+            detectedSchoolId: detectedSchoolId,
             status: app.status,
-            note: app.note,
-            interviewNote: app.interviewNote,
-            formDetails: app.formDetails,
-            applicationData: app.applicationData,
-            _raw: app._raw,
-            fullData: app
+            studentName: app.studentName,
+            class: app.class,
+            date: app.date,
+            applicationData: app.applicationData ? 'present' : 'missing',
+            pdfUrl: app.pdfUrl ? 'present' : 'missing',
+            _raw: app._raw ? 'present' : 'missing'
           });
         });
       }
@@ -134,25 +237,57 @@ const ViewStudentApplications = ({ schoolId }) => {
       // Accepted, Interview, Written Exam, and Shortlisted go to "Shortlisted Applications"
       const pendingApplications = (response.data || []).filter((a) => {
         const status = (a.status || '').toString().toLowerCase();
-        const keepInViewStudent = status === 'pending' || 
-                                  status === 'rejected' || 
-                                  status === 'reviewed' || 
+        const keepInViewStudent = status === 'pending' ||
+                                  status === 'rejected' ||
+                                  status === 'reviewed' ||
                                   status === '';
-        
-        console.log(`📋 Application status check:`, {
-          id: a._id || a.id,
+
+        console.log(`📋 [STATUS FILTER] Application status check:`, {
+          applicationId: a._id || a.id,
+          studentId: a?.studId,
+          schoolId: detectedSchoolId,
           status: a.status,
           normalizedStatus: status,
           showInViewStudentApplications: keepInViewStudent
         });
-        
+
         return keepInViewStudent;
       });
 
-      console.log(`📊 Showing ${pendingApplications.length} pending/rejected applications out of ${response.data?.length || 0} total`);
+      console.log(`📊 [FILTER RESULTS] Filtered applications:`, {
+        totalForms: response.data?.length || 0,
+        pendingApplications: pendingApplications.length,
+        schoolId: detectedSchoolId,
+        studentIds: pendingApplications.map(a => a?.studId).filter(Boolean),
+        applicationIds: pendingApplications.map(a => a?._id || a?.id).filter(Boolean)
+      });
+
       setApplications(pendingApplications);
     } catch (error) {
-      console.error("❌ Error fetching applications:", error);
+      console.error('❌ [FETCH APPLICATIONS ERROR] Failed to fetch applications:', {
+        errorMessage: error.message,
+        errorStack: error.stack,
+        httpStatus: error.response?.status,
+        httpStatusText: error.response?.statusText,
+        responseData: error.response?.data,
+        requestUrl: error.config?.url,
+        requestMethod: error.config?.method,
+        requestData: error.config?.data,
+        // ID context
+        attemptedSchoolIdentifier: currentUser?.schoolId || currentUser?._id || currentUser?.email,
+        detectedSchoolId: detectedSchoolId,
+        currentUser: {
+          _id: currentUser?._id,
+          email: currentUser?.email,
+          userType: currentUser?.userType,
+          schoolId: currentUser?.schoolId
+        },
+        // Error classification
+        isNetworkError: !error.response,
+        is4xxError: error.response?.status >= 400 && error.response?.status < 500,
+        is5xxError: error.response?.status >= 500,
+        fullError: error
+      });
       setError(error.message || "Failed to fetch applications");
       setApplications([]);
     } finally {
@@ -162,20 +297,20 @@ const ViewStudentApplications = ({ schoolId }) => {
   };
 
   useEffect(() => {
-    if (schoolId) {
+    if (currentUser?._id) {
       fetchApplications();
     } else {
-      console.warn("⚠️ No schoolId provided to ViewStudentApplications");
+      console.warn("⚠️ No current user found for ViewStudentApplications");
       setLoading(false);
     }
-  }, [schoolId, selectedStatus]);
+  }, [currentUser, selectedStatus]);
 
   // Listen for new applications
   useEffect(() => {
     const handleNewApplication = (event) => {
-      console.log('📨 New application received:', event);
+      console.log('📨 New application received:', event.detail);
       // Refresh applications when a new one is added
-      if (event.schoolId === schoolId) {
+      if (event.detail.schoolId === detectedSchoolId || !detectedSchoolId) {
         console.log('🔄 Refreshing applications due to new application');
         fetchApplications(true);
       }
@@ -187,14 +322,22 @@ const ViewStudentApplications = ({ schoolId }) => {
     return () => {
       window.removeEventListener('applicationAdded', handleNewApplication);
     };
-  }, [schoolId]);
+  }, [detectedSchoolId]);
 
   const handleStatusChange = async (app, newStatus) => {
     // Try multiple possible form ID locations
     const formId = app?._id || app?.formId || app?.id || app?._raw?._id;
     
     if (!formId) {
-      console.warn('No valid form id to update:', app);
+      console.warn('❌ No valid form id to update:', {
+        applicationId: app?._id || app?.id,
+        studentId: app?.studId || app?.studentId,
+        schoolId: detectedSchoolId,
+        status: app?.status,
+        newStatus,
+        availableKeys: Object.keys(app || {}),
+        fullApplicationData: app
+      });
       console.log('Available app properties:', Object.keys(app));
       return;
     }
@@ -207,16 +350,42 @@ const ViewStudentApplications = ({ schoolId }) => {
     );
 
     try {
-      console.log(`Updating form ${formId} to status: ${newStatus}`);
+      console.log(`🔄 Updating form ${formId} to status: ${newStatus}`, {
+        formId,
+        newStatus,
+        schoolId: detectedSchoolId,
+        studentId: app?.studId || app?.studentId,
+        applicationId: app?._id || app?.id
+      });
       await updateFormStatus(formId, newStatus);
-      console.log('Status updated successfully');
+      console.log('✅ Status updated successfully:', {
+        formId,
+        newStatus,
+        schoolId: detectedSchoolId,
+        studentId: app?.studId || app?.studentId,
+        applicationId: app?._id || app?.id
+      });
       toast.success(`Application status updated to ${newStatus}`);
     } catch (e) {
-      console.error('Failed to update status:', e);
+      console.error('❌ Failed to update form status:', {
+        formId,
+        newStatus,
+        schoolId: detectedSchoolId,
+        studentId: app?.studId || app?.studentId,
+        applicationId: app?._id || app?.id,
+        error: e.message,
+        status: e.response?.status,
+        responseData: e.response?.data,
+        fullError: e
+      });
       // Revert optimistic update by refetching
       try {
-        const response = await getSchoolForms(schoolId, selectedStatus === 'All' ? null : selectedStatus);
-        setApplications(response.data);
+        const response = await fetchStudentApplications(currentUser?.schoolId || currentUser?._id || currentUser?.email);
+        const pendingApplications = (response.data || []).filter((a) => {
+          const status = (a.status || '').toString().toLowerCase();
+          return status === 'pending' || status === 'rejected' || status === 'reviewed' || status === '';
+        });
+        setApplications(pendingApplications);
         toast.error('Failed to update status. Changes reverted.');
       } catch (_) {
         toast.error('Failed to update status and unable to reload.');
@@ -228,7 +397,14 @@ const ViewStudentApplications = ({ schoolId }) => {
     // Extract form ID for the interview modal
     const formId = app?._id || app?.formId || app?.id || app?._raw?._id;
     if (!formId) {
-      console.warn('No valid form id for interview scheduling:', app);
+      console.warn('❌ No valid form id for interview scheduling:', {
+        applicationId: app?._id || app?.id,
+        studentId: app?.studId || app?.studentId,
+        schoolId: detectedSchoolId,
+        status: app?.status,
+        availableKeys: Object.keys(app || {}),
+        fullApplicationData: app
+      });
       toast.error('Cannot schedule interview: Invalid application data');
       return;
     }
@@ -242,7 +418,14 @@ const ViewStudentApplications = ({ schoolId }) => {
   const handleScheduleWrittenExam = (app) => {
     const formId = app?._id || app?.formId || app?.id || app?._raw?._id;
     if (!formId) {
-      console.warn('No valid form id for written exam scheduling:', app);
+      console.warn('❌ No valid form id for written exam scheduling:', {
+        applicationId: app?._id || app?.id,
+        studentId: app?.studId || app?.studentId,
+        schoolId: detectedSchoolId,
+        status: app?.status,
+        availableKeys: Object.keys(app || {}),
+        fullApplicationData: app
+      });
       toast.error('Cannot schedule written exam: Invalid application data');
       return;
     }
@@ -258,13 +441,48 @@ const ViewStudentApplications = ({ schoolId }) => {
 
       // Use updateFormStatus which properly handles the note parameter in the request body
       const result = await updateFormStatus(formId, status, note);
-      console.log('✅ API Response:', result);
+      console.log('✅ Interview scheduled successfully:', {
+        formId,
+        status,
+        note,
+        schoolId: detectedSchoolId,
+        studentId: selectedApplication?.studId || selectedApplication?.studentId,
+        applicationId: selectedApplication?._id || selectedApplication?.id,
+        apiResponse: result
+      });
 
       toast.success('Interview scheduled successfully!');
       console.log('🔄 Refreshing applications data...');
       await fetchApplications(true);
     } catch (error) {
-      console.error('Error scheduling interview:', error);
+      console.error('❌ [INTERVIEW SCHEDULING ERROR] Failed to schedule interview:', {
+        errorMessage: error.message,
+        errorStack: error.stack,
+        httpStatus: error.response?.status,
+        httpStatusText: error.response?.statusText,
+        responseData: error.response?.data,
+        requestUrl: error.config?.url,
+        requestMethod: error.config?.method,
+        requestData: error.config?.data,
+        // ID context
+        formId: formId,
+        status: status,
+        note: note,
+        schoolId: detectedSchoolId,
+        studentId: selectedApplication?.studId || selectedApplication?.studentId,
+        applicationId: selectedApplication?._id || selectedApplication?.id,
+        // Current user context
+        currentUser: {
+          _id: currentUser?._id,
+          email: currentUser?.email,
+          userType: currentUser?.userType,
+          schoolId: currentUser?.schoolId
+        },
+        // Application context
+        selectedApplicationKeys: Object.keys(selectedApplication || {}),
+        selectedApplicationData: selectedApplication,
+        fullError: error
+      });
       toast.error('Failed to schedule interview');
     }
   };
@@ -274,12 +492,47 @@ const ViewStudentApplications = ({ schoolId }) => {
       console.log('📝 Scheduling written exam with note:', note);
       console.log('🔄 Calling updateFormStatus with:', { formId, status, note });
       const result = await updateFormStatus(formId, status, note);
-      console.log('✅ API Response:', result);
+      console.log('✅ Written exam scheduled successfully:', {
+        formId,
+        status,
+        note,
+        schoolId: detectedSchoolId,
+        studentId: selectedWrittenExamApplication?.studId || selectedWrittenExamApplication?.studentId,
+        applicationId: selectedWrittenExamApplication?._id || selectedWrittenExamApplication?.id,
+        apiResponse: result
+      });
       toast.success('Written exam scheduled successfully!');
       console.log('🔄 Refreshing applications data...');
       await fetchApplications(true);
     } catch (error) {
-      console.error('Error scheduling written exam:', error);
+      console.error('❌ [WRITTEN EXAM SCHEDULING ERROR] Failed to schedule written exam:', {
+        errorMessage: error.message,
+        errorStack: error.stack,
+        httpStatus: error.response?.status,
+        httpStatusText: error.response?.statusText,
+        responseData: error.response?.data,
+        requestUrl: error.config?.url,
+        requestMethod: error.config?.method,
+        requestData: error.config?.data,
+        // ID context
+        formId: formId,
+        status: status,
+        note: note,
+        schoolId: detectedSchoolId,
+        studentId: selectedWrittenExamApplication?.studId || selectedWrittenExamApplication?.studentId,
+        applicationId: selectedWrittenExamApplication?._id || selectedWrittenExamApplication?.id,
+        // Current user context
+        currentUser: {
+          _id: currentUser?._id,
+          email: currentUser?.email,
+          userType: currentUser?.userType,
+          schoolId: currentUser?.schoolId
+        },
+        // Application context
+        selectedWrittenExamApplicationKeys: Object.keys(selectedWrittenExamApplication || {}),
+        selectedWrittenExamApplicationData: selectedWrittenExamApplication,
+        fullError: error
+      });
       toast.error('Failed to schedule written exam');
     }
   };
@@ -345,7 +598,14 @@ const ViewStudentApplications = ({ schoolId }) => {
 
       setShowInterviewDetailsModal(true);
     } catch (error) {
-      console.error('Error showing interview details:', error);
+      console.error('❌ Error showing interview details:', {
+        applicationId: app?._id || app?.id,
+        studentId: app?.studId || app?.studentId,
+        schoolId: detectedSchoolId,
+        status: app?.status,
+        error: error.message,
+        fullError: error
+      });
       toast.error('Failed to load interview details');
     }
   };
@@ -392,7 +652,16 @@ const ViewStudentApplications = ({ schoolId }) => {
       window.open(pdfUrl, '_blank');
     } else {
       toast.error('Unable to view details: Student ID not found');
-      console.warn('No student ID found for application:', app);
+      console.warn('❌ No student ID found for application:', {
+        applicationId: app?._id || app?.id,
+        formId: app?.formId,
+        schoolId: detectedSchoolId,
+        status: app?.status,
+        studId: app?.studId,
+        studentId: app?.studentId,
+        availableKeys: Object.keys(app || {}),
+        fullApplicationData: app
+      });
       console.log('Available app properties:', Object.keys(app));
     }
   };
@@ -674,17 +943,100 @@ const ViewStudentApplications = ({ schoolId }) => {
     </div>
   );
 };
-const ViewShortlistedApplications = ({ schoolId }) => {
+const ViewShortlistedApplications = ({}) => {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [detectedSchoolId, setDetectedSchoolId] = useState(null);
+  const { user: currentUser } = useAuth();
 
   useEffect(() => {
     const getApps = async () => {
       try {
         setLoading(true);
-        const response = await fetchStudentApplications(schoolId);
+
+        // First, use authId to find the school profile and get the correct schoolId
+        console.log(`🔍 [SHORTLIST SCHOOL DETECTION] Starting school detection using authId: ${currentUser?._id}`);
+
+        let schoolId = null;
+        let schoolIdentifier = null;
+
+        if (currentUser?._id) {
+          try {
+            console.log(`🔑 [SHORTLIST AUTH ID LOOKUP] Finding school profile for authId: ${currentUser._id}`);
+
+            // Use authId to find the school in schools collection where authId matches
+            const schoolProfileResponse = await getSchoolByAuthId(currentUser._id);
+            const schoolProfileData = schoolProfileResponse?.data;
+
+            console.log(`🏫 [SHORTLIST SCHOOL PROFILE] Found school by authId:`, {
+              profileData: schoolProfileData,
+              hasData: !!schoolProfileData,
+              profileKeys: schoolProfileData ? Object.keys(schoolProfileData) : []
+            });
+
+            if (schoolProfileData?.data?._id) {
+              schoolId = schoolProfileData.data._id;
+              schoolIdentifier = schoolId;
+              console.log(`✅ [SHORTLIST SCHOOL ID FOUND] Extracted schoolId from schools collection: ${schoolId}`);
+            } else if (schoolProfileData?._id) {
+              schoolId = schoolProfileData._id;
+              schoolIdentifier = schoolId;
+              console.log(`✅ [SHORTLIST SCHOOL ID FOUND] Direct schoolId from schools collection: ${schoolId}`);
+            } else {
+              console.warn(`⚠️ [SHORTLIST NO SCHOOL PROFILE] No school found for authId: ${currentUser._id}`);
+              // Fallback to currentUser schoolId
+              schoolId = currentUser?.schoolId;
+              schoolIdentifier = schoolId || currentUser?._id || currentUser?.email;
+              console.log(`🔄 [SHORTLIST FALLBACK] Using fallback identifier: ${schoolIdentifier}`);
+            }
+          } catch (profileError) {
+            console.warn(`⚠️ [SHORTLIST PROFILE LOOKUP ERROR] Could not find school profile by authId:`, {
+              authId: currentUser?._id,
+              error: profileError.message,
+              status: profileError.response?.status,
+              responseData: profileError.response?.data
+            });
+
+            // Fallback to currentUser schoolId
+            schoolId = currentUser?.schoolId;
+            schoolIdentifier = schoolId || currentUser?._id || currentUser?.email;
+            console.log(`🔄 [SHORTLIST FALLBACK AFTER ERROR] Using fallback identifier: ${schoolIdentifier}`);
+          }
+        } else {
+          console.warn(`⚠️ [SHORTLIST NO AUTH ID] No authId found in currentUser, using fallback`);
+          schoolId = currentUser?.schoolId;
+          schoolIdentifier = schoolId || currentUser?._id || currentUser?.email;
+        }
+
+        console.log(`🎯 [SHORTLIST FINAL SCHOOL ID] Using schoolId: ${schoolId}, identifier: ${schoolIdentifier}`, {
+          authId: currentUser?._id,  // This is the user ID from Auth collection
+          userEmail: currentUser?.email,
+          userType: currentUser?.userType,
+          originalUserSchoolId: currentUser?.schoolId,  // This might be wrong
+          detectedSchoolId: schoolId,  // This is the correct school ID from schools collection
+          finalIdentifier: schoolIdentifier
+        });
+
+        const response = await fetchStudentApplications(schoolIdentifier);
         const all = response.data || [];
-        
+
+        // Use the schoolId we already detected from the profile
+        let detectedSchoolId = schoolId; // Use the schoolId from email lookup
+
+        // If we didn't get schoolId from profile, try to detect it from forms as fallback
+        if (!detectedSchoolId && all && all.length > 0) {
+          for (const app of all) {
+            if (app.schoolId) {
+              detectedSchoolId = typeof app.schoolId === 'object' ? app.schoolId._id || app.schoolId : app.schoolId;
+              console.log(`🎯 [SHORTLIST SCHOOL ID DETECTED FROM FORM] Found schoolId from form: ${detectedSchoolId}`);
+              break;
+            }
+          }
+        }
+
+        // Store the detected schoolId
+        setDetectedSchoolId(detectedSchoolId);
+
         // Show applications that have been processed: accepted, interview, written exam, or shortlisted
         const processedApplications = all.filter((a) => {
           const status = (a.status || '').toString().toLowerCase();
@@ -706,14 +1058,38 @@ const ViewShortlistedApplications = ({ schoolId }) => {
         console.log(`📊 Shortlisted: ${processedApplications.length} out of ${all.length} total`);
         setApplications(processedApplications);
       } catch (error) {
-        console.error("Error fetching shortlisted applications:", error);
+        console.error("❌ [SHORTLISTED APPLICATIONS ERROR] Error fetching shortlisted applications:", {
+          errorMessage: error.message,
+          errorStack: error.stack,
+          httpStatus: error.response?.status,
+          httpStatusText: error.response?.statusText,
+          responseData: error.response?.data,
+          requestUrl: error.config?.url,
+          requestMethod: error.config?.method,
+          requestData: error.config?.data,
+          // ID context
+          schoolIdentifier: currentUser?.schoolId || currentUser?._id || currentUser?.email,
+          detectedSchoolId: detectedSchoolId,
+          currentUser: {
+            _id: currentUser?._id,
+            email: currentUser?.email,
+            userType: currentUser?.userType,
+            schoolId: currentUser?.schoolId
+          },
+          // Application context
+          totalApplicationsProcessed: all?.length || 0,
+          filteredApplicationsCount: applications?.length || 0,
+          fullError: error
+        });
         setApplications([]);
       } finally {
         setLoading(false);
       }
     };
-    getApps();
-  }, [schoolId]);
+    if (currentUser?._id) {
+      getApps();
+    }
+  }, [currentUser]);
 
   if (loading) return <div className="p-8 text-center">Loading shortlisted applications...</div>;
 
@@ -766,7 +1142,13 @@ const SchoolPortalPage = ({ currentUser, onLogout, onRegister }) => {
         const res = await fetchStudentApplications(idForQuery);
         const apps = res?.data || [];
         setApplicationsCount(Array.isArray(apps) ? apps.length : 0);
-      } catch (_) {
+      } catch (error) {
+        console.error("❌ Error loading applications count:", {
+          schoolId: idForQuery,
+          userId: currentUser?._id,
+          error: error.message,
+          fullError: error
+        });
         setApplicationsCount(0);
       }
     };
@@ -848,14 +1230,14 @@ const SchoolPortalPage = ({ currentUser, onLogout, onRegister }) => {
       <Routes>
         <Route
           path="shortlisted"
-          element={<ViewShortlistedApplications schoolId={currentUser?.schoolId || currentUser?._id} />}
+          element={<ViewShortlistedApplications />}
         />
         {/* Approval Status route removed */}
          <Route
            path="applications"
            element={
              <ErrorBoundary>
-               <ViewStudentApplications schoolId={currentUser?.schoolId || currentUser?._id} />
+               <ViewStudentApplications />
              </ErrorBoundary>
            }
          />
@@ -876,7 +1258,7 @@ const SchoolPortalPage = ({ currentUser, onLogout, onRegister }) => {
           index
           element={
             <ErrorBoundary>
-              <ViewStudentApplications schoolId={currentUser?.schoolId || currentUser?._id} />
+              <ViewStudentApplications />
             </ErrorBoundary>
           }
         />

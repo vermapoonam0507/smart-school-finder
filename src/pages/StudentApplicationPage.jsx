@@ -4,9 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
-import { submitApplication, generateStudentPdf } from '../api/userService';
+import { submitApplication, generateStudentPdf, getUserProfile, createStudentProfile } from '../api/userService';
 import { createApplication, checkApplicationExists, updateExistingApplication, submitFormToSchool } from '../api/applicationService';
-import eventEmitter from '../utils/eventEmitter';
 import { getSchoolById } from '../api/adminService';
 import { FileText, User, Users, Home, BookOpen, PlusCircle, Trash2, Shield } from 'lucide-react';
 
@@ -82,6 +81,7 @@ const StudentApplicationPage = () => {
         placeOfBirth: '', speciallyAbled: false, speciallyAbledType: '',
         nationality: '', religion: '', caste: '', subcaste: '', aadharNo: '',
         bloodGroup: '', allergicTo: '', interest: '',
+        standard: '', // Required: Class/grade student wants to enroll in
         lastSchoolName: '', classCompleted: '', lastAcademicYear: '',
         reasonForLeaving: '', board: '',
         fatherName: '', fatherAge: '', fatherQualification: '', fatherProfession: '',
@@ -118,6 +118,50 @@ const StudentApplicationPage = () => {
         setSiblings(values);
     };
 
+    const ensureStudentProfileExists = async () => {
+        try {
+            console.log('🔍 Checking if student profile exists for:', currentUser.authId);
+
+            // Check if student profile exists
+            const profileResponse = await getUserProfile(currentUser.authId);
+            console.log('📋 Profile response:', profileResponse);
+
+            if (profileResponse.data) {
+                console.log('✅ Student profile exists:', profileResponse.data);
+                return true;
+            }
+
+            if (profileResponse.status === 'Not Found') {
+                console.log('❌ Student profile not found, creating one...');
+
+                // Create a basic student profile with required fields
+                const profileData = {
+                    authId: currentUser.authId,
+                    email: currentUser.email,
+                    name: currentUser.name || 'Student User',
+                    contactNo: currentUser.contactNo || currentUser.phone || '0000000000',
+                    dateOfBirth: currentUser.dateOfBirth || new Date('2000-01-01').toISOString(),
+                    gender: currentUser.gender || 'other',
+                    state: currentUser.state || 'Unknown',
+                    city: currentUser.city || 'Unknown',
+                    userType: 'student'
+                };
+
+                console.log('📝 Creating profile with data:', profileData);
+                const createResponse = await createStudentProfile(profileData);
+                console.log('✅ Student profile created successfully:', createResponse);
+                return true;
+            }
+
+            console.log('❓ Unexpected profile response structure');
+            return false;
+        } catch (error) {
+            console.error('❌ Error ensuring student profile exists:', error);
+            // If profile creation fails, we'll let the application submission handle the error
+            return false;
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -133,7 +177,7 @@ const StudentApplicationPage = () => {
         ];
 
         // Check if any essential fields are missing
-        const essentialFields = ['name', 'gender', 'dob', 'fatherName', 'motherName'];
+        const essentialFields = ['name', 'gender', 'dob', 'standard', 'fatherName', 'motherName'];
         const missingEssential = essentialFields.filter(field =>
             !formData[field] || formData[field].toString().trim() === ''
         );
@@ -151,8 +195,17 @@ const StudentApplicationPage = () => {
         console.log('Starting submission process...');
         setIsSubmitting(true);
         try {
+            // Ensure student profile exists before submitting application
+            const profileExists = await ensureStudentProfileExists();
+            if (!profileExists) {
+                toast.info('Please complete your profile before submitting an application');
+                // Optionally redirect to profile creation page
+                window.location.href = '/create-profile';
+                return;
+            }
+
             // Get the correct student ID - use student profile ID if available, otherwise auth ID
-            const studentId = currentUser.studentId || currentUser._id;
+            const studentId = currentUser.studentId || currentUser.authId || currentUser._id;
             console.log('🔍 Using student ID for application:', studentId, 'from user:', currentUser);
             
             const payload = {
@@ -219,11 +272,13 @@ const StudentApplicationPage = () => {
             }
             
             // Emit event to notify school portal of new application
-            eventEmitter.emit('applicationAdded', {
-              schoolId: schoolId,
-              schoolEmail: school.email,
-              applicationData: result.data
-            });
+            window.dispatchEvent(new CustomEvent('applicationAdded', {
+              detail: {
+                schoolId: schoolId,
+                schoolEmail: school.email,
+                applicationData: result.data
+              }
+            }));
             
             setSubmitted(true);
             
@@ -233,6 +288,17 @@ const StudentApplicationPage = () => {
             }, 2000); // Give user time to see success message
         } catch (error) {
             console.error("Submission Error:", error);
+            
+            // Handle specific error cases
+            if (error.response?.data?.message === 'Student not found') {
+                toast.error('Please complete your profile before submitting an application');
+                // Redirect to profile creation page
+                setTimeout(() => {
+                    window.location.href = '/create-profile';
+                }, 2000);
+                return;
+            }
+            
             toast.error(`Submission failed: ${error.message || 'Please ensure all required fields are filled.'}`);
         } finally {
             setIsSubmitting(false);
@@ -331,7 +397,8 @@ const StudentApplicationPage = () => {
                     dob: appData.dob || prevData.dob,
                     age: appData.age || prevData.age,
                     gender: appData.gender || prevData.gender,
-                    motherTongue: appData.motherTongue || prevData.motherTongue
+                    motherTongue: appData.motherTongue || prevData.motherTongue,
+                    standard: appData.standard || prevData.standard
                 }));
                 
                 // Handle siblings separately as it's an array
@@ -451,9 +518,10 @@ const StudentApplicationPage = () => {
                     {step === 2 && (
                         <section className="space-y-6">
                             <h2 className="text-xl font-semibold text-gray-700 border-b pb-3 flex items-center">
-                                <BookOpen className="mr-2" />Previous School Details (if any)
+                                <BookOpen className="mr-2" />Academic Details
                             </h2>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <FormField label="Class/Grade Applying For" name="standard" type="select" options={['Nursery', 'LKG', 'UKG', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']} value={formData.standard} onChange={handleInputChange} required />
                                 <FormField label="Last School Name" name="lastSchoolName" value={formData.lastSchoolName} onChange={handleInputChange} />
                                 <FormField label="Class Completed" name="classCompleted" value={formData.classCompleted} onChange={handleInputChange} />
                                 <FormField label="Last Academic Year" name="lastAcademicYear" value={formData.lastAcademicYear} onChange={handleInputChange} />

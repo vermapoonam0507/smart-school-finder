@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { getStudentForms, trackForm } from '../api/applicationService';
+import { getFormsByStudent } from '../api/userService';
 import { 
   FileText, 
   Clock, 
@@ -173,11 +174,11 @@ const StudentApplicationTrackingPage = () => {
       }
       setError(null);
 
-      const studentId = currentUser.studentId || currentUser._id;
+      const studentId = currentUser.studentId || currentUser.authId || currentUser._id;
       const status = selectedStatus === 'All' ? null : selectedStatus;
       
       console.log(`🔍 Fetching applications for student: ${studentId}, status: ${status}`);
-      const response = await getStudentForms(studentId, status);
+      const response = await getFormsByStudent(studentId);
       
       console.log('✅ Applications fetched:', response.data?.length || 0, 'applications');
       setApplications(response.data || []);
